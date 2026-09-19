@@ -1,0 +1,47 @@
+[
+  {
+    "id": "e_1700000000000_example1",
+    "medium": "film",
+    "title": "Paprika",
+    "year": "2006",
+    "author": "",
+    "director": "Satoshi Kon",
+    "cast": "",
+    "platform": "",
+    "dateConsumed": "2026-08-10",
+    "rating": 4,
+    "coverUrl": "https://upload.wikimedia.org/wikipedia/en/1/16/Paprikaposter.jpg",
+    "insights": "Watched at a friend's place.",
+    "dateAdded": 1700000000000
+  },
+  {
+    "id": "e_1700000010000_example2",
+    "medium": "book",
+    "title": "Steppenwolf",
+    "year": "1927",
+    "author": "Hermann Hesse",
+    "director": "",
+    "cast": "",
+    "platform": "",
+    "dateConsumed": "2024-06-22",
+    "rating": 5,
+    "coverUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Hermann%20Hesse%20Der%20Steppenwolf%201927.jpg?width=600",
+    "insights": "",
+    "dateAdded": 1700000010000
+  },
+  {
+    "id": "e_1700000020000_example3",
+    "medium": "series",
+    "title": "Silo",
+    "year": "2023",
+    "author": "",
+    "director": "Graham Yost",
+    "cast": "Rebecca Ferguson",
+    "platform": "Apple TV",
+    "dateConsumed": "2026-08-01",
+    "rating": 4,
+    "coverUrl": "https://static.tvmaze.com/uploads/images/original_untouched/631/1577677.jpg",
+    "insights": "",
+    "dateAdded": 1700000020000
+  }
+]

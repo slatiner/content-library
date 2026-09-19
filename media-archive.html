@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>media.json</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f7f7f5;
+    --panel:#ffffff;
+    --ink:#191919;
+    --ink-soft:#5c5c58;
+    --line:#e1e0db;
+    --book:#3f5484;
+    --film:#a8503a;
+    --series:#3f6b4f;
+    --warn:#a8503a;
+    --radius:8px;
+    --radius-lg:14px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:'IBM Plex Sans',sans-serif;-webkit-font-smoothing:antialiased;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  .wrap{width:90%;margin:0 auto;padding:28px 0 80px;}
+
+  header.top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;border-bottom:2px solid var(--ink);padding-bottom:12px;flex-wrap:wrap;gap:8px;}
+  header.top h1{font-size:19px;font-weight:600;letter-spacing:0.02em;margin:0;text-transform:lowecase;}
+  header.top .header-right{display:flex;align-items:center;gap:16px;}
+  header.top .counts{font-size:12px;color:var(--ink-soft);}
+  header.top .counts span{margin-left:10px;}
+  header.top .counts b{color:var(--ink);}
+  .add-new-btn{padding:8px 16px;border:none;border-radius:var(--radius-lg);background:var(--ink);color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;}
+  .add-new-btn:hover{opacity:0.85;}
+
+  .filebar{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-soft);margin-bottom:18px;padding:8px 10px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);}
+  .filebar .dot{width:8px;height:8px;border-radius:50%;background:var(--line);flex:none;}
+  .filebar .dot.ok{background:var(--series);}
+  .filebar .dot.warn{background:var(--warn);}
+  .filebar b{color:var(--ink);font-weight:600;}
+
+  .btn{padding:8px 14px;border:1px solid var(--ink);border-radius:var(--radius);background:var(--ink);color:#fff;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;}
+  .btn:hover{opacity:0.85;}
+  .btn:disabled{opacity:0.5;cursor:default;}
+  .btn.ghost{background:transparent;color:var(--ink);}
+  .btn.small{padding:5px 10px;font-size:12px;}
+  .btn.danger{border-color:var(--warn);color:var(--warn);background:transparent;}
+
+  select{padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);font-family:inherit;font-size:13px;color:var(--ink);}
+
+  .filter-bar{margin-bottom:20px;}
+  .filter-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
+  .filter-row:last-child{margin-bottom:0;}
+  .filter-row input[type=text]{flex:1;min-width:180px;max-width:400px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);font-family:inherit;font-size:13px;color:var(--ink);}
+  .filter-row input[type=date]{padding:7px 8px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);font-family:inherit;font-size:12px;color:var(--ink);}
+  .input-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);font-family:inherit;font-size:13px;color:var(--ink);cursor:pointer;}
+  .input-btn:hover{border-color:var(--ink);}
+  .icon-btn{background:transparent;border:none;font-size:18px;color:var(--ink-soft);cursor:pointer;padding:6px;line-height:1;border-radius:50%;}
+  .icon-btn:hover{color:var(--ink);background:rgba(0,0,0,0.05);}
+  .tag-check{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);font-size:12px;font-weight:500;cursor:pointer;user-select:none;color:var(--ink-soft);transition:background .12s,border-color .12s,color .12s;}
+  .tag-check input{display:none;}
+  .tag-check.book.active{background:var(--book);border-color:var(--book);color:#fff;}
+  .tag-check.film.active{background:var(--film);border-color:var(--film);color:#fff;}
+  .tag-check.series.active{background:var(--series);border-color:var(--series);color:#fff;}
+
+  .popover-wrap{position:relative;}
+  .popover{position:absolute;top:calc(100% + 6px);right:0;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;min-width:210px;box-shadow:0 6px 20px rgba(0,0,0,0.12);display:none;z-index:6;}
+  .popover.open{display:block;}
+  .popover .field{margin-bottom:8px;}
+  .popover .field:last-of-type{margin-bottom:0;}
+  .popover .field label{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-soft);margin-bottom:4px;}
+  .popover .field input{width:100%;padding:7px 8px;border:1px solid var(--line);border-radius:var(--radius);font-family:inherit;font-size:12px;color:var(--ink);}
+  .popover .pop-actions{display:flex;justify-content:flex-end;gap:6px;margin-top:10px;}
+  .btn.full{display:block;width:100%;text-align:left;margin-bottom:6px;}
+  .btn.full:last-child{margin-bottom:0;}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(max(190px,calc((100% - 5*20px)/6)),1fr));gap:20px;}
+  .card{position:relative;background:transparent;border:none;border-radius:var(--radius-lg);overflow:hidden;cursor:pointer;transition:opacity .12s ease,transform .12s ease;opacity:1;}
+  .card.hidden{opacity:0;transform:scale(0.96);pointer-events:none;}
+  .card .cover{position:relative;width:100%;aspect-ratio:2/3;background:var(--line);overflow:hidden;border-radius:var(--radius-lg);}
+  .card .cover img{width:100%;height:100%;object-fit:cover;display:block;}
+  .card .cover .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff;text-align:center;padding:16px;line-height:1.3;}
+  .card .cover .ph.book{background:var(--book);}
+  .card .cover .ph.film{background:var(--film);}
+  .card .cover .ph.series{background:var(--series);}
+  .shield{position:absolute;top:0;right:12px;padding:7px 9px 12px;line-height:1;clip-path:polygon(0 0,100% 0,100% 76%,50% 100%,0 76%);display:flex;align-items:flex-start;justify-content:center;z-index:2;}
+  .shield svg{width:15px;height:15px;display:block;}
+  .shield.book{background:var(--book);}
+  .shield.film{background:var(--film);}
+  .shield.series{background:var(--series);}
+  .card .del{position:absolute;top:6px;left:6px;width:22px;height:22px;border-radius:50%;background:rgba(25,25,25,0.55);color:#fff;border:none;font-size:13px;line-height:22px;text-align:center;cursor:pointer;display:none;padding:0;z-index:2;}
+  .card:hover .del{display:block;}
+  .hover-info{position:absolute;inset:0;background:rgba(20,20,20,0.82);color:#fff;padding:12px;display:flex;flex-direction:column;justify-content:flex-end;gap:6px;opacity:0;transition:opacity .15s ease;pointer-events:none;z-index:1;}
+  .card:hover .hover-info{opacity:1;}
+  .hover-info .hi-people{font-size:13.5px;font-weight:600;line-height:1.35;color:#fff;margin-bottom:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .hover-info .hi-date{font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#b9b9b6;margin-bottom:6px;}
+  .hover-info .hi-note{font-size:13px;line-height:1.45;color:#eee;overflow:hidden;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;}
+  .card .info{padding:10px 2px 10px;}
+  .card h3{margin:0 0 5px;font-size:14px;font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .card h3 .yr{font-weight:500;color:var(--ink-soft);}
+  .stars{font-size:12.5px;color:var(--ink);letter-spacing:1px;}
+  .stars .off{color:var(--line);}
+  .empty{text-align:center;padding:60px 20px;color:var(--ink-soft);font-size:13px;}
+
+  .overlay{position:fixed;inset:0;background:rgba(25,25,25,0.4);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;z-index:10;}
+  .overlay.open{display:flex;}
+  .form-panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);width:100%;max-width:480px;padding:20px;}
+  .form-panel h2{margin:0 0 4px;font-size:15px;text-transform:uppercase;letter-spacing:0.04em;}
+  .form-sub{font-size:11.5px;color:var(--ink-soft);margin:0 0 16px;line-height:1.4;}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-soft);margin-bottom:4px;}
+  .field input,.field textarea,.field select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius);font-family:inherit;font-size:13px;color:var(--ink);background:#fff;}
+  .field textarea{resize:vertical;min-height:60px;}
+  .title-row{display:flex;gap:6px;align-items:flex-end;}
+  .title-row .field{flex:1;margin-bottom:0;}
+  .medium-toggle{display:flex;gap:6px;margin-bottom:14px;}
+  .medium-toggle button{flex:1;padding:8px;border:1px solid var(--line);background:#fff;font-family:inherit;font-size:12px;cursor:pointer;border-radius:var(--radius);text-transform:uppercase;letter-spacing:0.04em;}
+  .medium-toggle button.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .medium-toggle button[data-m=book].active{background:var(--book);border-color:var(--book);}
+  .medium-toggle button[data-m=film].active{background:var(--film);border-color:var(--film);}
+  .medium-toggle button[data-m=series].active{background:var(--series);border-color:var(--series);}
+  .star-pick{font-size:20px;letter-spacing:2px;cursor:pointer;color:var(--line);}
+  .star-pick span.on{color:var(--ink);}
+  .form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+  .status{font-size:11px;color:var(--ink-soft);margin-top:10px;min-height:14px;line-height:1.5;}
+  .row-two{display:flex;gap:10px;}
+  .row-two .field{flex:1;}
+
+  .suggest-box{border:1px solid var(--line);border-radius:var(--radius);padding:10px;margin:12px 0;background:#fbfbfa;}
+  .suggest-box .suggest-head{font-size:11px;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-soft);margin-bottom:8px;}
+  .suggest-item{display:block;width:100%;text-align:left;padding:8px 9px;border:1px solid var(--line);background:#fff;border-radius:var(--radius);cursor:pointer;font-family:inherit;margin-bottom:6px;}
+  .suggest-item:hover{border-color:var(--ink);}
+  .suggest-item .s-title{font-size:13px;font-weight:600;}
+  .suggest-item .s-desc{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+  .suggest-skip{font-size:11.5px;color:var(--ink-soft);background:none;border:none;text-decoration:underline;cursor:pointer;padding:2px 0;font-family:inherit;}
+
+  .setup{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:24px;text-align:center;}
+  .setup p{font-size:13px;color:var(--ink-soft);line-height:1.6;max-width:440px;margin:0 auto 16px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>nik's media.json</h1>
+    <div class="header-right">
+      <div class="counts mono" id="counts"></div>
+      <button class="add-new-btn" id="addBtn">+ Add new</button>
+    </div>
+  </header>
+
+  <div class="filebar" id="filebar">
+    <span class="dot" id="fileDot"></span>
+    <span id="fileStatus">Checking for a connected data file…</span>
+    <span style="flex:1;"></span>
+    <button class="btn ghost small" id="reconnectBtn" style="display:none;">Reconnect</button>
+    <button class="btn ghost small" id="changeFileBtn" style="display:none;">Change folder</button>
+  </div>
+
+  <div id="setupPanel" class="setup" style="display:none;">
+    <p>No folder connected yet. Pick the folder where you keep this HTML file (or any folder) — the app will create/use a file called <code>media-archive-data.json</code> inside it automatically from now on, no browsing to find it each time. Brave/Chrome will still ask you to reconnect on each new launch — that's the browser's own security check, not something I can skip.</p>
+    <button class="btn" id="connectBtn">Connect folder</button>
+  </div>
+
+  <div id="mainPanel" style="display:none;">
+    <div class="filter-bar">
+      <div class="filter-row">
+        <input type="text" id="search" placeholder="Search title, author, director, cast…">
+        <div class="popover-wrap">
+          <button class="input-btn" id="dateRangeBtn">📅 <span id="dateRangeLabel">Date range</span></button>
+          <div class="popover" id="dateRangePopover">
+            <div class="field"><label>From</label><input type="date" id="dateFrom"></div>
+            <div class="field"><label>To</label><input type="date" id="dateTo"></div>
+            <div class="pop-actions">
+              <button class="btn ghost small" id="dateRangeClear">Clear</button>
+              <button class="btn small" id="dateRangeApply">Apply</button>
+            </div>
+          </div>
+        </div>
+        <select id="sortBy">
+          <option value="dateConsumed_desc">Recently consumed</option>
+          <option value="dateAdded_desc">Recently added</option>
+          <option value="rating_desc">Highest rated</option>
+          <option value="year_desc">Year, newest</option>
+          <option value="title_asc">Title, A–Z</option>
+        </select>
+        <div id="mediumTags" style="display:flex;gap:8px;">
+          <label class="tag-check book active" data-m="book"><input type="checkbox" value="book" checked>Books</label>
+          <label class="tag-check film active" data-m="film"><input type="checkbox" value="film" checked>Films</label>
+          <label class="tag-check series active" data-m="series"><input type="checkbox" value="series" checked>Series</label>
+        </div>
+        <div class="popover-wrap" style="margin-left:auto;">
+          <button class="icon-btn" id="moreBtn" title="More options">⚙</button>
+          <div class="popover" id="morePopover">
+            <button class="btn ghost small full" id="changeFileBtn2">Change folder</button>
+            <button class="btn ghost small full" id="diagBtn">Diagnose connection</button>
+            <button class="btn ghost small full" id="backupBtn">Export / Import JSON</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid" id="list"></div>
+    <div class="empty" id="emptyState" style="display:none;">Nothing here yet. Add your first entry.</div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="form-panel">
+    <h2 id="formTitle">Add entry</h2>
+    <p class="form-sub">Type a title, then hit "Look up" to pull director/cast/year/poster automatically.</p>
+    <div class="medium-toggle" id="mediumToggle">
+      <button data-m="book">Book</button>
+      <button data-m="film">Film</button>
+      <button data-m="series">Series</button>
+    </div>
+
+    <div class="title-row">
+      <div class="field"><label>Title</label><input type="text" id="f_title"></div>
+      <button type="button" class="btn small" id="lookupBtn">Look up</button>
+    </div>
+
+    <div id="suggestBox" class="suggest-box" style="display:none;">
+      <div class="suggest-head">Multiple matches — which one is it?</div>
+      <div id="suggestList"></div>
+      <button class="suggest-skip" id="suggestSkip">None of these</button>
+    </div>
+
+    <div class="row-two">
+      <div class="field"><label id="f_year_label">Year published</label><input type="text" id="f_year" placeholder="e.g. 2019"></div>
+      <div class="field" id="f_author_wrap"><label>Author</label><input type="text" id="f_author"></div>
+    </div>
+
+    <div class="field" id="f_director_wrap"><label id="f_director_label">Director</label><input type="text" id="f_director"></div>
+    <div class="field" id="f_cast_wrap"><label>Cast</label><input type="text" id="f_cast" placeholder="comma-separated"></div>
+    <div class="field" id="f_platform_wrap"><label>Streaming service / watched on</label><input type="text" id="f_platform" placeholder="e.g. Netflix, cinema, Mubi"></div>
+
+    <div class="row-two">
+      <div class="field"><label>Date consumed</label><input type="date" id="f_date"></div>
+      <div class="field">
+        <label>Rating</label>
+        <div class="star-pick" id="starPick">★★★★★</div>
+      </div>
+    </div>
+
+    <div class="field"><label>Cover URL</label><input type="text" id="f_cover" placeholder="Auto-filled by Look up, or paste your own"></div>
+    <div class="field"><label>Insights</label><textarea id="f_insights" placeholder="Notes, reactions, quotes, whatever's worth keeping."></textarea></div>
+
+    <div class="status" id="formStatus"></div>
+    <div class="form-actions">
+      <button class="btn ghost" id="cancelBtn">Cancel</button>
+      <button class="btn" id="saveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="backupOverlay">
+  <div class="form-panel">
+    <h2>Export / Import JSON</h2>
+    <p class="form-sub">Your data file already does this automatically. Use this as a manual backup, or to move data between machines/browsers.</p>
+    <div class="field">
+      <label>Current data — copy this</label>
+      <textarea id="backupExport" class="mono" readonly style="min-height:110px;font-size:11px;"></textarea>
+    </div>
+    <button class="btn small" id="copyBackupBtn">Copy to clipboard</button>
+    <div class="field" style="margin-top:20px;border-top:1px solid var(--line);padding-top:16px;">
+      <label>Restore from a backup — paste JSON here</label>
+      <textarea id="backupImport" class="mono" placeholder="Paste a previously copied backup here" style="min-height:90px;font-size:11px;"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn small ghost" id="mergeBackupBtn">Merge (add missing only)</button>
+      <button class="btn small danger" id="replaceBackupBtn">Replace all</button>
+    </div>
+    <div class="status" id="backupStatus"></div>
+    <div class="form-actions">
+      <button class="btn ghost" id="backupCloseBtn">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="diagOverlay">
+  <div class="form-panel">
+    <h2>Connection diagnostics</h2>
+    <p class="form-sub">Tests the exact endpoints "Look up" relies on and reports the real result.</p>
+    <div id="diagResults" class="mono" style="font-size:12px;line-height:1.8;"></div>
+    <div class="form-actions">
+      <button class="btn ghost" id="diagCloseBtn">Close</button>
+      <button class="btn" id="diagRunBtn">Run again</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let entries = [];
+let editingId = null;
+let currentMedium = 'book';
+let currentRating = 0;
+let dirHandle = null;
+let fileHandle = null;
+const DATA_FILENAME = 'media-archive-data.json';
+
+const $ = id => document.getElementById(id);
+const supportsFS = ('showDirectoryPicker' in window) && window.isSecureContext;
+const isFileProtocol = location.protocol === 'file:';
+
+// ================== folder connection (IndexedDB stores the directory handle) ==================
+function idbOpen(){
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('archiveFileDB', 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('handles');
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function idbSet(key, value){
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('handles', 'readwrite');
+    tx.objectStore('handles').put(value, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+async function idbGet(key){
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('handles', 'readonly');
+    const req = tx.objectStore('handles').get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function setFileStatus(state, text){
+  $('fileDot').className = 'dot' + (state ? ' ' + state : '');
+  $('fileStatus').textContent = text;
+  $('reconnectBtn').style.display = state === 'warn' ? 'inline-block' : 'none';
+  $('changeFileBtn').style.display = state === 'ok' ? 'inline-block' : 'none';
+  $('filebar').style.display = state === 'ok' ? 'none' : 'flex';
+  $('setupPanel').style.display = state === 'ok' ? 'none' : (state === 'warn' ? 'none' : 'block');
+  $('mainPanel').style.display = state === 'ok' ? 'block' : 'none';
+}
+
+async function loadFromFile(){
+  const file = await fileHandle.getFile();
+  const text = await file.text();
+  entries = text.trim() ? JSON.parse(text) : [];
+}
+async function saveToFile(){
+  if(!fileHandle) return;
+  const writable = await fileHandle.createWritable();
+  await writable.write(JSON.stringify(entries, null, 2));
+  await writable.close();
+}
+
+async function connectFolder(){
+  try{
+    const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    dirHandle = handle;
+    await idbSet('dataDirHandle', handle);
+    fileHandle = await dirHandle.getFileHandle(DATA_FILENAME, { create: true });
+    await loadFromFile();
+    setFileStatus('ok', `Connected folder — using ${DATA_FILENAME}`);
+    render();
+  }catch(e){
+    if(e && e.name !== 'AbortError') alert('Could not connect the folder: ' + (e.message || e));
+  }
+}
+
+async function tryRestoreHandle(){
+  if(!supportsFS){
+    if(isFileProtocol){
+      setFileStatus('warn', 'Folder access needs a secure context — this page is open as file://. Run a local server (e.g. "python3 -m http.server 8000" in this folder) and open it via http://localhost:8000/ instead. You can still use Export / Import JSON manually from here.');
+    } else {
+      setFileStatus('warn', 'This browser doesn\'t support direct folder access — use Chrome, Brave, or Edge. You can still use Export / Import JSON manually.');
+    }
+    $('setupPanel').style.display = 'none';
+    $('mainPanel').style.display = 'block';
+    return;
+  }
+  let handle;
+  try{ handle = await idbGet('dataDirHandle'); }catch(e){ handle = null; }
+  if(!handle){
+    setFileStatus(null, 'No folder connected yet.');
+    return;
+  }
+  dirHandle = handle;
+  try{
+    const perm = await handle.queryPermission({ mode: 'readwrite' });
+    if(perm === 'granted'){
+      fileHandle = await dirHandle.getFileHandle(DATA_FILENAME, { create: true });
+      await loadFromFile();
+      setFileStatus('ok', `Connected folder — using ${DATA_FILENAME}`);
+      render();
+      return;
+    }
+  }catch(e){ /* fall through to reconnect */ }
+  setFileStatus('warn', `Reconnect to your folder to continue (Brave asks for this each launch).`);
+}
+
+async function reconnectFile(){
+  if(!dirHandle) return;
+  try{
+    const perm = await dirHandle.requestPermission({ mode: 'readwrite' });
+    if(perm === 'granted'){
+      fileHandle = await dirHandle.getFileHandle(DATA_FILENAME, { create: true });
+      await loadFromFile();
+      setFileStatus('ok', `Connected folder — using ${DATA_FILENAME}`);
+      render();
+    }
+  }catch(e){
+    alert('Reconnect failed: ' + (e.message || e));
+  }
+}
+
+function uid(){ return 'e_' + Date.now() + '_' + Math.random().toString(36).slice(2,8); }
+
+// ================== live auto-fill (works here — no artifact CSP in a locally-run file) ==================
+const MEDIUM_KEYWORDS = {
+  film: ['film', 'movie'],
+  series: ['television series', 'tv series', 'miniseries', 'web series'],
+  book: ['novel', 'book', 'short story', 'graphic novel', 'literary work']
+};
+const MEDIUM_PROPS = {
+  film:   { people: ['P57'],        cast: ['P161'], date: ['P577','P571'] },
+  series: { people: ['P170','P57'], cast: ['P161'], date: ['P571','P580','P577'] },
+  book:   { people: ['P50'],        cast: null,     date: ['P577','P571'] }
+};
+
+async function wikidataSearch(title){
+  const url = `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${encodeURIComponent(title)}&language=en&format=json&origin=*&limit=6&type=item`;
+  const r = await fetch(url);
+  if(!r.ok) throw new Error('Wikidata search HTTP ' + r.status);
+  const d = await r.json();
+  return (d.search || []).map(c => ({ id: c.id, label: c.label || title, description: c.description || '' }));
+}
+function candidateMatchesMedium(c, medium){
+  const desc = (c.description || '').toLowerCase();
+  return MEDIUM_KEYWORDS[medium].some(k => desc.includes(k));
+}
+async function wikidataGetEntity(qid){
+  const url = `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${qid}&props=claims|sitelinks&format=json&origin=*`;
+  const r = await fetch(url);
+  if(!r.ok) throw new Error('Wikidata entity HTTP ' + r.status);
+  const d = await r.json();
+  return d.entities && d.entities[qid] ? d.entities[qid] : null;
+}
+function firstClaimQids(claims, propList, limit){
+  if(!claims || !propList) return [];
+  for(const p of propList){
+    if(claims[p] && claims[p].length){
+      return claims[p].slice(0, limit || 8)
+        .map(c => c.mainsnak && c.mainsnak.datavalue && c.mainsnak.datavalue.value && c.mainsnak.datavalue.value.id)
+        .filter(Boolean);
+    }
+  }
+  return [];
+}
+function firstClaimYear(claims, propList){
+  if(!claims || !propList) return '';
+  for(const p of propList){
+    if(claims[p] && claims[p].length){
+      const v = claims[p][0].mainsnak && claims[p][0].mainsnak.datavalue && claims[p][0].mainsnak.datavalue.value;
+      if(v && v.time) return v.time.replace('+','').slice(0,4);
+    }
+  }
+  return '';
+}
+function firstImageFilename(claims){
+  if(!claims || !claims.P18 || !claims.P18.length) return '';
+  const v = claims.P18[0].mainsnak && claims.P18[0].mainsnak.datavalue && claims.P18[0].mainsnak.datavalue.value;
+  return v || '';
+}
+async function resolveLabels(qids){
+  const unique = [...new Set(qids)].filter(Boolean);
+  if(!unique.length) return {};
+  const url = `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${unique.join('|')}&props=labels&languages=en&format=json&origin=*`;
+  const r = await fetch(url);
+  if(!r.ok) throw new Error('Wikidata labels HTTP ' + r.status);
+  const d = await r.json();
+  const out = {};
+  unique.forEach(id => {
+    const ent = d.entities && d.entities[id];
+    out[id] = ent && ent.labels && ent.labels.en ? ent.labels.en.value : id;
+  });
+  return out;
+}
+async function fetchWikipediaLeadImage(pageTitle){
+  try{
+    const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(pageTitle.replace(/ /g,'_'))}`;
+    const r = await fetch(url);
+    if(!r.ok) return '';
+    const d = await r.json();
+    if(d.originalimage && d.originalimage.source) return d.originalimage.source;
+    if(d.thumbnail && d.thumbnail.source) return d.thumbnail.source;
+    return '';
+  }catch(e){ return ''; }
+}
+async function fetchCoverFallback(medium, title, author){
+  try{
+    if(medium === 'book'){
+      const q = encodeURIComponent(title + (author ? ' ' + author : ''));
+      const r = await fetch(`https://openlibrary.org/search.json?q=${q}&limit=1`);
+      const d = await r.json();
+      if(d.docs && d.docs[0] && d.docs[0].cover_i) return `https://covers.openlibrary.org/b/id/${d.docs[0].cover_i}-L.jpg`;
+      return '';
+    } else {
+      const media = medium === 'film' ? 'movie' : 'tvShow';
+      const r = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(title)}&media=${media}&limit=1`);
+      const d = await r.json();
+      if(d.results && d.results[0] && d.results[0].artworkUrl100) return d.results[0].artworkUrl100.replace('100x100bb','600x600bb');
+      return '';
+    }
+  }catch(e){ return ''; }
+}
+
+async function applyWikidataDetails(qid){
+  const entity = await wikidataGetEntity(qid);
+  if(!entity) return false;
+  const claims = entity.claims;
+  const props = MEDIUM_PROPS[currentMedium];
+
+  const peopleQids = firstClaimQids(claims, props.people, 3);
+  const castQids = props.cast ? firstClaimQids(claims, props.cast, 6) : [];
+  const labels = await resolveLabels([...peopleQids, ...castQids]);
+
+  if(currentMedium === 'book'){
+    if(!$('f_author').value.trim() && peopleQids.length) $('f_author').value = peopleQids.map(q=>labels[q]).join(', ');
+  } else {
+    if(!$('f_director').value.trim() && peopleQids.length) $('f_director').value = peopleQids.map(q=>labels[q]).join(', ');
+    if(!$('f_cast').value.trim() && castQids.length) $('f_cast').value = castQids.map(q=>labels[q]).join(', ');
+  }
+  if(!$('f_year').value.trim()){
+    const y = firstClaimYear(claims, props.date);
+    if(y) $('f_year').value = y;
+  }
+  if(!$('f_cover').value.trim()){
+    let cover = '';
+    if(currentMedium !== 'book'){
+      const enTitle = entity.sitelinks && entity.sitelinks.enwiki && entity.sitelinks.enwiki.title;
+      if(enTitle) cover = await fetchWikipediaLeadImage(enTitle);
+    }
+    if(!cover){
+      const img = firstImageFilename(claims);
+      if(img) cover = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(img)}?width=600`;
+    }
+    if(!cover) cover = await fetchCoverFallback(currentMedium, $('f_title').value.trim(), $('f_author').value.trim());
+    if(cover) $('f_cover').value = cover;
+  }
+  return true;
+}
+
+function showSuggestions(candidates, uncertain){
+  $('suggestBox').style.display = 'block';
+  $('suggestList').innerHTML = candidates.map(c => `
+    <button class="suggest-item" data-qid="${c.id}" data-label="${escapeHtml(c.label)}">
+      <div class="s-title">${escapeHtml(c.label)}</div>
+      <div class="s-desc">${escapeHtml(c.description || 'No description available')}</div>
+    </button>`).join('');
+  $('suggestList').querySelectorAll('.suggest-item').forEach(btn=>{
+    btn.onclick = async () => {
+      $('formStatus').textContent = 'Filling details…';
+      await applyWikidataDetails(btn.dataset.qid);
+      hideSuggestions();
+      $('formStatus').textContent = `Filled from "${btn.dataset.label}". Review, then Save.`;
+    };
+  });
+  $('formStatus').textContent = uncertain
+    ? "Couldn't confirm which of these is the right medium — pick one, or skip."
+    : 'Found more than one match — pick the right one.';
+}
+function hideSuggestions(){
+  $('suggestBox').style.display = 'none';
+  $('suggestList').innerHTML = '';
+}
+
+async function lookupTitle(){
+  const title = $('f_title').value.trim();
+  if(!title){ $('formStatus').textContent = 'Type a title first.'; return; }
+  hideSuggestions();
+  $('lookupBtn').disabled = true;
+  $('formStatus').textContent = 'Looking up on Wikidata…';
+  try{
+    const candidates = await wikidataSearch(title);
+    if(!candidates.length){
+      $('formStatus').textContent = 'No match found for this title.';
+      $('lookupBtn').disabled = false;
+      return;
+    }
+    const matched = candidates.filter(c => candidateMatchesMedium(c, currentMedium));
+    if(matched.length === 1){
+      await applyWikidataDetails(matched[0].id);
+      $('formStatus').textContent = `Filled from Wikidata (${matched[0].label}).`;
+    } else if(matched.length > 1){
+      showSuggestions(matched, false);
+    } else if(candidates.length === 1){
+      await applyWikidataDetails(candidates[0].id);
+      $('formStatus').textContent = `Filled from Wikidata (${candidates[0].label}) — couldn't confirm the medium, worth a check.`;
+    } else {
+      showSuggestions(candidates, true);
+    }
+  }catch(e){
+    $('formStatus').textContent = `Couldn't reach Wikidata — ${e && e.message ? e.message : e}.`;
+  }
+  $('lookupBtn').disabled = false;
+}
+
+// ================== form handling ==================
+function setMedium(m){
+  currentMedium = m;
+  document.querySelectorAll('#mediumToggle button').forEach(b=>b.classList.toggle('active', b.dataset.m===m));
+  $('f_author_wrap').style.display = m === 'book' ? 'block' : 'none';
+  $('f_director_wrap').style.display = m === 'book' ? 'none' : 'block';
+  $('f_director_label').textContent = m === 'series' ? 'Director / Creator' : 'Director';
+  $('f_cast_wrap').style.display = m === 'book' ? 'none' : 'block';
+  $('f_platform_wrap').style.display = m === 'book' ? 'none' : 'block';
+  $('f_year_label').textContent = m === 'book' ? 'Year published' : 'Year released';
+}
+function setRating(n){ currentRating = n; renderStarPick(); }
+function renderStarPick(){
+  $('starPick').innerHTML = '';
+  for(let i=1;i<=5;i++){
+    const s = document.createElement('span');
+    s.textContent = '★';
+    if(i<=currentRating) s.classList.add('on');
+    s.onclick = ()=>setRating(i);
+    $('starPick').appendChild(s);
+  }
+}
+
+function openForm(entry){
+  editingId = entry ? entry.id : null;
+  hideSuggestions();
+  $('formTitle').textContent = entry ? 'Edit entry' : 'Add entry';
+  setMedium(entry ? entry.medium : 'book');
+  $('f_title').value = entry ? entry.title : '';
+  $('f_year').value = entry ? (entry.year || '') : '';
+  $('f_author').value = entry ? (entry.author || '') : '';
+  $('f_director').value = entry ? (entry.director || '') : '';
+  $('f_cast').value = entry ? (entry.cast || '') : '';
+  $('f_platform').value = entry ? (entry.platform || '') : '';
+  $('f_date').value = entry ? (entry.dateConsumed || '') : '';
+  $('f_cover').value = entry ? (entry.coverUrl || '') : '';
+  $('f_insights').value = entry ? (entry.insights || '') : '';
+  setRating(entry ? (entry.rating || 0) : 0);
+  $('formStatus').textContent = '';
+  $('overlay').classList.add('open');
+}
+function closeForm(){ $('overlay').classList.remove('open'); }
+
+async function saveEntry(){
+  const title = $('f_title').value.trim();
+  if(!title){ $('formStatus').textContent = 'Title is required.'; return; }
+  $('saveBtn').disabled = true;
+
+  const entry = {
+    id: editingId || uid(),
+    medium: currentMedium,
+    title,
+    year: $('f_year').value.trim(),
+    author: $('f_author').value.trim(),
+    director: $('f_director').value.trim(),
+    cast: $('f_cast').value.trim(),
+    platform: $('f_platform').value.trim(),
+    dateConsumed: $('f_date').value,
+    rating: currentRating,
+    coverUrl: $('f_cover').value.trim(),
+    insights: $('f_insights').value.trim(),
+    dateAdded: editingId ? (entries.find(e=>e.id===editingId)||{}).dateAdded || Date.now() : Date.now()
+  };
+  if(editingId) entries = entries.map(e => e.id === editingId ? entry : e);
+  else entries.push(entry);
+
+  try{
+    await saveToFile();
+  }catch(e){
+    alert('Saved in memory but could not write to the file: ' + (e.message||e) + '\nUse Export/Import to back this up manually.');
+  }
+  closeForm();
+  render();
+  $('saveBtn').disabled = false;
+}
+
+function deleteEntry(id){
+  const entry = entriesById[id];
+  const label = entry ? `"${entry.title}"` : 'this entry';
+  if(!confirm(`Delete ${label}? This can't be undone.`)) return;
+  entries = entries.filter(e=>e.id!==id);
+  saveToFile().catch(()=>{});
+  render();
+}
+
+// ================== render ==================
+function starsHtml(n){
+  let h = '';
+  for(let i=1;i<=5;i++) h += `<span class="${i<=n?'':'off'}">★</span>`;
+  return h;
+}
+function personLine(e){
+  if(e.medium === 'book') return e.author || '';
+  const parts = [];
+  if(e.director) parts.push(e.director);
+  if(e.cast) parts.push(e.cast);
+  return parts.join(' · ');
+}
+const MEDIUM_ICON = {
+  book: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H12v20H6.5A2.5 2.5 0 0 1 4 19.5v-15Z"/><path d="M20 4.5A2.5 2.5 0 0 0 17.5 2H12v20h5.5a2.5 2.5 0 0 0 2.5-2.5v-15Z"/></svg>',
+  film: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 8 15.5-3 .8 4-15.5 3Z"/><rect x="4" y="10" width="16" height="10" rx="1"/></svg>',
+  series: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="m8 3 4 3 4-3"/></svg>'
+};
+function activeMediums(){
+  return new Set(
+    Array.from(document.querySelectorAll('#mediumTags input[type=checkbox]:checked')).map(cb=>cb.value)
+  );
+}
+
+let entriesById = {};
+function renderCards(){
+  entriesById = {};
+  entries.forEach(e=>{ entriesById[e.id] = e; });
+  $('list').innerHTML = entries.map(e=>`
+    <div class="card" data-id="${e.id}" onclick="openForm(${JSON.stringify(e).replace(/"/g,'&quot;')})">
+      <button class="del" onclick="event.stopPropagation();deleteEntry('${e.id}')" title="Delete">×</button>
+      <div class="cover">
+        ${e.coverUrl ? `<img src="${e.coverUrl}" alt="" loading="lazy">` : `<div class="ph ${e.medium}">${escapeHtml(e.title)}</div>`}
+        ${(e.dateConsumed || e.insights || personLine(e)) ? `<div class="hover-info">
+          ${personLine(e) ? `<div class="hi-people">${escapeHtml(personLine(e))}</div>` : ''}
+          ${e.dateConsumed ? `<div class="hi-date">Consumed ${escapeHtml(e.dateConsumed)}</div>` : ''}
+          ${e.insights ? `<div class="hi-note">${escapeHtml(e.insights)}</div>` : ''}
+        </div>` : ''}
+        <span class="shield ${e.medium}">${MEDIUM_ICON[e.medium] || ''}</span>
+      </div>
+      <div class="info">
+        <h3>${escapeHtml(e.title)}${e.year ? ` <span class="yr">(${escapeHtml(e.year)})</span>` : ''}</h3>
+        <div class="stars">${starsHtml(e.rating)}</div>
+      </div>
+    </div>`
+  ).join('');
+}
+
+function setCardVisible(card, show){
+  clearTimeout(card._hideTimer);
+  if(show){
+    card.style.display = '';
+    void card.offsetWidth;
+    card.classList.remove('hidden');
+  } else {
+    card.classList.add('hidden');
+    card._hideTimer = setTimeout(()=>{ card.style.display = 'none'; }, 120);
+  }
+}
+
+function applyFilters(){
+  const search = $('search').value.trim().toLowerCase();
+  const mediums = activeMediums();
+  const dateFrom = $('dateFrom').value;
+  const dateTo = $('dateTo').value;
+  const sortBy = $('sortBy').value;
+
+  const cards = Array.from(document.querySelectorAll('#list .card'));
+  const visible = [];
+  cards.forEach(card=>{
+    const e = entriesById[card.dataset.id];
+    let show = mediums.has(e.medium);
+    if(show && dateFrom && (!e.dateConsumed || e.dateConsumed < dateFrom)) show = false;
+    if(show && dateTo && (!e.dateConsumed || e.dateConsumed > dateTo)) show = false;
+    if(show && search){
+      const hay = [e.title,e.author,e.director,e.cast,e.insights].filter(Boolean).join(' ').toLowerCase();
+      if(!hay.includes(search)) show = false;
+    }
+    setCardVisible(card, show);
+    if(show) visible.push({card,e});
+  });
+  visible.sort((a,b)=>{
+    switch(sortBy){
+      case 'dateConsumed_desc': return (b.e.dateConsumed||'').localeCompare(a.e.dateConsumed||'');
+      case 'dateAdded_desc': return (b.e.dateAdded||0) - (a.e.dateAdded||0);
+      case 'rating_desc': return (b.e.rating||0) - (a.e.rating||0);
+      case 'year_desc': return (parseInt(b.e.year)||0) - (parseInt(a.e.year)||0);
+      case 'title_asc': return (a.e.title||'').localeCompare(b.e.title||'');
+    }
+  });
+  visible.forEach((v,i)=>{ v.card.style.order = i; });
+
+  $('emptyState').style.display = visible.length ? 'none' : 'block';
+
+  const c = {book:0,film:0,series:0};
+  entries.forEach(e=>{ if(c[e.medium]!==undefined) c[e.medium]++; });
+  $('counts').innerHTML = `<span><b>${c.book}</b> books</span><span><b>${c.film}</b> films</span><span><b>${c.series}</b> series</span>`;
+}
+
+function render(){ renderCards(); applyFilters(); }
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+// ================== connection diagnostics ==================
+const DIAG_TARGETS = [
+  { id: 'wd_search', name: 'Wikidata search', url: 'https://www.wikidata.org/w/api.php?action=wbsearchentities&search=test&language=en&format=json&origin=*&limit=1&type=item' },
+  { id: 'wd_entity', name: 'Wikidata entity detail', url: 'https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q64&props=labels&languages=en&format=json&origin=*' },
+  { id: 'wp_poster', name: 'Wikipedia (film/series poster)', url: 'https://en.wikipedia.org/api/rest_v1/page/summary/Berlin' },
+  { id: 'itunes', name: 'iTunes Search (cover fallback)', url: 'https://itunes.apple.com/search?term=test&limit=1' },
+  { id: 'openlib', name: 'Open Library (book cover)', url: 'https://openlibrary.org/search.json?q=test&limit=1' }
+];
+async function runDiagnostics(){
+  $('diagResults').innerHTML = DIAG_TARGETS.map(t => `<div id="diag_${t.id}">${escapeHtml(t.name)}: checking…</div>`).join('');
+  await Promise.all(DIAG_TARGETS.map(async t => {
+    const el = document.getElementById('diag_' + t.id);
+    const start = performance.now();
+    try{
+      const r = await fetch(t.url);
+      const ms = Math.round(performance.now() - start);
+      el.textContent = `${r.ok ? '✅' : '⚠️'} ${t.name}: HTTP ${r.status} (${ms}ms)`;
+    }catch(e){
+      el.textContent = `❌ ${t.name}: ${e && e.message ? e.message : e}`;
+    }
+  }));
+}
+
+// ================== export / import (manual backup) ==================
+function openBackup(){
+  $('backupExport').value = JSON.stringify(entries, null, 2);
+  $('backupImport').value = '';
+  $('backupStatus').textContent = '';
+  $('backupOverlay').classList.add('open');
+}
+function parseBackupInput(){
+  const raw = $('backupImport').value.trim();
+  if(!raw) throw new Error('empty');
+  const parsed = JSON.parse(raw);
+  if(!Array.isArray(parsed)) throw new Error('not an array');
+  return parsed;
+}
+
+// ================== wiring ==================
+document.querySelectorAll('#mediumToggle button').forEach(b=>b.onclick = ()=>setMedium(b.dataset.m));
+$('addBtn').onclick = ()=>openForm(null);
+$('cancelBtn').onclick = closeForm;
+$('saveBtn').onclick = saveEntry;
+$('lookupBtn').onclick = lookupTitle;
+$('search').oninput = applyFilters;
+$('sortBy').onchange = applyFilters;
+const allMediumTags = () => Array.from(document.querySelectorAll('#mediumTags .tag-check'));
+allMediumTags().forEach(label=>{
+  label.addEventListener('click', e=>{
+    e.preventDefault();
+    const tags = allMediumTags();
+    const allActive = tags.every(l => l.querySelector('input').checked);
+    if(allActive){
+      tags.forEach(l=>{
+        const on = l === label;
+        l.querySelector('input').checked = on;
+        l.classList.toggle('active', on);
+      });
+    } else {
+      const cb = label.querySelector('input');
+      cb.checked = !cb.checked;
+      label.classList.toggle('active', cb.checked);
+    }
+    applyFilters();
+  });
+});
+$('suggestSkip').onclick = () => { hideSuggestions(); $('formStatus').textContent = 'Skipped — fill in manually and Save.'; };
+$('overlay').addEventListener('click', e=>{ if(e.target.id==='overlay') closeForm(); });
+
+$('connectBtn').onclick = connectFolder;
+$('reconnectBtn').onclick = reconnectFile;
+$('changeFileBtn').onclick = connectFolder;
+
+// ================== popovers ==================
+function togglePopover(id){
+  document.querySelectorAll('.popover.open').forEach(p=>{ if(p.id!==id) p.classList.remove('open'); });
+  $(id).classList.toggle('open');
+}
+$('dateRangeBtn').onclick = e => { e.stopPropagation(); togglePopover('dateRangePopover'); };
+$('moreBtn').onclick = e => { e.stopPropagation(); togglePopover('morePopover'); };
+document.addEventListener('click', e=>{
+  document.querySelectorAll('.popover.open').forEach(p=>{
+    if(!p.contains(e.target) && e.target.id!=='dateRangeBtn' && e.target.id!=='moreBtn') p.classList.remove('open');
+  });
+});
+function updateDateRangeLabel(){
+  const f = $('dateFrom').value, t = $('dateTo').value;
+  $('dateRangeLabel').textContent = (f || t) ? `${f||'…'} – ${t||'…'}` : 'Date range';
+}
+$('dateFrom').onchange = () => { updateDateRangeLabel(); applyFilters(); };
+$('dateTo').onchange = () => { updateDateRangeLabel(); applyFilters(); };
+$('dateRangeApply').onclick = () => { $('dateRangePopover').classList.remove('open'); };
+$('dateRangeClear').onclick = () => { $('dateFrom').value=''; $('dateTo').value=''; updateDateRangeLabel(); applyFilters(); };
+
+$('diagBtn').onclick = () => { $('morePopover').classList.remove('open'); $('diagOverlay').classList.add('open'); runDiagnostics(); };
+$('diagRunBtn').onclick = runDiagnostics;
+$('diagCloseBtn').onclick = () => $('diagOverlay').classList.remove('open');
+$('diagOverlay').addEventListener('click', e => { if(e.target.id === 'diagOverlay') $('diagOverlay').classList.remove('open'); });
+
+$('backupBtn').onclick = () => { $('morePopover').classList.remove('open'); openBackup(); };
+$('changeFileBtn2').onclick = () => { $('morePopover').classList.remove('open'); connectFolder(); };
+$('backupCloseBtn').onclick = () => $('backupOverlay').classList.remove('open');
+$('backupOverlay').addEventListener('click', e => { if(e.target.id === 'backupOverlay') $('backupOverlay').classList.remove('open'); });
+$('copyBackupBtn').onclick = async () => {
+  try{ await navigator.clipboard.writeText($('backupExport').value); $('backupStatus').textContent = 'Copied to clipboard.'; }
+  catch(e){ $('backupExport').select(); $('backupStatus').textContent = 'Clipboard blocked — text selected, copy manually.'; }
+};
+$('mergeBackupBtn').onclick = async () => {
+  try{
+    const incoming = parseBackupInput();
+    const existingIds = new Set(entries.map(e => e.id));
+    let added = 0;
+    incoming.forEach(e => { if(e && e.id && !existingIds.has(e.id)){ entries.push(e); added++; } });
+    await saveToFile();
+    render();
+    $('backupStatus').textContent = `Merged — added ${added} new entr${added===1?'y':'ies'}.`;
+  }catch(e){ $('backupStatus').textContent = "Couldn't read that as a backup."; }
+};
+$('replaceBackupBtn').onclick = async () => {
+  try{
+    const incoming = parseBackupInput();
+    if(!confirm(`Replace all ${entries.length} current entries with ${incoming.length} from this backup?`)) return;
+    entries = incoming;
+    await saveToFile();
+    render();
+    $('backupStatus').textContent = `Replaced — now ${entries.length} entries.`;
+  }catch(e){ $('backupStatus').textContent = "Couldn't read that as a backup."; }
+};
+
+tryRestoreHandle();
+</script>
+</body>
+</html>
