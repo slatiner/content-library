@@ -36,12 +36,7 @@ The File System Access API (used for "Connect folder") requires a [secure contex
 
 ## Project status & roadmap
 
-This is an evolving personal project, currently a single static HTML file with no backend. Planned direction (see [issues](../../issues) for current progress):
-
-- [ ] Add **music** as a trackable content type, with links to Spotify/YouTube
-- [ ] A natural-language "add / find" assistant using a free-tier LLM API
-- [ ] Move from a local JSON file to a real backend (evaluating [PocketBase](https://pocketbase.io/) / [Supabase](https://supabase.com/) — both free/open-source and bundle a database with auth)
-- [ ] Multi-user support with OAuth sign-in (Google first; Apple Sign-In requires a paid Apple Developer account, so it's deferred)
+This is an evolving personal project, currently a single static HTML file with no backend. See [`ROADMAP.md`](./ROADMAP.md) for the phased plan and the reasoning behind it, and [issues](../../issues) for live task status per phase.
 
 ## Contributing
 
