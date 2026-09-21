@@ -528,6 +528,23 @@ async function fetchWikipediaLeadImage(pageTitle){
     return '';
   }catch(e){ return ''; }
 }
+// iTunes Search API sends no Access-Control-Allow-Origin header, so a plain
+// fetch() is blocked by CORS from any browser origin (not just file://).
+// JSONP (a <script> tag, not subject to CORS) is the API's own intended
+// workaround for client-side use — it supports a `callback` param for this.
+function jsonp(url){
+  return new Promise((resolve, reject) => {
+    const cbName = 'jsonp_cb_' + Math.random().toString(36).slice(2);
+    const script = document.createElement('script');
+    const timer = setTimeout(() => { cleanup(); reject(new Error('Request timed out')); }, 10000);
+    function cleanup(){ clearTimeout(timer); delete window[cbName]; script.remove(); }
+    window[cbName] = data => { cleanup(); resolve(data); };
+    script.onerror = () => { cleanup(); reject(new Error('Request failed')); };
+    script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cbName;
+    document.head.appendChild(script);
+  });
+}
+
 async function fetchCoverFallback(medium, title, author){
   try{
     if(medium === 'book'){
@@ -538,8 +555,7 @@ async function fetchCoverFallback(medium, title, author){
       return '';
     } else {
       const media = medium === 'film' ? 'movie' : 'tvShow';
-      const r = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(title)}&media=${media}&limit=1`);
-      const d = await r.json();
+      const d = await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(title)}&media=${media}&limit=1`);
       if(d.results && d.results[0] && d.results[0].artworkUrl100) return d.results[0].artworkUrl100.replace('100x100bb','600x600bb');
       return '';
     }
@@ -607,9 +623,7 @@ function hideSuggestions(){
 }
 
 async function applyItunesMusicDetails(title){
-  const r = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(title)}&media=music&limit=1`);
-  if(!r.ok) throw new Error('iTunes HTTP ' + r.status);
-  const d = await r.json();
+  const d = await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(title)}&media=music&limit=1`);
   const hit = d.results && d.results[0];
   if(!hit) return false;
   if(!$('f_author').value.trim() && hit.artistName) $('f_author').value = hit.artistName;
@@ -869,7 +883,7 @@ const DIAG_TARGETS = [
   { id: 'wd_search', name: 'Wikidata search', url: 'https://www.wikidata.org/w/api.php?action=wbsearchentities&search=test&language=en&format=json&origin=*&limit=1&type=item' },
   { id: 'wd_entity', name: 'Wikidata entity detail', url: 'https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q64&props=labels&languages=en&format=json&origin=*' },
   { id: 'wp_poster', name: 'Wikipedia (film/series poster)', url: 'https://en.wikipedia.org/api/rest_v1/page/summary/Berlin' },
-  { id: 'itunes', name: 'iTunes Search (cover fallback)', url: 'https://itunes.apple.com/search?term=test&limit=1' },
+  { id: 'itunes', name: 'iTunes Search (music + cover fallback)', url: 'https://itunes.apple.com/search?term=test&limit=1', via: 'jsonp' },
   { id: 'openlib', name: 'Open Library (book cover)', url: 'https://openlibrary.org/search.json?q=test&limit=1' }
 ];
 async function runDiagnostics(){
@@ -878,9 +892,15 @@ async function runDiagnostics(){
     const el = document.getElementById('diag_' + t.id);
     const start = performance.now();
     try{
-      const r = await fetch(t.url);
-      const ms = Math.round(performance.now() - start);
-      el.textContent = `${r.ok ? '✅' : '⚠️'} ${t.name}: HTTP ${r.status} (${ms}ms)`;
+      if(t.via === 'jsonp'){
+        await jsonp(t.url);
+        const ms = Math.round(performance.now() - start);
+        el.textContent = `✅ ${t.name}: OK via JSONP (${ms}ms)`;
+      } else {
+        const r = await fetch(t.url);
+        const ms = Math.round(performance.now() - start);
+        el.textContent = `${r.ok ? '✅' : '⚠️'} ${t.name}: HTTP ${r.status} (${ms}ms)`;
+      }
     }catch(e){
       el.textContent = `❌ ${t.name}: ${e && e.message ? e.message : e}`;
     }
