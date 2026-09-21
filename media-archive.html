@@ -329,12 +329,21 @@ async function idbGet(key){
     req.onerror = () => reject(req.error);
   });
 }
+async function idbDelete(key){
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('handles', 'readwrite');
+    tx.objectStore('handles').delete(key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
 
 function setFileStatus(state, text){
   $('fileDot').className = 'dot' + (state ? ' ' + state : '');
   $('fileStatus').textContent = text;
   $('reconnectBtn').style.display = state === 'warn' ? 'inline-block' : 'none';
-  $('changeFileBtn').style.display = state === 'ok' ? 'inline-block' : 'none';
+  $('changeFileBtn').style.display = (state === 'ok' || state === 'warn') ? 'inline-block' : 'none';
   $('filebar').style.display = state === 'ok' ? 'none' : 'flex';
   $('setupPanel').style.display = state === 'ok' ? 'none' : (state === 'warn' ? 'none' : 'block');
   $('mainPanel').style.display = state === 'ok' ? 'block' : 'none';
@@ -393,7 +402,15 @@ async function tryRestoreHandle(){
       render();
       return;
     }
-  }catch(e){ /* fall through to reconnect */ }
+  }catch(e){
+    if(e && e.name === 'NotFoundError'){
+      await idbDelete('dataDirHandle').catch(()=>{});
+      dirHandle = null;
+      setFileStatus('warn', `That folder couldn't be found — it may have been moved or renamed. Click "Change folder" to pick its new location.`);
+      return;
+    }
+    /* other errors: fall through to reconnect */
+  }
   setFileStatus('warn', `Reconnect to your folder to continue (Brave asks for this each launch).`);
 }
 
@@ -408,6 +425,12 @@ async function reconnectFile(){
       render();
     }
   }catch(e){
+    if(e && e.name === 'NotFoundError'){
+      await idbDelete('dataDirHandle').catch(()=>{});
+      dirHandle = null;
+      setFileStatus('warn', `That folder couldn't be found — it may have been moved or renamed. Click "Change folder" to pick its new location.`);
+      return;
+    }
     alert('Reconnect failed: ' + (e.message || e));
   }
 }
