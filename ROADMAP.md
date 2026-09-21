@@ -23,7 +23,7 @@ Run `gh issue list --label phase-1-music` (etc.) to see live status for a phase.
 | Phase | Name | Status | Milestone |
 |---|---|---|---|
 | 0 | Foundation | ✅ Done | — |
-| 1 | Music content type | 🔲 Not started | [Phase 1](../../milestone/1) |
+| 1 | Music content type | ✅ Done | [Phase 1](../../milestone/1) |
 | 2 | Natural-language add/find assistant | 🔲 Not started | [Phase 2](../../milestone/2) |
 | 3 | Backend foundation (DB) | 🔲 Not started | [Phase 3](../../milestone/3) |
 | 4 | Auth & multi-user | 🔲 Not started | [Phase 4](../../milestone/4) |
