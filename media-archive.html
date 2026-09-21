@@ -15,6 +15,7 @@
     --book:#3f5484;
     --film:#a8503a;
     --series:#3f6b4f;
+    --music:#6b4c8a;
     --warn:#a8503a;
     --radius:8px;
     --radius-lg:14px;
@@ -62,6 +63,7 @@
   .tag-check.book.active{background:var(--book);border-color:var(--book);color:#fff;}
   .tag-check.film.active{background:var(--film);border-color:var(--film);color:#fff;}
   .tag-check.series.active{background:var(--series);border-color:var(--series);color:#fff;}
+  .tag-check.music.active{background:var(--music);border-color:var(--music);color:#fff;}
 
   .popover-wrap{position:relative;}
   .popover{position:absolute;top:calc(100% + 6px);right:0;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;min-width:210px;box-shadow:0 6px 20px rgba(0,0,0,0.12);display:none;z-index:6;}
@@ -83,11 +85,13 @@
   .card .cover .ph.book{background:var(--book);}
   .card .cover .ph.film{background:var(--film);}
   .card .cover .ph.series{background:var(--series);}
+  .card .cover .ph.music{background:var(--music);}
   .shield{position:absolute;top:0;right:12px;padding:7px 9px 12px;line-height:1;clip-path:polygon(0 0,100% 0,100% 76%,50% 100%,0 76%);display:flex;align-items:flex-start;justify-content:center;z-index:2;}
   .shield svg{width:15px;height:15px;display:block;}
   .shield.book{background:var(--book);}
   .shield.film{background:var(--film);}
   .shield.series{background:var(--series);}
+  .shield.music{background:var(--music);}
   .card .del{position:absolute;top:6px;left:6px;width:22px;height:22px;border-radius:50%;background:rgba(25,25,25,0.55);color:#fff;border:none;font-size:13px;line-height:22px;text-align:center;cursor:pointer;display:none;padding:0;z-index:2;}
   .card:hover .del{display:block;}
   .hover-info{position:absolute;inset:0;background:rgba(20,20,20,0.82);color:#fff;padding:12px;display:flex;flex-direction:column;justify-content:flex-end;gap:6px;opacity:0;transition:opacity .15s ease;pointer-events:none;z-index:1;}
@@ -95,6 +99,8 @@
   .hover-info .hi-people{font-size:13.5px;font-weight:600;line-height:1.35;color:#fff;margin-bottom:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
   .hover-info .hi-date{font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#b9b9b6;margin-bottom:6px;}
   .hover-info .hi-note{font-size:13px;line-height:1.45;color:#eee;overflow:hidden;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;}
+  .hover-info .hi-listen{font-size:11.5px;font-weight:600;letter-spacing:0.02em;color:#fff;text-decoration:none;margin-top:6px;display:inline-flex;align-items:center;gap:4px;pointer-events:auto;}
+  .hover-info .hi-listen:hover{text-decoration:underline;}
   .card .info{padding:10px 2px 10px;}
   .card h3{margin:0 0 5px;font-size:14px;font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
   .card h3 .yr{font-weight:500;color:var(--ink-soft);}
@@ -119,6 +125,7 @@
   .medium-toggle button[data-m=book].active{background:var(--book);border-color:var(--book);}
   .medium-toggle button[data-m=film].active{background:var(--film);border-color:var(--film);}
   .medium-toggle button[data-m=series].active{background:var(--series);border-color:var(--series);}
+  .medium-toggle button[data-m=music].active{background:var(--music);border-color:var(--music);}
   .star-pick{font-size:20px;letter-spacing:2px;cursor:pointer;color:var(--line);}
   .star-pick span.on{color:var(--ink);}
   .form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
@@ -187,6 +194,7 @@
           <label class="tag-check book active" data-m="book"><input type="checkbox" value="book" checked>Books</label>
           <label class="tag-check film active" data-m="film"><input type="checkbox" value="film" checked>Films</label>
           <label class="tag-check series active" data-m="series"><input type="checkbox" value="series" checked>Series</label>
+          <label class="tag-check music active" data-m="music"><input type="checkbox" value="music" checked>Music</label>
         </div>
         <div class="popover-wrap" style="margin-left:auto;">
           <button class="icon-btn" id="moreBtn" title="More options">⚙</button>
@@ -212,6 +220,7 @@
       <button data-m="book">Book</button>
       <button data-m="film">Film</button>
       <button data-m="series">Series</button>
+      <button data-m="music">Music</button>
     </div>
 
     <div class="title-row">
@@ -227,12 +236,13 @@
 
     <div class="row-two">
       <div class="field"><label id="f_year_label">Year published</label><input type="text" id="f_year" placeholder="e.g. 2019"></div>
-      <div class="field" id="f_author_wrap"><label>Author</label><input type="text" id="f_author"></div>
+      <div class="field" id="f_author_wrap"><label id="f_author_label">Author</label><input type="text" id="f_author"></div>
     </div>
 
     <div class="field" id="f_director_wrap"><label id="f_director_label">Director</label><input type="text" id="f_director"></div>
-    <div class="field" id="f_cast_wrap"><label>Cast</label><input type="text" id="f_cast" placeholder="comma-separated"></div>
+    <div class="field" id="f_cast_wrap"><label id="f_cast_label">Cast</label><input type="text" id="f_cast" placeholder="comma-separated"></div>
     <div class="field" id="f_platform_wrap"><label>Streaming service / watched on</label><input type="text" id="f_platform" placeholder="e.g. Netflix, cinema, Mubi"></div>
+    <div class="field" id="f_url_wrap"><label>Listen link</label><input type="text" id="f_url" placeholder="Spotify, YouTube, SoundCloud, Mixcloud…"></div>
 
     <div class="row-two">
       <div class="field"><label>Date consumed</label><input type="date" id="f_date"></div>
@@ -596,11 +606,36 @@ function hideSuggestions(){
   $('suggestList').innerHTML = '';
 }
 
+async function applyItunesMusicDetails(title){
+  const r = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(title)}&media=music&limit=1`);
+  if(!r.ok) throw new Error('iTunes HTTP ' + r.status);
+  const d = await r.json();
+  const hit = d.results && d.results[0];
+  if(!hit) return false;
+  if(!$('f_author').value.trim() && hit.artistName) $('f_author').value = hit.artistName;
+  if(!$('f_year').value.trim() && hit.releaseDate) $('f_year').value = hit.releaseDate.slice(0, 4);
+  if(!$('f_cover').value.trim() && hit.artworkUrl100) $('f_cover').value = hit.artworkUrl100.replace('100x100bb', '600x600bb');
+  return true;
+}
+
 async function lookupTitle(){
   const title = $('f_title').value.trim();
   if(!title){ $('formStatus').textContent = 'Type a title first.'; return; }
   hideSuggestions();
   $('lookupBtn').disabled = true;
+  if(currentMedium === 'music'){
+    $('formStatus').textContent = 'Looking up on iTunes…';
+    try{
+      const filled = await applyItunesMusicDetails(title);
+      $('formStatus').textContent = filled
+        ? 'Filled artist, year, and cover from iTunes. Band members and the listen link aren\'t auto-filled — add those yourself.'
+        : 'No match found on iTunes.';
+    }catch(e){
+      $('formStatus').textContent = `Couldn't reach iTunes — ${e && e.message ? e.message : e}.`;
+    }
+    $('lookupBtn').disabled = false;
+    return;
+  }
   $('formStatus').textContent = 'Looking up on Wikidata…';
   try{
     const candidates = await wikidataSearch(title);
@@ -631,11 +666,19 @@ async function lookupTitle(){
 function setMedium(m){
   currentMedium = m;
   document.querySelectorAll('#mediumToggle button').forEach(b=>b.classList.toggle('active', b.dataset.m===m));
-  $('f_author_wrap').style.display = m === 'book' ? 'block' : 'none';
-  $('f_director_wrap').style.display = m === 'book' ? 'none' : 'block';
+
+  $('f_author_wrap').style.display = (m === 'book' || m === 'music') ? 'block' : 'none';
+  $('f_author_label').textContent = m === 'music' ? 'Artist' : 'Author';
+
+  $('f_director_wrap').style.display = (m === 'film' || m === 'series') ? 'block' : 'none';
   $('f_director_label').textContent = m === 'series' ? 'Director / Creator' : 'Director';
+
   $('f_cast_wrap').style.display = m === 'book' ? 'none' : 'block';
-  $('f_platform_wrap').style.display = m === 'book' ? 'none' : 'block';
+  $('f_cast_label').textContent = m === 'music' ? 'Band members' : 'Cast';
+
+  $('f_platform_wrap').style.display = (m === 'film' || m === 'series') ? 'block' : 'none';
+  $('f_url_wrap').style.display = m === 'music' ? 'block' : 'none';
+
   $('f_year_label').textContent = m === 'book' ? 'Year published' : 'Year released';
 }
 function setRating(n){ currentRating = n; renderStarPick(); }
@@ -661,6 +704,7 @@ function openForm(entry){
   $('f_director').value = entry ? (entry.director || '') : '';
   $('f_cast').value = entry ? (entry.cast || '') : '';
   $('f_platform').value = entry ? (entry.platform || '') : '';
+  $('f_url').value = entry ? (entry.streamUrl || '') : '';
   $('f_date').value = entry ? (entry.dateConsumed || '') : '';
   $('f_cover').value = entry ? (entry.coverUrl || '') : '';
   $('f_insights').value = entry ? (entry.insights || '') : '';
@@ -684,6 +728,7 @@ async function saveEntry(){
     director: $('f_director').value.trim(),
     cast: $('f_cast').value.trim(),
     platform: $('f_platform').value.trim(),
+    streamUrl: $('f_url').value.trim(),
     dateConsumed: $('f_date').value,
     rating: currentRating,
     coverUrl: $('f_cover').value.trim(),
@@ -721,6 +766,7 @@ function starsHtml(n){
 function personLine(e){
   if(e.medium === 'book') return e.author || '';
   const parts = [];
+  if(e.medium === 'music' && e.author) parts.push(e.author);
   if(e.director) parts.push(e.director);
   if(e.cast) parts.push(e.cast);
   return parts.join(' · ');
@@ -728,7 +774,8 @@ function personLine(e){
 const MEDIUM_ICON = {
   book: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H12v20H6.5A2.5 2.5 0 0 1 4 19.5v-15Z"/><path d="M20 4.5A2.5 2.5 0 0 0 17.5 2H12v20h5.5a2.5 2.5 0 0 0 2.5-2.5v-15Z"/></svg>',
   film: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 8 15.5-3 .8 4-15.5 3Z"/><rect x="4" y="10" width="16" height="10" rx="1"/></svg>',
-  series: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="m8 3 4 3 4-3"/></svg>'
+  series: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="m8 3 4 3 4-3"/></svg>',
+  music: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>'
 };
 function activeMediums(){
   return new Set(
@@ -745,10 +792,11 @@ function renderCards(){
       <button class="del" onclick="event.stopPropagation();deleteEntry('${e.id}')" title="Delete">×</button>
       <div class="cover">
         ${e.coverUrl ? `<img src="${e.coverUrl}" alt="" loading="lazy">` : `<div class="ph ${e.medium}">${escapeHtml(e.title)}</div>`}
-        ${(e.dateConsumed || e.insights || personLine(e)) ? `<div class="hover-info">
+        ${(e.dateConsumed || e.insights || personLine(e) || e.streamUrl) ? `<div class="hover-info">
           ${personLine(e) ? `<div class="hi-people">${escapeHtml(personLine(e))}</div>` : ''}
           ${e.dateConsumed ? `<div class="hi-date">Consumed ${escapeHtml(e.dateConsumed)}</div>` : ''}
           ${e.insights ? `<div class="hi-note">${escapeHtml(e.insights)}</div>` : ''}
+          ${e.streamUrl ? `<a class="hi-listen" href="${escapeHtml(e.streamUrl)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Listen ↗</a>` : ''}
         </div>` : ''}
         <span class="shield ${e.medium}">${MEDIUM_ICON[e.medium] || ''}</span>
       </div>
@@ -806,9 +854,9 @@ function applyFilters(){
 
   $('emptyState').style.display = visible.length ? 'none' : 'block';
 
-  const c = {book:0,film:0,series:0};
+  const c = {book:0,film:0,series:0,music:0};
   entries.forEach(e=>{ if(c[e.medium]!==undefined) c[e.medium]++; });
-  $('counts').innerHTML = `<span><b>${c.book}</b> books</span><span><b>${c.film}</b> films</span><span><b>${c.series}</b> series</span>`;
+  $('counts').innerHTML = `<span><b>${c.book}</b> books</span><span><b>${c.film}</b> films</span><span><b>${c.series}</b> series</span><span><b>${c.music}</b> music</span>`;
 }
 
 function render(){ renderCards(); applyFilters(); }

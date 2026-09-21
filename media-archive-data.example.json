@@ -8,6 +8,7 @@
     "director": "Satoshi Kon",
     "cast": "",
     "platform": "",
+    "streamUrl": "",
     "dateConsumed": "2026-08-10",
     "rating": 4,
     "coverUrl": "https://upload.wikimedia.org/wikipedia/en/1/16/Paprikaposter.jpg",
@@ -23,6 +24,7 @@
     "director": "",
     "cast": "",
     "platform": "",
+    "streamUrl": "",
     "dateConsumed": "2024-06-22",
     "rating": 5,
     "coverUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Hermann%20Hesse%20Der%20Steppenwolf%201927.jpg?width=600",
@@ -38,10 +40,27 @@
     "director": "Graham Yost",
     "cast": "Rebecca Ferguson",
     "platform": "Apple TV",
+    "streamUrl": "",
     "dateConsumed": "2026-08-01",
     "rating": 4,
     "coverUrl": "https://static.tvmaze.com/uploads/images/original_untouched/631/1577677.jpg",
     "insights": "",
     "dateAdded": 1700000020000
+  },
+  {
+    "id": "e_1700000030000_example4",
+    "medium": "music",
+    "title": "In Rainbows",
+    "year": "2007",
+    "author": "Radiohead",
+    "director": "",
+    "cast": "Thom Yorke, Jonny Greenwood, Colin Greenwood, Ed O'Brien, Philip Selway",
+    "platform": "",
+    "streamUrl": "https://open.spotify.com/album/5vkqYmiPBYLaalcmjujWxK",
+    "dateConsumed": "2026-08-15",
+    "rating": 5,
+    "coverUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/dd/50/c7/dd50c790-99ac-d3d0-5ab8-e3891fb8fd52/634904032463.png/600x600bb.jpg",
+    "insights": "",
+    "dateAdded": 1700000030000
   }
 ]
