@@ -126,6 +126,30 @@
   .medium-toggle button[data-m=film].active{background:var(--film);border-color:var(--film);}
   .medium-toggle button[data-m=series].active{background:var(--series);border-color:var(--series);}
   .medium-toggle button[data-m=music].active{background:var(--music);border-color:var(--music);}
+  .view-tabs{display:flex;gap:6px;margin-bottom:14px;}
+  .view-tabs button{flex:1;padding:8px;border:1px solid var(--line);background:#fff;font-family:inherit;font-size:12px;cursor:pointer;border-radius:var(--radius);text-transform:uppercase;letter-spacing:0.04em;}
+  .view-tabs button.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+  #aiInput{width:100%;min-height:96px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius);font-family:inherit;font-size:14px;line-height:1.45;color:var(--ink);background:#fff;resize:vertical;}
+  .ai-preview{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:var(--radius);background:#fbfbfa;}
+  .pv-row{display:flex;gap:12px;}
+  .pv-cover{width:64px;aspect-ratio:2/3;flex:none;border-radius:8px;overflow:hidden;background:var(--line);}
+  .pv-cover img{width:100%;height:100%;object-fit:cover;display:block;}
+  .pv-cover .pv-ph{width:100%;height:100%;}
+  .pv-ph.book{background:var(--book);}
+  .pv-ph.film{background:var(--film);}
+  .pv-ph.series{background:var(--series);}
+  .pv-ph.music{background:var(--music);}
+  .pv-body{min-width:0;flex:1;}
+  .pv-chip{display:inline-block;font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:#fff;padding:2px 7px;border-radius:6px;margin-bottom:6px;}
+  .pv-chip.book{background:var(--book);}
+  .pv-chip.film{background:var(--film);}
+  .pv-chip.series{background:var(--series);}
+  .pv-chip.music{background:var(--music);}
+  .pv-title{font-size:14px;font-weight:600;line-height:1.3;}
+  .pv-title .yr{font-weight:500;color:var(--ink-soft);}
+  .pv-meta{font-size:12px;color:var(--ink-soft);margin-top:3px;}
+  .pv-note{font-size:12.5px;line-height:1.4;margin-top:6px;color:var(--ink);}
+  .pv-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px;}
   .star-pick{font-size:20px;letter-spacing:2px;cursor:pointer;color:var(--line);}
   .star-pick span.on{color:var(--ink);}
   .form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
@@ -215,6 +239,42 @@
 <div class="overlay" id="overlay">
   <div class="form-panel">
     <h2 id="formTitle">Add entry</h2>
+
+    <div class="view-tabs" id="viewTabs">
+      <button type="button" data-view="ai" class="active">Describe it</button>
+      <button type="button" data-view="manual">Manual</button>
+    </div>
+
+    <div id="aiView">
+      <p class="form-sub">Just say what you watched, read or listened to. For example: "Perfect Blue, solid 4, watched two weeks ago, note: anime night at home".</p>
+
+      <div id="aiKeyBox" class="suggest-box" style="display:none;">
+        <div class="suggest-head">Groq API key needed</div>
+        <p class="form-sub" style="margin-bottom:8px;">Put it in <code>secrets.json</code> in your data folder, or paste it here. Pasted keys are stored only in this browser.</p>
+        <div class="title-row">
+          <div class="field"><input type="password" id="aiKeyInput" placeholder="gsk_…" autocomplete="off"></div>
+          <button type="button" class="btn small" id="aiKeySave">Save key</button>
+        </div>
+      </div>
+
+      <textarea id="aiInput" placeholder="What did you just finish?"></textarea>
+      <div class="status" id="aiStatus"></div>
+
+      <div id="aiPreview" class="ai-preview" style="display:none;">
+        <div id="aiPreviewBody" class="pv-row"></div>
+        <div class="pv-actions">
+          <button type="button" class="btn small ghost" id="aiEditBtn">Edit details</button>
+          <button type="button" class="btn small" id="aiAddBtn">Add to library</button>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn ghost" id="aiCancelBtn">Cancel</button>
+        <button type="button" class="btn" id="aiSendBtn">Send</button>
+      </div>
+    </div>
+
+    <div id="manualView" style="display:none;">
     <p class="form-sub">Type a title, then hit "Look up" to pull director/cast/year/poster automatically.</p>
     <div class="medium-toggle" id="mediumToggle">
       <button data-m="book">Book</button>
@@ -259,6 +319,7 @@
     <div class="form-actions">
       <button class="btn ghost" id="cancelBtn">Cancel</button>
       <button class="btn" id="saveBtn">Save</button>
+    </div>
     </div>
   </div>
 </div>
@@ -623,7 +684,9 @@ function hideSuggestions(){
 }
 
 async function applyItunesMusicDetails(title){
-  const d = await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(title)}&media=music&limit=1`);
+  const artist = $('f_author').value.trim();
+  const term = artist ? `${title} ${artist}` : title;
+  const d = await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=music&limit=1`);
   const hit = d.results && d.results[0];
   if(!hit) return false;
   if(!$('f_author').value.trim() && hit.artistName) $('f_author').value = hit.artistName;
@@ -632,7 +695,9 @@ async function applyItunesMusicDetails(title){
   return true;
 }
 
-async function lookupTitle(){
+// auto: pick the best match instead of showing the chooser (used by the "Describe it" view, which shows a preview to confirm)
+async function lookupTitle(opts){
+  const auto = !!(opts && opts.auto);
   const title = $('f_title').value.trim();
   if(!title){ $('formStatus').textContent = 'Type a title first.'; return; }
   hideSuggestions();
@@ -659,7 +724,7 @@ async function lookupTitle(){
       return;
     }
     const matched = candidates.filter(c => candidateMatchesMedium(c, currentMedium));
-    if(matched.length === 1){
+    if(matched.length === 1 || (auto && matched.length > 1)){
       await applyWikidataDetails(matched[0].id);
       $('formStatus').textContent = `Filled from Wikidata (${matched[0].label}).`;
     } else if(matched.length > 1){
@@ -667,6 +732,8 @@ async function lookupTitle(){
     } else if(candidates.length === 1){
       await applyWikidataDetails(candidates[0].id);
       $('formStatus').textContent = `Filled from Wikidata (${candidates[0].label}) — couldn't confirm the medium, worth a check.`;
+    } else if(auto){
+      $('formStatus').textContent = `Couldn't pin down which "${title}" you mean, so only what you told me is filled in.`;
     } else {
       showSuggestions(candidates, true);
     }
@@ -724,19 +791,22 @@ function openForm(entry){
   $('f_insights').value = entry ? (entry.insights || '') : '';
   setRating(entry ? (entry.rating || 0) : 0);
   $('formStatus').textContent = '';
+  if(entry){
+    showView('manual', false);
+  } else {
+    resetAiView();
+    showView('ai', true);
+  }
   $('overlay').classList.add('open');
+  if(!entry) setTimeout(() => $('aiInput').focus(), 0);
 }
 function closeForm(){ $('overlay').classList.remove('open'); }
 
-async function saveEntry(){
-  const title = $('f_title').value.trim();
-  if(!title){ $('formStatus').textContent = 'Title is required.'; return; }
-  $('saveBtn').disabled = true;
-
-  const entry = {
+function collectFormEntry(){
+  return {
     id: editingId || uid(),
     medium: currentMedium,
-    title,
+    title: $('f_title').value.trim(),
     year: $('f_year').value.trim(),
     author: $('f_author').value.trim(),
     director: $('f_director').value.trim(),
@@ -749,6 +819,14 @@ async function saveEntry(){
     insights: $('f_insights').value.trim(),
     dateAdded: editingId ? (entries.find(e=>e.id===editingId)||{}).dateAdded || Date.now() : Date.now()
   };
+}
+
+async function saveEntry(){
+  const title = $('f_title').value.trim();
+  if(!title){ $('formStatus').textContent = 'Title is required.'; return; }
+  $('saveBtn').disabled = true;
+
+  const entry = collectFormEntry();
   if(editingId) entries = entries.map(e => e.id === editingId ? entry : e);
   else entries.push(entry);
 
@@ -769,6 +847,212 @@ function deleteEntry(id){
   entries = entries.filter(e=>e.id!==id);
   saveToFile().catch(()=>{});
   render();
+}
+
+// ================== "Describe it" view: natural-language add via an LLM ==================
+// The provider call is isolated in llmExtract() so another provider (e.g. Gemini) can be swapped in.
+const GROQ_MODEL = 'openai/gpt-oss-20b';
+const EXTRACT_SCHEMA = {
+  type: 'object',
+  properties: {
+    intent: { type: 'string', enum: ['add', 'other'] },
+    medium: { type: 'string', enum: ['book', 'film', 'series', 'music'] },
+    title: { type: 'string' },
+    year: { type: ['string', 'null'] },
+    creator: { type: ['string', 'null'] },
+    rating: { type: ['integer', 'null'] },
+    dateConsumed: { type: ['string', 'null'] },
+    note: { type: ['string', 'null'] },
+    platform: { type: ['string', 'null'] },
+    url: { type: ['string', 'null'] }
+  },
+  required: ['intent', 'medium', 'title', 'year', 'creator', 'rating', 'dateConsumed', 'note', 'platform', 'url'],
+  additionalProperties: false
+};
+
+function todayLocalIso(){
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+function buildExtractPrompt(){
+  return `You turn a casual message into one entry for a personal media library (things the user watched, read or listened to). Today's date is ${todayLocalIso()}. Reply with JSON only.
+
+Rules:
+- intent: "add" if the user is logging an item, otherwise "other" (then set medium "film" and title "").
+- medium: "book", "film", "series" (TV show) or "music" (album, single, song or DJ set). Infer it when the user doesn't say.
+- title: the work's proper title. Fix obvious typos and use normal capitalization (e.g. "moderless brooklyn" -> "Motherless Brooklyn"). Never put the year or creator inside the title.
+- year: only if the user states it, otherwise null. Never guess.
+- creator: only if the user states it (author for books, artist or band for music, director for films and series), with the spelling fixed. Otherwise null.
+- rating: integer 1-5. Use the user's number; convert other scales (8/10 -> 4). If no rating is given, null.
+- dateConsumed: YYYY-MM-DD, only when the user says when they finished it. Resolve relative phrases from today's date: "now", "just now", "today", "just saw it" -> today; "yesterday"; "last week" -> 7 days ago; "N weeks ago" -> N*7 days ago; "N months ago" -> same day-of-month N months earlier; "a year ago" -> same date one year earlier; "mid <month>" -> the 15th of the most recent such month that is not in the future; a bare month name -> the 15th of that month the same way. If no timing is mentioned, null.
+- note: the user's own comment about the item, in their words, without the rating or date parts. Otherwise null.
+- platform: where they watched it (Netflix, cinema...) if stated, otherwise null.
+- url: a link the user pasted, otherwise null.`;
+}
+
+let groqKey = null;
+// Key sources, in order: secrets.json in the connected data folder, then a key pasted into this browser (localStorage).
+async function ensureGroqKey(){
+  if(groqKey) return groqKey;
+  if(dirHandle){
+    try{
+      const fh = await dirHandle.getFileHandle('secrets.json');
+      const s = JSON.parse(await (await fh.getFile()).text());
+      const k = s && s.groq && typeof s.groq.apiKey === 'string' ? s.groq.apiKey.trim() : '';
+      if(k){ groqKey = k; return k; }
+    }catch(e){ /* no secrets.json, or unreadable: fall back to localStorage */ }
+  }
+  try{
+    const k = (localStorage.getItem('groqApiKey') || '').trim();
+    if(k){ groqKey = k; return k; }
+  }catch(e){ /* storage unavailable */ }
+  return null;
+}
+
+async function groqRequest(key, text, temperature){
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 20000);
+  try{
+    return await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      signal: ctrl.signal,
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        messages: [{ role: 'system', content: buildExtractPrompt() }, { role: 'user', content: text }],
+        temperature,
+        reasoning_effort: 'medium',
+        max_completion_tokens: 1500,
+        response_format: { type: 'json_schema', json_schema: { name: 'library_entry', strict: true, schema: EXTRACT_SCHEMA } }
+      })
+    });
+  }catch(e){
+    const err = new Error(e && e.name === 'AbortError' ? 'Groq took too long to answer. Try again.' : "Couldn't reach Groq. Check your connection.");
+    err.code = 'NETWORK';
+    throw err;
+  }finally{
+    clearTimeout(timer);
+  }
+}
+
+async function llmExtract(text){
+  const key = await ensureGroqKey();
+  if(!key){ const err = new Error('No API key'); err.code = 'NO_KEY'; throw err; }
+  let r = await groqRequest(key, text, 0);
+  if(r.status === 400){
+    // The small model occasionally returns an empty answer that fails strict-JSON validation; one retry with a little sampling noise clears it.
+    const body = await r.clone().json().catch(() => null);
+    if(body && body.error && body.error.code === 'json_validate_failed') r = await groqRequest(key, text, 0.3);
+  }
+  if(!r.ok){
+    const err = new Error(
+      r.status === 401 ? 'Groq rejected the API key.' :
+      r.status === 429 ? 'Groq rate limit reached (free tier). Wait a minute and try again.' :
+      `Groq returned an error (HTTP ${r.status}).`
+    );
+    err.code = r.status;
+    throw err;
+  }
+  const d = await r.json();
+  try{
+    return JSON.parse(d.choices[0].message.content);
+  }catch(e){
+    const err = new Error("Groq's answer wasn't in the expected format. Try rephrasing.");
+    err.code = 'PARSE';
+    throw err;
+  }
+}
+
+function validIsoDate(s){
+  if(typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return '';
+  const [y, m, d] = s.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  return (dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d) ? s : '';
+}
+
+function fillFormFromExtraction(r){
+  hideSuggestions();
+  setMedium(r.medium);
+  const creator = (r.creator || '').trim();
+  $('f_title').value = r.title.trim();
+  $('f_year').value = (r.year || '').trim();
+  $('f_author').value = (r.medium === 'book' || r.medium === 'music') ? creator : '';
+  $('f_director').value = (r.medium === 'film' || r.medium === 'series') ? creator : '';
+  $('f_cast').value = '';
+  $('f_platform').value = (r.medium === 'film' || r.medium === 'series') ? (r.platform || '').trim() : '';
+  $('f_url').value = r.medium === 'music' ? (r.url || '').trim() : '';
+  $('f_date').value = validIsoDate(r.dateConsumed);
+  $('f_cover').value = '';
+  $('f_insights').value = (r.note || '').trim();
+  setRating(Math.max(0, Math.min(5, Math.round(Number(r.rating) || 0))));
+  $('formStatus').textContent = '';
+}
+
+function showView(view, withTabs){
+  $('viewTabs').style.display = withTabs ? 'flex' : 'none';
+  document.querySelectorAll('#viewTabs button').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  $('aiView').style.display = view === 'ai' ? 'block' : 'none';
+  $('manualView').style.display = view === 'manual' ? 'block' : 'none';
+}
+function setAiStatus(t){ $('aiStatus').textContent = t || ''; }
+function resetAiView(){
+  $('aiInput').value = '';
+  setAiStatus('');
+  $('aiPreview').style.display = 'none';
+  $('aiKeyBox').style.display = 'none';
+  $('aiSendBtn').disabled = false;
+  $('aiAddBtn').disabled = false;
+}
+
+function showAiPreview(){
+  const e = collectFormEntry();
+  const who = personLine(e);
+  $('aiPreviewBody').innerHTML = `
+    <div class="pv-cover">${e.coverUrl ? `<img src="${escapeHtml(e.coverUrl)}" alt="">` : `<div class="pv-ph ${e.medium}"></div>`}</div>
+    <div class="pv-body">
+      <span class="pv-chip ${e.medium}">${e.medium}</span>
+      <div class="pv-title">${escapeHtml(e.title)}${e.year ? ` <span class="yr">(${escapeHtml(e.year)})</span>` : ''}</div>
+      ${who ? `<div class="pv-meta">${escapeHtml(who)}</div>` : ''}
+      <div class="stars" style="margin-top:4px;">${starsHtml(e.rating)}</div>
+      <div class="pv-meta">${e.dateConsumed ? `Consumed ${escapeHtml(e.dateConsumed)}` : 'No date'}</div>
+      ${e.insights ? `<div class="pv-note">${escapeHtml(e.insights)}</div>` : ''}
+    </div>`;
+  $('aiPreview').style.display = 'block';
+}
+
+async function aiSubmit(){
+  const text = $('aiInput').value.trim();
+  if(!text) return;
+  $('aiPreview').style.display = 'none';
+  $('aiKeyBox').style.display = 'none';
+  $('aiSendBtn').disabled = true;
+  setAiStatus('Thinking…');
+  try{
+    const r = await llmExtract(text);
+    if(r.intent !== 'add' || !(r.title || '').trim()){
+      setAiStatus('I can only add items for now. Tell me what you watched, read or listened to, e.g. "Perfect Blue, film, solid 4".');
+      return;
+    }
+    fillFormFromExtraction(r);
+    setAiStatus('Looking up details…');
+    await lookupTitle({ auto: true });
+    showAiPreview();
+    setAiStatus($('formStatus').textContent);
+  }catch(e){
+    if(e && e.code === 'NO_KEY'){
+      $('aiKeyBox').style.display = 'block';
+      setAiStatus('');
+    } else if(e && e.code === 401){
+      groqKey = null;
+      $('aiKeyBox').style.display = 'block';
+      setAiStatus(e.message);
+    } else {
+      setAiStatus((e && e.message) || String(e));
+    }
+  }finally{
+    $('aiSendBtn').disabled = false;
+  }
 }
 
 // ================== render ==================
@@ -927,7 +1211,33 @@ document.querySelectorAll('#mediumToggle button').forEach(b=>b.onclick = ()=>set
 $('addBtn').onclick = ()=>openForm(null);
 $('cancelBtn').onclick = closeForm;
 $('saveBtn').onclick = saveEntry;
-$('lookupBtn').onclick = lookupTitle;
+$('lookupBtn').onclick = () => lookupTitle();
+
+document.querySelectorAll('#viewTabs button').forEach(b => b.onclick = () => {
+  showView(b.dataset.view, true);
+  if(b.dataset.view === 'ai') $('aiInput').focus();
+});
+$('aiSendBtn').onclick = aiSubmit;
+$('aiCancelBtn').onclick = closeForm;
+$('aiInput').addEventListener('keydown', e => {
+  if(e.key === 'Enter' && !e.shiftKey && !e.isComposing){ e.preventDefault(); aiSubmit(); }
+});
+$('aiEditBtn').onclick = () => showView('manual', true);
+$('aiAddBtn').onclick = async () => {
+  $('aiAddBtn').disabled = true;
+  await saveEntry();
+  $('aiAddBtn').disabled = false;
+};
+$('aiKeySave').onclick = () => {
+  const k = $('aiKeyInput').value.trim();
+  if(!k) return;
+  groqKey = k;
+  let persisted = true;
+  try{ localStorage.setItem('groqApiKey', k); }catch(e){ persisted = false; }
+  $('aiKeyInput').value = '';
+  $('aiKeyBox').style.display = 'none';
+  setAiStatus(persisted ? 'Key saved in this browser. Send your message again.' : "Key set for this session only (browser storage is unavailable). Send your message again.");
+};
 $('search').oninput = applyFilters;
 $('sortBy').onchange = applyFilters;
 const allMediumTags = () => Array.from(document.querySelectorAll('#mediumTags .tag-check'));

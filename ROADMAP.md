@@ -53,9 +53,16 @@ Run `gh issue list --label phase-1-music` (etc.) to see live status for a phase.
 - **Gemini API drift:** the current docs show a new `/v1beta/interactions` endpoint
   with a `response_format` object and Gemini 3.x model IDs (e.g. `gemini-3.8-flash`).
   Follow the current docs when wiring it up, not older `generateContent` examples.
-- **Not verified:** exact free-tier rate limits for either provider (each shows
-  them only in its console after login), and Groq's regional terms. Re-check both
-  before relying on them.
+- **Verified on 2026-10-08 (from response headers on a real free-tier key):** Groq
+  `openai/gpt-oss-20b` allows 1,000 requests/day and 8,000 tokens/minute. One
+  extraction call uses roughly 750 tokens, so about 10 messages per minute.
+- **Implementation findings** (the "Describe it" add view): `openai/gpt-oss-20b`
+  answers in about 0.5–2s. At `reasoning_effort: "low"` strict JSON mode was flaky
+  (an empty answer failed validation about 1 in 4 times, and it sometimes dropped
+  the artist or got "last week" wrong); at `"medium"` it was 6/6 correct on hard
+  cases. The app uses `medium` plus one automatic retry on `json_validate_failed`.
+- **Not verified:** Groq's regional terms (EEA/UK/CH), and Gemini's free-tier rate
+  limits. Re-check before relying on them.
 
 ---
 
