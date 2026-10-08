@@ -150,6 +150,7 @@
   .pv-meta{font-size:12px;color:var(--ink-soft);margin-top:3px;}
   .pv-note{font-size:12.5px;line-height:1.4;margin-top:6px;color:var(--ink);}
   .pv-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px;}
+  .pv-hint{margin-right:auto;align-self:center;font-size:11px;color:var(--ink-soft);}
   .star-pick{font-size:20px;letter-spacing:2px;cursor:pointer;color:var(--line);}
   .star-pick span.on{color:var(--ink);}
   .form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
@@ -260,15 +261,23 @@
       <textarea id="aiInput" placeholder="What did you just finish?"></textarea>
       <div class="status" id="aiStatus"></div>
 
+      <div id="aiChoices" class="suggest-box" style="display:none;">
+        <div class="suggest-head" id="aiChoicesHead">Which one did you mean?</div>
+        <div id="aiChoiceList"></div>
+        <button type="button" class="suggest-skip" id="aiChoiceNone">None of these, use what I typed</button>
+      </div>
+
       <div id="aiPreview" class="ai-preview" style="display:none;">
         <div id="aiPreviewBody" class="pv-row"></div>
         <div class="pv-actions">
-          <button type="button" class="btn small ghost" id="aiEditBtn">Edit details</button>
-          <button type="button" class="btn small" id="aiAddBtn">Add to library</button>
+          <span class="pv-hint">Press Enter to add</span>
+          <button type="button" class="btn ghost" id="aiPreviewCancel">Cancel</button>
+          <button type="button" class="btn ghost" id="aiEditBtn">Edit details</button>
+          <button type="button" class="btn" id="aiAddBtn">Add to library</button>
         </div>
       </div>
 
-      <div class="form-actions">
+      <div class="form-actions" id="aiFooter">
         <button type="button" class="btn ghost" id="aiCancelBtn">Cancel</button>
         <button type="button" class="btn" id="aiSendBtn">Send</button>
       </div>
@@ -669,9 +678,13 @@ function showSuggestions(candidates, uncertain){
   $('suggestList').querySelectorAll('.suggest-item').forEach(btn=>{
     btn.onclick = async () => {
       $('formStatus').textContent = 'Filling details…';
-      await applyWikidataDetails(btn.dataset.qid);
-      hideSuggestions();
-      $('formStatus').textContent = `Filled from "${btn.dataset.label}". Review, then Save.`;
+      try{
+        await applyWikidataDetails(btn.dataset.qid);
+        hideSuggestions();
+        $('formStatus').textContent = `Filled from "${btn.dataset.label}". Review, then Save.`;
+      }catch(e){
+        $('formStatus').textContent = `Couldn't load details (${(e && e.message) || e}). Pick again, or fill the fields yourself.`;
+      }
     };
   });
   $('formStatus').textContent = uncertain
@@ -695,9 +708,11 @@ async function applyItunesMusicDetails(title){
   return true;
 }
 
-// auto: pick the best match instead of showing the chooser (used by the "Describe it" view, which shows a preview to confirm)
+// auto: used by the "Describe it" view. Instead of opening the manual chooser, an ambiguous lookup returns
+// { choices, uncertain } so that view can show its own list. Returns undefined when nothing needs choosing.
 async function lookupTitle(opts){
   const auto = !!(opts && opts.auto);
+  let result;
   const title = $('f_title').value.trim();
   if(!title){ $('formStatus').textContent = 'Type a title first.'; return; }
   hideSuggestions();
@@ -724,23 +739,24 @@ async function lookupTitle(opts){
       return;
     }
     const matched = candidates.filter(c => candidateMatchesMedium(c, currentMedium));
-    if(matched.length === 1 || (auto && matched.length > 1)){
+    if(matched.length === 1){
       await applyWikidataDetails(matched[0].id);
       $('formStatus').textContent = `Filled from Wikidata (${matched[0].label}).`;
     } else if(matched.length > 1){
-      showSuggestions(matched, false);
+      if(auto) result = { choices: matched, uncertain: false };
+      else showSuggestions(matched, false);
     } else if(candidates.length === 1){
       await applyWikidataDetails(candidates[0].id);
       $('formStatus').textContent = `Filled from Wikidata (${candidates[0].label}) — couldn't confirm the medium, worth a check.`;
-    } else if(auto){
-      $('formStatus').textContent = `Couldn't pin down which "${title}" you mean, so only what you told me is filled in.`;
     } else {
-      showSuggestions(candidates, true);
+      if(auto) result = { choices: candidates, uncertain: true };
+      else showSuggestions(candidates, true);
     }
   }catch(e){
     $('formStatus').textContent = `Couldn't reach Wikidata — ${e && e.message ? e.message : e}.`;
   }
   $('lookupBtn').disabled = false;
+  return result;
 }
 
 // ================== form handling ==================
@@ -996,13 +1012,53 @@ function showView(view, withTabs){
   $('manualView').style.display = view === 'manual' ? 'block' : 'none';
 }
 function setAiStatus(t){ $('aiStatus').textContent = t || ''; }
+
+// The view is always in one of three stages. Only one primary action is on screen at a time:
+// 'input' = Send, 'choices' = pick a match, 'preview' = Add to library.
+let aiStage = 'input';
+let aiLastText = '';
+function setAiStage(stage){
+  aiStage = stage;
+  $('aiChoices').style.display = stage === 'choices' ? 'block' : 'none';
+  $('aiPreview').style.display = stage === 'preview' ? 'block' : 'none';
+  $('aiFooter').style.display = stage === 'input' ? 'flex' : 'none';
+}
 function resetAiView(){
   $('aiInput').value = '';
+  aiLastText = '';
   setAiStatus('');
-  $('aiPreview').style.display = 'none';
+  setAiStage('input');
   $('aiKeyBox').style.display = 'none';
   $('aiSendBtn').disabled = false;
   $('aiAddBtn').disabled = false;
+}
+
+function showAiChoices(res){
+  $('aiChoicesHead').textContent = res.uncertain
+    ? "Couldn't tell which of these is the right kind of item. Which one did you mean?"
+    : 'More than one match. Which one did you mean?';
+  $('aiChoiceList').innerHTML = res.choices.slice(0, 6).map(c => `
+    <button type="button" class="suggest-item" data-qid="${escapeHtml(c.id)}" data-label="${escapeHtml(c.label)}">
+      <div class="s-title">${escapeHtml(c.label)}</div>
+      <div class="s-desc">${escapeHtml(c.description || 'No description available')}</div>
+    </button>`).join('');
+  $('aiChoiceList').querySelectorAll('.suggest-item').forEach(btn => {
+    btn.onclick = async () => {
+      setAiStage('input');
+      $('aiSendBtn').disabled = true;
+      setAiStatus('Filling in details…');
+      try{
+        await applyWikidataDetails(btn.dataset.qid);
+        setAiStatus(`Filled from Wikidata (${btn.dataset.label}).`);
+      }catch(e){
+        setAiStatus(`Couldn't load details (${(e && e.message) || e}). Showing what you told me.`);
+      }
+      $('aiSendBtn').disabled = false;
+      showAiPreview();
+    };
+  });
+  setAiStatus('');
+  setAiStage('choices');
 }
 
 function showAiPreview(){
@@ -1018,13 +1074,14 @@ function showAiPreview(){
       <div class="pv-meta">${e.dateConsumed ? `Consumed ${escapeHtml(e.dateConsumed)}` : 'No date'}</div>
       ${e.insights ? `<div class="pv-note">${escapeHtml(e.insights)}</div>` : ''}
     </div>`;
-  $('aiPreview').style.display = 'block';
+  setAiStage('preview');
 }
 
 async function aiSubmit(){
   const text = $('aiInput').value.trim();
   if(!text) return;
-  $('aiPreview').style.display = 'none';
+  aiLastText = text;
+  setAiStage('input');
   $('aiKeyBox').style.display = 'none';
   $('aiSendBtn').disabled = true;
   setAiStatus('Thinking…');
@@ -1036,7 +1093,11 @@ async function aiSubmit(){
     }
     fillFormFromExtraction(r);
     setAiStatus('Looking up details…');
-    await lookupTitle({ auto: true });
+    const res = await lookupTitle({ auto: true });
+    if(res && res.choices){
+      showAiChoices(res);
+      return;
+    }
     showAiPreview();
     setAiStatus($('formStatus').textContent);
   }catch(e){
@@ -1219,14 +1280,33 @@ document.querySelectorAll('#viewTabs button').forEach(b => b.onclick = () => {
 });
 $('aiSendBtn').onclick = aiSubmit;
 $('aiCancelBtn').onclick = closeForm;
+$('aiPreviewCancel').onclick = closeForm;
 $('aiInput').addEventListener('keydown', e => {
-  if(e.key === 'Enter' && !e.shiftKey && !e.isComposing){ e.preventDefault(); aiSubmit(); }
+  if(e.key !== 'Enter' || e.shiftKey || e.isComposing) return;
+  e.preventDefault();
+  // Enter twice: the first sends, the second confirms the preview for the same text.
+  if(aiStage === 'preview' && $('aiInput').value.trim() === aiLastText) $('aiAddBtn').click();
+  else if(aiStage === 'input') aiSubmit();
 });
+$('aiInput').addEventListener('input', () => {
+  if(aiStage !== 'input'){ setAiStage('input'); setAiStatus(''); }
+});
+$('aiChoiceNone').onclick = () => {
+  setAiStatus('Using just what you typed.');
+  showAiPreview();
+};
 $('aiEditBtn').onclick = () => showView('manual', true);
 $('aiAddBtn').onclick = async () => {
   $('aiAddBtn').disabled = true;
-  await saveEntry();
-  $('aiAddBtn').disabled = false;
+  try{
+    await saveEntry();
+    // If the dialog is still open, saveEntry refused (e.g. missing title); say why here, not in the hidden form.
+    if($('overlay').classList.contains('open')) setAiStatus($('formStatus').textContent || "Couldn't save this entry.");
+  }catch(e){
+    setAiStatus(`Couldn't save: ${(e && e.message) || e}`);
+  }finally{
+    $('aiAddBtn').disabled = false;
+  }
 };
 $('aiKeySave').onclick = () => {
   const k = $('aiKeyInput').value.trim();

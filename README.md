@@ -8,7 +8,7 @@ A single-file, self-hosted media archive for tracking films, series, and books y
 
 - **Card grid** with cover art, star ratings, and a colored type badge (book / film / series / music), responsive up to 6 columns per row
 - **Filters**: text search, a date-range picker, and toggleable type tags
-- **Describe it** (optional): the Add dialog opens on a plain-language box. Type something like "Perfect Blue, solid 4, watched two weeks ago, note: anime night" and it works out the type, title, rating, date and note, looks up the cover and details, and shows a preview to confirm. It uses a free [Groq](https://console.groq.com/) API key (see [Natural-language add](#natural-language-add-optional)). The **Manual** tab is the regular form.
+- **Describe it** (optional): the Add dialog opens on a plain-language box. Type something like "Perfect Blue, solid 4, watched two weeks ago, note: anime night" and it works out the type, title, rating, date and note, looks up the cover and details (if more than one item matches, you pick the right one), and shows a preview to confirm. Press Enter to send, and Enter again to add. It uses a free [Groq](https://console.groq.com/) API key (see [Natural-language add](#natural-language-add-optional)). The **Manual** tab is the regular form.
 - **Add/Edit dialog** with a "Look up" button that auto-fills director, cast, year, and cover art from free public sources:
   - [Wikidata](https://www.wikidata.org/) + [Wikipedia](https://www.wikipedia.org/) for films and series
   - [Open Library](https://openlibrary.org/) for books
