@@ -24,10 +24,38 @@ Run `gh issue list --label phase-1-music` (etc.) to see live status for a phase.
 |---|---|---|---|
 | 0 | Foundation | ✅ Done | — |
 | 1 | Music content type | ✅ Done | [Phase 1](../../milestone/1) |
-| 2 | Natural-language add/find assistant | 🔲 Not started | [Phase 2](../../milestone/2) |
+| 2 | Natural-language add/find assistant | 🔶 In progress | [Phase 2](../../milestone/2) |
 | 3 | Backend foundation (DB) | 🔲 Not started | [Phase 3](../../milestone/3) |
 | 4 | Auth & multi-user | 🔲 Not started | [Phase 4](../../milestone/4) |
 | 5 | Reconnect assistant to backend | 🔲 Not started | [Phase 5](../../milestone/5) |
+
+## Decisions
+
+### Phase 2 LLM provider: Groq by default, Gemini swappable (2026-10-08, issue #5)
+
+- **Default provider: Groq.** Models with strict JSON-schema output at the time of
+  writing: `openai/gpt-oss-20b`, `openai/gpt-oss-120b`, `qwen/qwen3.8-27b`
+  (`response_format: json_schema` with `strict: true`).
+- **Build the assistant behind one small provider function** so the provider can be
+  swapped without touching the chat UI or intent logic. Gemini stays available for
+  testing through that seam.
+- **Why not Gemini's free tier by default:** Google's [Gemini API terms](https://ai.google.dev/gemini-api/terms)
+  say only Paid Services may be used when making API clients available to users in
+  the EEA, Switzerland and the UK, and that free-tier content may be used to improve
+  Google products and read by human reviewers. That conflicts with the no-spend
+  constraint and with personal notes in entries. This was read via a page
+  summarizer — read the terms directly before relying on it.
+- **Browser access works for both** from a `file://` page (CORS preflight checked
+  2026-10-08: Gemini echoes `null`, Groq returns `*`). Unlike the iTunes Search
+  API, no JSONP workaround is needed.
+- **Groq data handling:** its docs say inference requests are not retained by
+  default. Its Services Agreement / DPA has not been reviewed.
+- **Gemini API drift:** the current docs show a new `/v1beta/interactions` endpoint
+  with a `response_format` object and Gemini 3.x model IDs (e.g. `gemini-3.8-flash`).
+  Follow the current docs when wiring it up, not older `generateContent` examples.
+- **Not verified:** exact free-tier rate limits for either provider (each shows
+  them only in its console after login), and Groq's regional terms. Re-check both
+  before relying on them.
 
 ---
 
