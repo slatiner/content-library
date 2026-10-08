@@ -1,2 +1,7 @@
 media-archive-data.json
 .DS_Store
+
+# Secrets: API keys and tokens. Never commit these.
+secrets.json
+.env
+.env.*

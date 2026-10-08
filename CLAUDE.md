@@ -33,6 +33,21 @@ just true in this transcript.
   which conflicts with the constraint above) — don't implement it without
   re-confirming this tradeoff with the user first.
 
+## Secrets
+
+This repo is public. API keys and tokens live in **`secrets.json`** at the repo
+root, which is gitignored (as are `.env` and `.env.*`). `secrets.example.json`
+documents the shape and is the only secrets-related file that gets committed.
+
+- Never commit, print, log, or paste a key into code, commit messages, issues, or
+  docs. When a command needs a key, read it from `secrets.json` in the shell
+  instead of writing it inline.
+- Add any new secret to `secrets.json` and a placeholder to `secrets.example.json`.
+- Before committing, check that `git status` doesn't list `secrets.json`.
+- The browser app can read `secrets.json` from the connected data folder through
+  the same folder handle it already uses for `media-archive-data.json`. Don't
+  hard-code keys in `media-archive.html`.
+
 ## House style
 
 - This is a no-build-step project: one HTML file with inline CSS/JS. Keep new
