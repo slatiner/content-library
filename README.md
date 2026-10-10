@@ -9,6 +9,7 @@ A single-file, self-hosted media archive for tracking films, series, and books y
 - **Card grid** with cover art, star ratings, and a colored type badge (book / film / series / music), responsive up to 6 columns per row
 - **Filters**: text search, a date-range picker, and toggleable type tags
 - **Describe it** (optional): the Add dialog opens on a plain-language box. Type something like "Perfect Blue, solid 4, watched two weeks ago, note: anime night" and it works out the type, title, rating, date and note, looks up the cover and details (if more than one item matches, you pick the right one), and shows a preview to confirm. Press Enter to send, and Enter again to add. It uses a free [Groq](https://console.groq.com/) API key (see [Natural-language add](#natural-language-add-optional)). The **Manual** tab is the regular form.
+- **Ask your library** (optional, same Groq key): type a question in the search box and press Enter, e.g. "films I rated above 4 this year", "Murakami", "series I rated below 3", or "best music from the 90s". It sets the type tags, date range, sort and a rating / release-year filter, and shows what it understood as chips with a **Clear** button. Without a key, or if Groq is unreachable, the search box keeps working as a normal text search.
 - **Add/Edit dialog** with a "Look up" button that auto-fills director, cast, year, and cover art from free public sources:
   - [Wikidata](https://www.wikidata.org/) + [Wikipedia](https://www.wikipedia.org/) for films and series
   - [Open Library](https://openlibrary.org/) for books
@@ -26,14 +27,14 @@ A single-file, self-hosted media archive for tracking films, series, and books y
 
 Want to see the data shape before adding your own? Check [`media-archive-data.example.json`](./media-archive-data.example.json).
 
-### Natural-language add (optional)
+### Natural-language add and search (optional)
 
-The "Describe it" view needs a free API key from [Groq](https://console.groq.com/keys). Without one, the Manual tab works exactly as before.
+The "Describe it" view and "Ask your library" need a free API key from [Groq](https://console.groq.com/keys). Without one, the Manual tab and plain search work exactly as before.
 
 1. Create a key, then copy [`secrets.example.json`](./secrets.example.json) to `secrets.json` in the same folder as `media-archive.html` and paste the key in. `secrets.json` is gitignored, so it won't be committed.
 2. Or skip the file: the dialog asks for the key the first time and stores it in your browser only.
 
-Your message is sent to Groq to be parsed; the lookups (Wikidata, Open Library, iTunes) then run from your browser.
+Your message or question is sent to Groq to be parsed (it never sees your whole library, only what you type); the lookups (Wikidata, Open Library, iTunes) then run from your browser. The free tier allows about 10 adds or 5 questions a minute.
 
 ### Browser notes
 

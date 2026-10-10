@@ -61,6 +61,13 @@ Run `gh issue list --label phase-1-music` (etc.) to see live status for a phase.
   (an empty answer failed validation about 1 in 4 times, and it sometimes dropped
   the artist or got "last week" wrong); at `"medium"` it was 6/6 correct on hard
   cases. The app uses `medium` plus one automatic retry on `json_validate_failed`.
+- **Ask-the-library cost:** a question uses about 1,100–1,450 tokens (the filter
+  prompt is longer than the add prompt), so roughly 5 questions per minute on the
+  8,000 tokens/minute free tier. Only the typed question is sent, never the library.
+- **Groq error responses carry `access-control-allow-origin: *`**, so a bad key or
+  rate limit reaches the browser as a real status code (and gets a specific
+  message), not as a generic network failure. `retry-after` is not readable
+  cross-origin, so the app says "wait a minute" instead of a precise delay.
 - **Not verified:** Groq's regional terms (EEA/UK/CH), and Gemini's free-tier rate
   limits. Re-check before relying on them.
 
