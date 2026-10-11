@@ -81,6 +81,37 @@ was for a single-user tool. Hand-written auth means owning the security.
   Supabase's terms; whether an EU region can be chosen at project creation (for EU
   users' data); whether sign-up needs a payment card; the Google login setup; and
   the free Edge Function limits.
+- **Sequencing: the app switch ships together with login and row rules.** Moving
+  the app onto the database (#15) must land with Google login and per-user rules
+  (#17–#19), not before them. The page's public key is visible to everyone, so
+  without row rules anyone could read and change all the data. Tables created with
+  SQL start with row-level security switched off: switch it on and test it (#31).
+  Until then, experiment against a private copy of the data.
+
+**Free-tier drawbacks to plan around** (checked 2026-10-11; mostly from Supabase's
+docs and changelog, the rest from third-party sources and marked as such):
+
+- **Projects pause after 7 days of low activity** (Supabase docs). The app is down
+  until someone restores the project by hand in the dashboard. A paused project is
+  restorable for 90 days (changelog); after that only a download of the last
+  logical backup and the storage files remains. Mitigation: the keep-alive (#39).
+  The $25/month Pro plan removes pausing.
+- **Assume no backups.** One blog says the free tier keeps zero days of backups
+  (not confirmed in Supabase's backup docs). Restoring a paused project gives only
+  the state at pause. So we need our own regular export (#27).
+- **Email login is throttled.** The built-in auth email is about 2 messages an hour
+  for the whole project, and only to team members' addresses (third-party
+  sources). Use Google login only, or add custom SMTP (another provider; default
+  30 an hour).
+- **Limits** (third-party, confirm on supabase.com/pricing): 500 MB database, 2
+  active projects, 1 GB file storage, 5 GB bandwidth, 50,000 monthly users, 7-day
+  logs. Edge Functions about 500,000 invocations a month and 10 s per run (figures
+  differ between sources). All far above what this app needs.
+- **No guarantees.** One article reports the free limits changed several times in
+  past years. Keep the data portable (plain Postgres plus our own export) so a
+  move to PocketBase on a VPS stays possible.
+- **Not verified:** whether free projects share compute, and any free-tier uptime
+  commitment.
 - **Never upload the whole project folder to a public web root.** `secrets.json`
   and `media-archive-data.json` would become readable. Deploy only the HTML file
   and backend code.
@@ -183,8 +214,10 @@ backend in Phase 5, not rebuilt.
 The original plan had "build a DB" and "add auth" as separate steps. They're
 combined here: pick a free, open-source backend-as-a-service that bundles a
 database *and* auth together (PocketBase or Supabase — both free/open source),
-so this is one setup effort instead of two custom builds. This phase migrates
-existing JSON data into it but stays single-user — multi-user is Phase 4.
+so this is one setup effort instead of two custom builds. This phase builds the
+database and migrates the existing JSON into it. It does not go live on its own:
+the app switch (#15) ships together with login and per-user rules (see the
+sequencing note in Decisions).
 
 Because the app is headed for many users, design the schema for that now: store
 canonical external IDs on entries, decide catalogue versus per-user entries, and
@@ -194,7 +227,9 @@ until the switch.
 
 ## Phase 4 — Auth & multi-user
 
-Mostly configuration once Phase 3's tool is in place. Start with **Google**
+Mostly configuration once Phase 3's tool is in place. Google login and the
+per-user rules (#17–#19) ship together with the app switch (#15), not after it.
+Start with **Google**
 OAuth (free); GitHub is a good second option given the audience. **Apple
 Sign-In is deferred** — see Constraints above. This phase must also decide
 the visibility model (private, friends, public; notes private by default) since
