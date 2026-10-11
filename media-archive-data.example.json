@@ -13,6 +13,10 @@
     "rating": 4,
     "coverUrl": "https://upload.wikimedia.org/wikipedia/en/1/16/Paprikaposter.jpg",
     "insights": "Watched at a friend's place.",
+    "wikidataId": "",
+    "openlibraryId": "",
+    "itunesId": "",
+    "visibility": "private",
     "dateAdded": 1700000000000
   },
   {
@@ -29,6 +33,10 @@
     "rating": 5,
     "coverUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Hermann%20Hesse%20Der%20Steppenwolf%201927.jpg?width=600",
     "insights": "",
+    "wikidataId": "",
+    "openlibraryId": "",
+    "itunesId": "",
+    "visibility": "private",
     "dateAdded": 1700000010000
   },
   {
@@ -45,6 +53,10 @@
     "rating": 4,
     "coverUrl": "https://static.tvmaze.com/uploads/images/original_untouched/631/1577677.jpg",
     "insights": "",
+    "wikidataId": "",
+    "openlibraryId": "",
+    "itunesId": "",
+    "visibility": "private",
     "dateAdded": 1700000020000
   },
   {
@@ -61,6 +73,10 @@
     "rating": 5,
     "coverUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/dd/50/c7/dd50c790-99ac-d3d0-5ab8-e3891fb8fd52/634904032463.png/600x600bb.jpg",
     "insights": "",
+    "wikidataId": "",
+    "openlibraryId": "",
+    "itunesId": "",
+    "visibility": "private",
     "dateAdded": 1700000030000
   }
 ]

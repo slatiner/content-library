@@ -147,9 +147,13 @@ and recommendations between users.
   work id, iTunes id) from Phase 3 on. The lookups already find them but the app
   discards them today. They are how the app knows two users logged "the same Dune".
   The migration (#14) should backfill the existing entries.
-- **Schema shape is a Phase 3 decision (#13):** a shared catalogue of works with
-  per-user entries on top, or per-user entries only. The catalogue makes
-  recommendations and cover reuse easier.
+- **Schema shape (decided 2026-10-11, #13): per-user entries only for now.** One
+  `entries` table (`supabase/migrations/`), keyed by user and the app's own entry
+  id, with separate nullable `wikidata_id`, `openlibrary_id` and `itunes_id`
+  columns and a `visibility` column (default private). Works are matched across
+  users by those ids. A shared catalogue would make cover reuse easier but raises
+  who may edit shared rows; it can be added later as a table built from the ids.
+  Schema changes go in as Supabase CLI migrations, applied with `supabase db push`.
 - **Private by default.** Notes (`insights`) often name people, so keep them
   private even when an entry or rating is shared. Levels: private, friends, public.
 - **Invite-only sign-up (invite codes) at first**, to limit abuse and quota use.
