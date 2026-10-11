@@ -69,9 +69,13 @@ was for a single-user tool. Hand-written auth means owning the security.
   Postgres later. Fallback if the free limits or the pause become a problem:
   PocketBase on a VPS (about €6/month). A custom domain is optional to start;
   free subdomains exist on both static hosts.
-- **Keep-alive:** a scheduled daily request (for example a free GitHub Actions
-  cron) so the project doesn't pause after a week idle. Or accept the pause while
-  it only holds the owner's data.
+- **Keep-alive:** a free GitHub Actions cron every 2–3 days (it can't do "every 6
+  days") that runs a real read on a small table, so the project doesn't pause
+  after a week idle. Supabase's docs don't say exactly what counts as activity
+  (they describe a few database requests a day), so test it. Caveat: GitHub
+  disables scheduled workflows in a public repo after 60 days with no repository
+  activity, so a long absence can switch it off silently; re-enable it from the
+  Actions tab. Or accept the pause while the project only holds the owner's data.
 - **Secrets:** the page may contain only Supabase's public key, which is safe
   because per-user rules protect the data. The secret (service role) key never
   goes in the HTML; it belongs in `secrets.json`.
