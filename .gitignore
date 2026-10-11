@@ -5,3 +5,7 @@ media-archive-data.json
 secrets.json
 .env
 .env.*
+
+# Node / Vite
+node_modules/
+dist/

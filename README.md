@@ -27,6 +27,19 @@ A single-file, self-hosted media archive for tracking films, series, and books y
 
 Want to see the data shape before adding your own? Check [`media-archive-data.example.json`](./media-archive-data.example.json).
 
+### Vue version (in progress)
+
+The app is being ported to Vue 3 + Vite (see [`ROADMAP.md`](./ROADMAP.md), Phase 3.5). It has the same features and the same data file. It needs a current [Node.js](https://nodejs.org/) (tested with 22):
+
+```
+npm install
+npm run dev     # opens on http://localhost:5173
+npm test        # component tests
+npm run build   # static site in dist/
+```
+
+Click **Connect folder** and pick the folder that holds `media-archive-data.json` (and `secrets.json`, if you use one). The browser remembers folders per site, so you connect once on `localhost:5173` even if you've already connected `media-archive.html`.
+
 ### Natural-language add and search (optional)
 
 The "Describe it" view and "Ask your library" need a free API key from [Groq](https://console.groq.com/keys). Without one, the Manual tab and plain search work exactly as before.
