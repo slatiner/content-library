@@ -1,6 +1,6 @@
 # Content Library
 
-A single-file, self-hosted media archive for tracking films, series, and books you've consumed — no server, no signup, no database. Your data lives in a plain JSON file on your own machine.
+A self-hosted media archive for tracking the films, series, books and music you've consumed. Today your data lives in a plain JSON file on your own machine; a hosted, multi-user version backed by Supabase is in progress (see the roadmap).
 
 ![type](https://img.shields.io/badge/status-personal%20project-blue)
 
@@ -20,16 +20,7 @@ A single-file, self-hosted media archive for tracking films, series, and books y
 
 ## Getting started
 
-1. Download `media-archive.html` into a folder of your choice.
-2. Open it in **Chrome, Edge, or Brave** (see [Browser notes](#browser-notes) below).
-3. Click **Connect folder** and pick the folder you put the file in. The app will create `media-archive-data.json` there automatically.
-4. Click **+ Add new** to start logging what you watch and read.
-
-Want to see the data shape before adding your own? Check [`media-archive-data.example.json`](./media-archive-data.example.json).
-
-### Vue version (in progress)
-
-The app is being ported to Vue 3 + Vite (see [`ROADMAP.md`](./ROADMAP.md), Phase 3.5). It has the same features and the same data file. It needs a current [Node.js](https://nodejs.org/) (tested with 22):
+The app is Vue 3 + Vite and needs a current [Node.js](https://nodejs.org/) (tested with 22).
 
 ```
 npm install
@@ -38,33 +29,38 @@ npm test        # component tests
 npm run build   # static site in dist/
 ```
 
-Click **Connect folder** and pick the folder that holds `media-archive-data.json` (and `secrets.json`, if you use one). The browser remembers folders per site, so you connect once on `localhost:5173` even if you've already connected `media-archive.html`.
+1. Open http://localhost:5173 in **Chrome, Edge, or Brave** (see [Browser notes](#browser-notes) below).
+2. Click **Connect folder** and pick a folder for your data (for example this repo's folder). The app will create `media-archive-data.json` there automatically.
+3. Click **+ Add new** to start logging what you watch and read.
+
+Want to see the data shape before adding your own? Check [`media-archive-data.example.json`](./media-archive-data.example.json).
+
+The app's source is in `app/`. The dev server only serves that folder and its packages, so `secrets.json` and your data file in the repo root are never served.
 
 ### Natural-language add and search (optional)
 
 The "Describe it" view and "Ask your library" need a free API key from [Groq](https://console.groq.com/keys). Without one, the Manual tab and plain search work exactly as before.
 
-1. Create a key, then copy [`secrets.example.json`](./secrets.example.json) to `secrets.json` in the same folder as `media-archive.html` and paste the key in. `secrets.json` is gitignored, so it won't be committed.
+1. Create a key, then copy [`secrets.example.json`](./secrets.example.json) to `secrets.json` in your data folder (the one you connect) and paste the key in. `secrets.json` is gitignored, so it won't be committed.
 2. Or skip the file: the dialog asks for the key the first time and stores it in your browser only.
 
 Your message or question is sent to Groq to be parsed (it never sees your whole library, only what you type); the lookups (Wikidata, Open Library, iTunes) then run from your browser. The free tier allows about 10 adds or 5 questions a minute.
 
 ### Browser notes
 
-The File System Access API (used for "Connect folder") requires a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts). Opening the file directly (`file://...`) works in most cases, but:
+The File System Access API (used for "Connect folder") requires a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts); `http://localhost` counts as one. Also:
 
 - **It will not work in a Private/Incognito window** — persistent storage permissions are disabled there by design.
 - **Brave** sometimes blocks this more aggressively via Shields or site permissions. If "Connect folder" fails, try lowering Shields for the page, or check `brave://settings/content/all` for a blocked "File editing" permission on the file's origin.
 - If your browser doesn't support the API at all, the app still works — use **⚙ → Export / Import JSON** to manage your data manually.
-- For the most reliable experience across browsers, serve the folder over `http://localhost` instead of opening it as a local file (e.g. `python3 -m http.server` from the folder, then visit `http://localhost:8000/media-archive.html`).
 
 ## Project status & roadmap
 
-This is an evolving personal project, currently a single static HTML file with no backend. See [`ROADMAP.md`](./ROADMAP.md) for the phased plan and the reasoning behind it, and [issues](../../issues) for live task status per phase.
+This is an evolving personal project: a Vue app with file-based storage today, moving onto a Supabase backend with login next. See [`ROADMAP.md`](./ROADMAP.md) for the phased plan and the reasoning behind it, and [issues](../../issues) for live task status per phase.
 
 ## Contributing
 
-Issues and PRs welcome. This project has no build step — it's one HTML file with inline CSS/JS — so contributions should stay dependency-free where reasonably possible.
+Issues and PRs welcome. Keep npm dependencies few and free (MIT or similar), and run `npm test` before opening a PR.
 
 ## License
 

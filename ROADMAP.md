@@ -32,7 +32,7 @@ Run `gh issue list --label phase-1-music` (etc.) to see live status for a phase.
 | 1 | Music content type | ✅ Done | [Phase 1](../../milestone/1) |
 | 2 | Natural-language add/find assistant | ✅ Done | [Phase 2](../../milestone/2) |
 | 3 | Backend foundation (DB) | 🔶 In progress | [Phase 3](../../milestone/3) |
-| 3.5 | Port to Vue + Vite | 🔶 In progress | [Phase 3.5](../../milestone/7) |
+| 3.5 | Port to Vue + Vite | ✅ Done | [Phase 3.5](../../milestone/7) |
 | 4 | Auth & multi-user | 🔲 Not started | [Phase 4](../../milestone/4) |
 | 5 | Reconnect assistant to backend | 🔲 Not started | [Phase 5](../../milestone/5) |
 | 6 | Sharing & recommendations | 🔲 Not started | [Phase 6](../../milestone/6) |
@@ -154,7 +154,8 @@ docs and changelog, the rest from third-party sources and marked as such):
   behind the storage adapter. Plain JavaScript (TypeScript can come later file by
   file). No Pinia; Vue's built-in reactive state is enough for one entries list.
   Tests move into the repo as Vitest + Vue Test Utils. The old
-  `media-archive.html` stays until the owner has checked parity.
+  `media-archive.html` stays until the owner has checked parity. (Owner checked
+  it on 2026-10-11 and the old file was removed; it's in git history.)
 - **Cost:** none in money (Vue, Vite and Vitest are MIT; Cloudflare Pages and
   GitHub Pages build with Node for free). It drops the no-build-step house rule,
   testing becomes `npm run dev` and localhost instead of opening the file, and
@@ -274,7 +275,7 @@ plan backups (see Decisions). Hosting is decided: Supabase free tier plus a free
 static host. Do this work on a branch so the current file-based app stays usable
 until the switch.
 
-## Phase 3.5 — Port to Vue + Vite
+## Phase 3.5 — Port to Vue + Vite (done 2026-10-11)
 
 Port the single-file app to Vue 3 + Vite with ES modules, keeping every feature
 and the file-based storage, now behind the storage adapter (#41). This comes

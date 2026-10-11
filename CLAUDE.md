@@ -46,13 +46,96 @@ documents the shape and is the only secrets-related file that gets committed.
 - Before committing, check that `git status` doesn't list `secrets.json`.
 - The browser app can read `secrets.json` from the connected data folder through
   the same folder handle it already uses for `media-archive-data.json`. Don't
-  hard-code keys in `media-archive.html`.
+  hard-code keys in the app source (`app/`).
+- The Vite dev server is restricted to `app/` and `node_modules`
+  (`vite.config.js`), so the repo-root `secrets.json` and data file are never
+  served. Keep it that way, and deploy only `dist/`.
 
 ## House style
 
-- This is a no-build-step project: one HTML file with inline CSS/JS. Keep new
-  work dependency-free where reasonably possible rather than introducing a
-  bundler/framework.
+- Vue 3 + Vite with ES modules, in plain JavaScript, without Pinia (shared state
+  is in `app/src/state.js`). Keep npm dependencies few and free (MIT or
+  similar).
+- All library reads and writes go through the storage adapter
+  (`app/src/lib/storage/`), never straight from components.
 - Data schema changes (adding a field, a new `medium` type) should be reflected
   in `media-archive-data.example.json` too, not just the real (gitignored) data
   file.
+
+## How the owner likes to work
+
+Learned over several sessions. Follow these by default.
+
+**Pace and questions**
+- Don't over-research small requests. For a quick data entry or tweak, go straight
+  to the file and do it. A long search for something that has a known location was
+  called out as too slow.
+- For a non-trivial feature, when asked, describe the approach first and call out
+  the real decision points (for example schema choices), so the owner can steer.
+  Once they've answered, build it without asking more questions ("no more
+  pointers, go to work").
+- Lead with the outcome, keep replies short, and be plain about what you could not
+  check.
+- When a choice has a hidden cost or a terms catch (a paid account, a free tier
+  with regional limits, data used for training), say so before building on it.
+  Give a recommendation and the main tradeoff; the owner decides.
+
+**Testing**
+- The owner tests UI changes themselves in Chrome via `npm run dev`
+  (http://localhost:5173). Don't drive the browser pane or take screenshots to
+  verify; it burns tokens.
+- Cheap checks are welcome and have caught real bugs: `npm run build`, and the
+  Vitest component tests (`npm test`, `app/src/app.test.js`) that click the real
+  components with a fake storage adapter and network. Add a test with each
+  change. Say what was and wasn't covered. Real folder permissions, the real
+  file write, and live lookups and image loading can't be simulated.
+- Several bugs only showed up in real use. When the owner reports one, ask for the
+  exact message they see before guessing.
+
+**Git and issues**
+- Never push unless asked. The owner holds pushes back at times ("not yet") and
+  says "push" when ready. Local commits at the end of a finished piece of work are
+  fine; say that they're unpushed.
+- Check `git status` before committing and make sure `secrets.json` and
+  `media-archive-data.json` are never staged.
+- Leave an issue open with a comment ("implemented in <sha>, awaiting
+  verification") until the owner has tried the change, then close it. Keep
+  `ROADMAP.md`'s status table in step.
+
+**Tokens**
+- The owner watches token use and plan limits. Avoid wide filesystem searches
+  (search from home took minutes), re-reading large files in full, and repeated
+  probing of rate-limited APIs (Wikidata returns 429 under bursts).
+- The project folder has been moved twice (`Documents/Content_Project`, then
+  `Personal Repos/`, now `Personal_Repos/Content_Project`). Use paths relative to
+  the repo. If one is missing, `find /Users/slatiner -maxdepth 4 -name
+  ROADMAP.md` is quick.
+- Suggest starting a fresh session at a phase boundary instead of letting a long
+  one auto-compact. State lives in `ROADMAP.md`, issues and this file, so a new
+  session loses nothing important.
+
+## Adding entries to the library
+
+"Add film X, solid 4, watched two weeks ago" is a frequent request. Do it directly
+in `media-archive-data.json` (repo root, gitignored; shape in
+`media-archive-data.example.json`).
+
+- Append to the end of the array. Use an id like `e_<ms>_<slug>` and `dateAdded`
+  as epoch milliseconds. Validate with `python3 -c "import json; json.load(open(...))"`.
+- Fix typos and capitalization in titles ("moderless brooklyn" -> "Motherless
+  Brooklyn"). Resolve relative dates from today's date: "just saw it" is today,
+  "mid May" is the 15th, "a year ago" is the same date a year back.
+- Only set a rating the owner gave. Otherwise leave it at 0 and mention that.
+- Covers should be portrait (about 2:3) and at least ~300px wide. Sources that
+  worked: the Wikipedia REST summary `originalimage` (films), TVmaze `original`
+  image (series posters, free and high-res), Open Library
+  `covers.openlibrary.org/b/id/<cover_i>-L.jpg` (books; the `-M` size looks
+  pixelated, and a ~43-byte response means no cover), and iTunes artwork with
+  `100x100bb` changed to `600x600bb` (music). Avoid logos and wordmarks, wide
+  images, and Google `gstatic` thumbnails.
+- Confirm the image URL returns 200 with an image type, and check its dimensions
+  (`file` on a downloaded copy), before saving it.
+- The page rewrites the whole data file every time it saves, so an edit made while
+  it's open can be overwritten and lost (a new entry vanished this way once). After
+  editing, tell the owner to reload the page, and re-check the file if something
+  looks missing. Two open tabs of the app clobber each other the same way.
