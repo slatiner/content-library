@@ -491,6 +491,10 @@ async function tryRestoreHandle(){
       render();
       return;
     }
+    if(perm === 'denied'){
+      setFileStatus('warn', `The browser has blocked access to your folder. Click "Change folder" and choose it again.`);
+      return;
+    }
   }catch(e){
     if(e && e.name === 'NotFoundError'){
       await idbDelete('dataDirHandle').catch(()=>{});
@@ -500,19 +504,22 @@ async function tryRestoreHandle(){
     }
     /* other errors: fall through to reconnect */
   }
-  setFileStatus('warn', `Reconnect to your folder to continue (Brave asks for this each launch).`);
+  setFileStatus('warn', `Reconnect to your folder to continue (the browser asks for this each time you open the file).`);
 }
 
 async function reconnectFile(){
-  if(!dirHandle) return;
+  // No usable saved folder (e.g. it was moved): Reconnect can't help, so go straight to choosing the folder again.
+  if(!dirHandle){ await connectFolder(); return; }
   try{
     const perm = await dirHandle.requestPermission({ mode: 'readwrite' });
-    if(perm === 'granted'){
-      fileHandle = await dirHandle.getFileHandle(DATA_FILENAME, { create: true });
-      await loadFromFile();
-      setFileStatus('ok', `Connected folder — using ${DATA_FILENAME}`);
-      render();
+    if(perm !== 'granted'){
+      setFileStatus('warn', `Access to the folder wasn't granted. Click "Change folder" and choose it again.`);
+      return;
     }
+    fileHandle = await dirHandle.getFileHandle(DATA_FILENAME, { create: true });
+    await loadFromFile();
+    setFileStatus('ok', `Connected folder — using ${DATA_FILENAME}`);
+    render();
   }catch(e){
     if(e && e.name === 'NotFoundError'){
       await idbDelete('dataDirHandle').catch(()=>{});
