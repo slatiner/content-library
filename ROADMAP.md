@@ -17,6 +17,11 @@ Run `gh issue list --label phase-1-music` (etc.) to see live status for a phase.
 - One consequence: **Sign in with Apple requires a paid Apple Developer account
   ($99/yr)**, which conflicts with the constraint above. It's deferred rather
   than dropped — revisit if that changes.
+- **Goal beyond a personal tool:** eventually invite other people to create
+  accounts and keep their own libraries, and later share and recommend between
+  users. This shapes the Phase 3 and 4 decisions (see Decisions).
+- **Hosting is the one accepted cost.** The owner has a paid HostGator account
+  (plan type not yet confirmed); see the hosting decision below.
 
 ## Status
 
@@ -28,8 +33,76 @@ Run `gh issue list --label phase-1-music` (etc.) to see live status for a phase.
 | 3 | Backend foundation (DB) | 🔲 Not started | [Phase 3](../../milestone/3) |
 | 4 | Auth & multi-user | 🔲 Not started | [Phase 4](../../milestone/4) |
 | 5 | Reconnect assistant to backend | 🔲 Not started | [Phase 5](../../milestone/5) |
+| 6 | Sharing & recommendations | 🔲 Not started | [Phase 6](../../milestone/6) |
 
 ## Decisions
+
+### Backend and hosting: open, decide in #11 (researched 2026-10-11)
+
+The app is going to be a public multi-user service (next decision), so a backend
+with built-in auth and declarative per-user access rules is worth more than it
+was for a single-user tool. Hand-written auth means owning the security.
+
+- **PocketBase on a VPS** (for example Hetzner, about €5.50–6/month including IPv4
+  per an August 2026 comparison; prices rose twice in 2026, confirm on
+  hetzner.com). Least custom code: database, Google login, admin screen and API.
+  Costs money monthly, needs a server to maintain and backups to arrange.
+- **Supabase free tier.** Ready-made auth and database, but free projects pause
+  after one week of inactivity (per its pricing page) until restored by hand;
+  removing the pause needs the $25/month Pro plan. Matters less once users keep it
+  active, but hurts early on.
+- **Cloudflare Pages + Workers + D1, free.** Static assets are free and unlimited;
+  Workers free is 100,000 requests/day and 10 ms CPU per invocation (Cloudflare's
+  pricing page). D1's limits (about 5 GB, daily read/write caps) come from
+  secondary sources only. Also fits the Phase 5 key proxy. Auth and API are custom
+  code.
+- **HostGator** (the owner's paid account, plan unconfirmed). Serving the static
+  page works on any plan. Third-party reviews list PHP, MySQL, cron and SSH on
+  shared plans. PocketBase probably can't run on shared hosting (it is a
+  persistent process; HostGator's own policy was not found). Its comparison chart
+  lists scheduled backups as unavailable on shared plans. Would mean custom PHP
+  auth and API.
+- **Oracle Always Free:** not recommended (card required, frequent capacity
+  shortages, idle instances reclaimed, a reported June 2026 allowance cut that
+  could not be confirmed).
+- **Not evaluated:** Render, Fly.io, Railway, Netlify, Vercel.
+- **Current lean, not a decision:** HostGator only if the plan has SSH and the
+  owner is happy to own the auth code. Otherwise PocketBase on a VPS (least code,
+  matches this roadmap) or Cloudflare (no cost, more code).
+- **Still needed from the owner:** HostGator plan type, PHP version, whether a
+  Terminal/SSH tool and "Setup Node.js App" exist in cPanel, and the domain to use.
+- **Never upload the whole project folder to a public web root.** `secrets.json`
+  and `media-archive-data.json` would become readable. Deploy only the HTML file
+  and backend code.
+
+### Multi-user and sharing (2026-10-11)
+
+Goal: invite others to create accounts and personal libraries, then add sharing
+and recommendations between users.
+
+- **Store canonical external IDs with every entry** (Wikidata QID, Open Library
+  work id, iTunes id) from Phase 3 on. The lookups already find them but the app
+  discards them today. They are how the app knows two users logged "the same Dune".
+  The migration (#14) should backfill the existing entries.
+- **Schema shape is a Phase 3 decision (#13):** a shared catalogue of works with
+  per-user entries on top, or per-user entries only. The catalogue makes
+  recommendations and cover reuse easier.
+- **Private by default.** Notes (`insights`) often name people, so keep them
+  private even when an entry or rating is shared. Levels: private, friends, public.
+- **Invite-only sign-up (invite codes) at first**, to limit abuse and quota use.
+- **Social features are staged (Phase 6):** friends and read-only library view,
+  then explicit recommendations with a note (an inbox), then aggregates such as
+  "friends who rated this 4+" and "also liked", which need the canonical IDs.
+- **The Groq quota is shared by every user** (1,000 requests/day, 8,000
+  tokens/minute). Fine for a handful of friends. Beyond that, per-user limits or
+  bring-your-own-key.
+- **Lookups stay in each user's browser** (Wikidata, Open Library, iTunes), so they
+  don't concentrate on one server.
+- **Public-service obligations.** If any users are in the EU, UK or Switzerland,
+  expect a privacy policy, data export and account deletion. Groq's regional terms
+  are still unreviewed. Check the licences and attribution terms of the cover and
+  metadata sources before serving them publicly. Plan backups. Add tests that one
+  user cannot read another's data.
 
 ### Phase 2 LLM provider: Groq by default, Gemini swappable (2026-10-08, issue #5)
 
@@ -103,13 +176,20 @@ database *and* auth together (PocketBase or Supabase — both free/open source),
 so this is one setup effort instead of two custom builds. This phase migrates
 existing JSON data into it but stays single-user — multi-user is Phase 4.
 
+Because the app is headed for many users, design the schema for that now: store
+canonical external IDs on entries, decide catalogue versus per-user entries, and
+plan backups (see Decisions). The hosting choice is made here too (#11).
+
 ## Phase 4 — Auth & multi-user
 
 Mostly configuration once Phase 3's tool is in place. Start with **Google**
 OAuth (free); GitHub is a good second option given the audience. **Apple
 Sign-In is deferred** — see Constraints above. This phase must also decide
-the visibility model (private-only vs. shareable libraries) since it affects
-the schema.
+the visibility model (private, friends, public; notes private by default) since
+it affects the schema. It is also where the app starts holding other people's
+data, so it covers invite-only sign-up, privacy basics (policy, data export,
+account deletion), a check of cover and metadata licences, and tests that one
+user cannot read another's data.
 
 ## Phase 5 — Reconnect the assistant, add real search
 
@@ -117,10 +197,27 @@ Points Phase 2's assistant at the Phase 3/4 backend instead of the local file,
 and adds the "find" half properly — natural-language search only makes sense
 once there's a real queryable DB behind it. Also moves the LLM API key
 server-side: a client-side key is fine solo, but becomes a shared, abusable
-quota once multiple users exist.
+quota once multiple users exist. Decide here whether users share one key with
+per-user limits or bring their own, and review Groq's terms for EEA/UK/CH users
+before opening the assistant to anyone else.
+
+## Phase 6 — Sharing & recommendations
+
+Built on Phases 3–5, in stages so each one is useful on its own:
+
+1. **Friends:** connect through an invite link with mutual approval, and view a
+   friend's library read-only, respecting visibility settings.
+2. **Recommendations:** send an item to a friend with a note and show it in an
+   inbox. Explicit and human, not algorithmic.
+3. **Aggregates:** "friends who rated this 4+" on an item, and later "friends who
+   liked X also liked Y". These need the canonical IDs from Phase 3.
+
+Sharing user-written notes also needs basic blocking and reporting.
 
 ## Open questions / not yet scheduled
 
 - Music embeds via Spotify/YouTube oEmbed (nice-to-have, not blocking)
 - Full-text/semantic search once the DB exists
-- Public/shareable profile pages
+- Public profile pages beyond friends
+- Moving the headless DOM tests into the repo (they need a dev-only dependency,
+  jsdom) once authorization tests exist
