@@ -32,7 +32,7 @@ Run `gh issue list --label phase-1-music` (etc.) to see live status for a phase.
 | 1 | Music content type | ✅ Done | [Phase 1](../../milestone/1) |
 | 2 | Natural-language add/find assistant | ✅ Done | [Phase 2](../../milestone/2) |
 | 3 | Backend foundation (DB) | 🔶 In progress | [Phase 3](../../milestone/3) |
-| 3.5 | Port to Vue + Vite | 🔲 Not started | [Phase 3.5](../../milestone/7) |
+| 3.5 | Port to Vue + Vite | 🔶 In progress | [Phase 3.5](../../milestone/7) |
 | 4 | Auth & multi-user | 🔲 Not started | [Phase 4](../../milestone/4) |
 | 5 | Reconnect assistant to backend | 🔲 Not started | [Phase 5](../../milestone/5) |
 | 6 | Sharing & recommendations | 🔲 Not started | [Phase 6](../../milestone/6) |
