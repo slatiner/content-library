@@ -32,6 +32,7 @@ Run `gh issue list --label phase-1-music` (etc.) to see live status for a phase.
 | 1 | Music content type | ✅ Done | [Phase 1](../../milestone/1) |
 | 2 | Natural-language add/find assistant | ✅ Done | [Phase 2](../../milestone/2) |
 | 3 | Backend foundation (DB) | 🔶 In progress | [Phase 3](../../milestone/3) |
+| 3.5 | Port to Vue + Vite | 🔲 Not started | [Phase 3.5](../../milestone/7) |
 | 4 | Auth & multi-user | 🔲 Not started | [Phase 4](../../milestone/4) |
 | 5 | Reconnect assistant to backend | 🔲 Not started | [Phase 5](../../milestone/5) |
 | 6 | Sharing & recommendations | 🔲 Not started | [Phase 6](../../milestone/6) |
@@ -137,6 +138,28 @@ docs and changelog, the rest from third-party sources and marked as such):
 - **Never upload the whole project folder to a public web root.** `secrets.json`
   and `media-archive-data.json` would become readable. Deploy only the HTML file
   and backend code.
+
+### Move to Vue + Vite, before the app switch (decided 2026-10-11)
+
+- **Owner's goal:** move from the single HTML file to a proper JS framework with
+  ES modules: Vue 3, built with Node (Vite).
+- **Timing: a new Phase 3.5, after the schema work (#13) and before the app switch
+  (#15).** #15, the storage adapter (#41) and Phase 4 rewrite storage and add
+  login and account screens. Building them in the old file first would mean
+  writing them twice. Google login also can't return to a page opened from disk
+  (`file://`), so from Phase 4 on a local server is needed anyway; the Vite dev
+  server is that. The migration script (#14) is a standalone Node script and
+  doesn't depend on the port.
+- **Shape:** a straight port with feature parity, same file-based storage, now
+  behind the storage adapter. Plain JavaScript (TypeScript can come later file by
+  file). No Pinia; Vue's built-in reactive state is enough for one entries list.
+  Tests move into the repo as Vitest + Vue Test Utils. The old
+  `media-archive.html` stays until the owner has checked parity.
+- **Cost:** none in money (Vue, Vite and Vitest are MIT; Cloudflare Pages and
+  GitHub Pages build with Node for free). It drops the no-build-step house rule,
+  testing becomes `npm run dev` and localhost instead of opening the file, and
+  npm dependencies need occasional updates (`npm audit`, Dependabot, both free).
+  New features pause during the port.
 
 ### Multi-user and sharing (2026-10-11)
 
@@ -251,6 +274,13 @@ plan backups (see Decisions). Hosting is decided: Supabase free tier plus a free
 static host. Do this work on a branch so the current file-based app stays usable
 until the switch.
 
+## Phase 3.5 — Port to Vue + Vite
+
+Port the single-file app to Vue 3 + Vite with ES modules, keeping every feature
+and the file-based storage, now behind the storage adapter (#41). This comes
+before the app switch (#15) so the backend and login work is written once, in
+the new app. See Decisions, "Move to Vue + Vite".
+
 ## Phase 4 — Auth & multi-user
 
 Mostly configuration once Phase 3's tool is in place. Google login and the
@@ -292,5 +322,3 @@ Sharing user-written notes also needs basic blocking and reporting.
 - Music embeds via Spotify/YouTube oEmbed (nice-to-have, not blocking)
 - Full-text/semantic search once the DB exists
 - Public profile pages beyond friends
-- Moving the headless DOM tests into the repo (they need a dev-only dependency,
-  jsdom) once authorization tests exist
