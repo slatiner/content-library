@@ -69,6 +69,24 @@ was for a single-user tool. Hand-written auth means owning the security.
   Postgres later. Fallback if the free limits or the pause become a problem:
   PocketBase on a VPS (about €6/month). A custom domain is optional to start;
   free subdomains exist on both static hosts.
+- **Exit plan (owner, 2026-10-11): start on Supabase free, move to PocketBase when
+  it stops fitting.** Move when any of these happens: the keep-alive can't keep
+  the project awake or Supabase objects to it; the database nears 500 MB; we need
+  real backups beyond our own export; the free terms change; or growth makes
+  the $25/month Pro plan the alternative. Targets: PocketBase on a managed host
+  (PocketHost about $5–10/month, Render about $7, Railway or Fly.io about $5–15;
+  sources conflict, verify live prices) or a Hetzner server (about €6/month).
+  Supabase Pro ($25/month, no pausing, 7-day daily backups) is the no-move option.
+- **What a later move costs.** The data is easy: our own JSON export and import.
+  To redo: the client calls (supabase-js to the PocketBase SDK), the access rules
+  (row-level policies to PocketBase API rules), the server function (Edge Function
+  to a PocketBase hook), and sign-in (people log in with Google again and we match
+  their data by email; verify at the time). The separate static host may go away,
+  since PocketBase can serve the page itself.
+- **Keep the move cheap (#41).** All backend calls go through one small storage
+  adapter instead of being scattered through the page, the schema stays plain (no
+  Postgres-only features), Export/Import (#16) keeps working as the migration
+  path, and the Groq proxy stays small and separate.
 - **Keep-alive:** a free GitHub Actions cron every 2–3 days (it can't do "every 6
   days") that runs a real read on a small table, so the project doesn't pause
   after a week idle. Supabase's docs don't say exactly what counts as activity
