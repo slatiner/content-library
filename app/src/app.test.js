@@ -29,9 +29,14 @@ function fakeAdapter(initial, connState = 'ok') {
 
 // Fake network: Groq answers come from `groqAnswer`; lookups find nothing.
 let groqAnswer;
-function fakeFetch(url) {
+// groqAnswer is one answer, or { library_filter, library_entry } keyed by task.
+function fakeFetch(url, init) {
   const json = (body, status = 200) => Promise.resolve(new Response(JSON.stringify(body), { status }));
-  if (url.startsWith('https://api.groq.com/')) return json({ choices: [{ message: { content: JSON.stringify(groqAnswer) } }] });
+  if (url.startsWith('https://api.groq.com/')) {
+    const task = JSON.parse(init.body).response_format.json_schema.name;
+    const answer = groqAnswer && groqAnswer[task] ? groqAnswer[task] : groqAnswer;
+    return json({ choices: [{ message: { content: JSON.stringify(answer) } }] });
+  }
   if (url.includes('wbsearchentities')) return json({ search: [] });
   return json({});
 }
@@ -185,6 +190,29 @@ describe('ask the library', () => {
     expect(w.findAll('.card')).toHaveLength(4);
     expect(w.find('select').element.value).toBe('dateConsumed_desc');
     expect(w.find('.ask-row').exists()).toBe(false);
+  });
+});
+
+describe('adding from the search box', () => {
+  it('an add request opens Describe it with the preview, and Enter adds', async () => {
+    groqAnswer = {
+      library_filter: { intent: 'add', mediums: [], text: null, minRating: null, maxRating: null, consumedFrom: null, consumedTo: null, releasedFrom: null, releasedTo: null, sort: null },
+      library_entry: { intent: 'add', medium: 'film', title: 'Dune', year: null, creator: null, rating: 4, dateConsumed: null, note: null, platform: null, url: null },
+    };
+    const w = await mountApp();
+    const search = w.find('.filter-row input[type=text]');
+    await search.setValue('just saw dune, 4 stars');
+    await search.trigger('keydown', { key: 'Enter' });
+    await flushPromises();
+    expect(search.element.value).toBe('');
+    expect(w.findAll('.card')).toHaveLength(4);
+    expect(w.find('.overlay.open').exists()).toBe(true);
+    expect(w.find('#aiInput').element.value).toBe('just saw dune, 4 stars');
+    expect(w.find('.pv-title').text()).toBe('Dune');
+    await w.find('#aiInput').trigger('keydown', { key: 'Enter' });
+    await flushPromises();
+    expect(adapter.calls.at(-1)[1]).toMatchObject({ medium: 'film', title: 'Dune', rating: 4 });
+    expect(w.findAll('.card')).toHaveLength(5);
   });
 });
 

@@ -86,6 +86,10 @@ export const filters = reactive({
 export const ask = reactive({ criteria: null, status: '', chips: [], busy: false });
 let askPrevSort = null;
 
+// The search box can also add: App registers a handler that opens the Add dialog.
+let addHandler = null;
+export function onAddRequest(fn) { addHandler = fn; }
+
 function setAsk(status, chips) { ask.status = status || ''; ask.chips = chips || []; }
 
 function applyFind(f, question) {
@@ -115,8 +119,14 @@ export async function askLibrary(text) {
   setAsk('Thinking…', []);
   try {
     const r = await llmJson(await ensureGroqKey(), text, FIND_TASK);
+    if (r.intent === 'add' && addHandler) {
+      filters.search = '';
+      setAsk('', []);
+      addHandler(text);
+      return;
+    }
     if (r.intent !== 'find') {
-      setAsk('I can only filter your library for now. Try "films I rated above 4 this year".', []);
+      setAsk('I can search your library or add to it. Try "films I rated above 4 this year" or "just watched Dune, 4 stars".', []);
       return;
     }
     applyFind(normalizeFind(r), text);

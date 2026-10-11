@@ -41,7 +41,7 @@ Rules:
 const FIND_SCHEMA = {
   type: 'object',
   properties: {
-    intent: { type: 'string', enum: ['find', 'other'] },
+    intent: { type: 'string', enum: ['find', 'add', 'other'] },
     mediums: { type: 'array', items: { type: 'string', enum: ['book', 'film', 'series', 'music'] } },
     text: { type: ['string', 'null'] },
     minRating: { type: ['integer', 'null'] },
@@ -62,7 +62,7 @@ function buildFindPrompt() {
 The library holds books, films, series (TV shows) and music (albums, singles, DJ sets). Each item has a title, release year, author/artist/director, cast, the user's 1-5 star rating, the date the user consumed it, and the user's notes.
 
 Rules:
-- intent: "find" if the user wants to see or narrow down items in the library (a bare keyword or name counts), otherwise "other".
+- intent: "find" if the user wants to see or narrow down items in the library (a bare keyword or name counts). "add" if the user is logging something they watched, read or listened to, e.g. "just watched Dune, 4 stars", "add Perfect Blue", "finished Steppenwolf last week, loved it" (then set the other fields to null and mediums to []). Otherwise "other".
 - mediums: the kinds to include, from "book", "film", "series", "music". An empty array means all kinds. "movies" -> film, "shows" -> series, "albums", "songs", "records", "sets" -> music, "read" suggests book, "listened" suggests music. Only restrict kinds when the user names or clearly implies them. Never guess a kind from a person's name: a bare name or keyword gets an empty array.
 - text: names or keywords to look for in titles, people or notes (e.g. "Murakami", "Beatles"). Never include generic words such as "films", "rated", "this year". null if there are none.
 - minRating / maxRating: inclusive, 1-5. "above 4" -> min 5; "4 or more", "at least 4", "4+" -> min 4; "below 3" -> max 2; "at most 3", "up to 3" -> max 3; "favorites" -> min 5; "good ones" -> min 4; "worst" or "bad ones" -> max 2. null if not about ratings. "highest rated" or "top rated" by themselves are an ordering (sort), not a rating filter.

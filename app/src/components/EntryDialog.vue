@@ -48,7 +48,13 @@ function open(entry) {
   if (!entry) nextTick(() => aiInputEl.value && aiInputEl.value.focus());
 }
 function close() { isOpen.value = false; }
-defineExpose({ open });
+// Open on "Describe it" with text already typed, and send it.
+function describe(text) {
+  open(null);
+  aiText.value = text;
+  aiSubmit();
+}
+defineExpose({ open, describe });
 
 function showView(v, tabs) { view.value = v; withTabs.value = tabs; }
 function onTab(v) {

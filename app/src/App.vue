@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
-import { entries, connection, initStorage, connectStorage, reconnectStorage, filters, ask, deleteEntry } from './state.js';
+import { entries, connection, initStorage, connectStorage, reconnectStorage, filters, ask, deleteEntry, onAddRequest } from './state.js';
 import { countByMedium, filterAndSort } from './lib/entries.js';
 import FilterBar from './components/FilterBar.vue';
 import EntryCard from './components/EntryCard.vue';
@@ -20,6 +20,7 @@ const dialog = ref(null);
 const backupOpen = ref(false);
 const diagOpen = ref(false);
 
+onAddRequest((text) => dialog.value.describe(text));
 onMounted(initStorage);
 </script>
 

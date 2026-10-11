@@ -39,7 +39,7 @@ function menu(event) { openPop.value = null; emit(event); }
 <template>
   <div class="filter-bar">
     <div class="filter-row">
-      <input v-model="filters.search" type="text" placeholder="Search, or ask: films I rated 4+ this year ↵" @keydown.enter="onSearchEnter">
+      <input v-model="filters.search" type="text" placeholder="Search, ask (films I rated 4+) or add (just saw Dune, 4 stars) ↵" @keydown.enter="onSearchEnter">
       <div ref="datePop" class="popover-wrap">
         <button class="input-btn" @click.stop="togglePop('date')">📅 <span>{{ dateLabel }}</span></button>
         <div class="popover" :class="{ open: openPop === 'date' }">
