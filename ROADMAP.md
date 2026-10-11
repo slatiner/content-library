@@ -33,7 +33,7 @@ Run `gh issue list --label phase-1-music` (etc.) to see live status for a phase.
 | 2 | Natural-language add/find assistant | ✅ Done | [Phase 2](../../milestone/2) |
 | 3 | Backend foundation (DB) | 🔶 In progress | [Phase 3](../../milestone/3) |
 | 3.5 | Port to Vue + Vite | ✅ Done | [Phase 3.5](../../milestone/7) |
-| 4 | Auth & multi-user | 🔲 Not started | [Phase 4](../../milestone/4) |
+| 4 | Auth & multi-user | 🔶 In progress | [Phase 4](../../milestone/4) |
 | 5 | Reconnect assistant to backend | 🔲 Not started | [Phase 5](../../milestone/5) |
 | 6 | Sharing & recommendations | 🔲 Not started | [Phase 6](../../milestone/6) |
 
@@ -283,6 +283,11 @@ before the app switch (#15) so the backend and login work is written once, in
 the new app. See Decisions, "Move to Vue + Vite".
 
 ## Phase 4 — Auth & multi-user
+
+**Status (2026-10-11):** the app runs on Supabase with Google sign-in (#15, #17,
+#18, #19 done). Only the owner can sign in: new sign-ups and the email provider are
+off until invite codes (#28). Next: free static hosting (#40) and the keep-alive
+(#39), then invites, privacy basics and visibility.
 
 Mostly configuration once Phase 3's tool is in place. Google login and the
 per-user rules (#17–#19) ship together with the app switch (#15), not after it.
