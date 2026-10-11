@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
-import { entries, connection, initStorage, connectStorage, reconnectStorage, filters, ask, deleteEntry, onAddRequest } from './state.js';
+import { entries, connection, initStorage, connectStorage, reconnectStorage, signOut, filters, ask, deleteEntry, onAddRequest } from './state.js';
 import { countByMedium, filterAndSort } from './lib/entries.js';
 import FilterBar from './components/FilterBar.vue';
 import EntryCard from './components/EntryCard.vue';
@@ -14,6 +14,8 @@ const visible = computed(() => filterAndSort(entries.value, filters, ask.criteri
 // 'unsupported' still shows the library, so Export / Import can be used by hand.
 const showMain = computed(() => connection.state === 'ok' || connection.state === 'unsupported');
 const showSetup = computed(() => connection.state === 'none');
+const showSignIn = computed(() => connection.state === 'signedOut');
+const isFile = computed(() => connection.kind === 'file');
 const dot = computed(() => (connection.state === 'warn' || connection.state === 'unsupported') ? 'warn' : '');
 
 const dialog = ref(null);
@@ -32,7 +34,11 @@ onMounted(initStorage);
         <div class="counts mono">
           <span><b>{{ counts.book }}</b> books</span><span><b>{{ counts.film }}</b> films</span><span><b>{{ counts.series }}</b> series</span><span><b>{{ counts.music }}</b> music</span>
         </div>
-        <button class="add-new-btn" @click="dialog.open(null)">+ Add new</button>
+        <span v-if="connection.account && connection.state === 'ok'" class="account">
+          {{ connection.account }}
+          <button class="btn ghost small" @click="signOut">Sign out</button>
+        </span>
+        <button v-if="showMain" class="add-new-btn" @click="dialog.open(null)">+ Add new</button>
       </div>
     </header>
 
@@ -40,9 +46,14 @@ onMounted(initStorage);
       <span class="dot" :class="dot"></span>
       <span>{{ connection.text }}</span>
       <span style="flex:1;"></span>
-      <template v-if="connection.state === 'warn'">
+      <template v-if="connection.state === 'warn' && isFile">
         <button class="btn ghost small" @click="reconnectStorage">Reconnect</button>
         <button class="btn ghost small" @click="connectStorage">Change folder</button>
+      </template>
+      <template v-else-if="connection.state === 'warn'">
+        <button class="btn ghost small" @click="reconnectStorage">Retry</button>
+        <button v-if="connection.account" class="btn ghost small" @click="signOut">Sign out</button>
+        <button v-else class="btn ghost small" @click="connectStorage">Sign in again</button>
       </template>
     </div>
 
@@ -51,8 +62,13 @@ onMounted(initStorage);
       <button class="btn" @click="connectStorage">Connect folder</button>
     </div>
 
+    <div v-if="showSignIn" class="setup">
+      <p>Your library is stored in your account. Sign in with Google to see it.</p>
+      <button class="btn" @click="connectStorage">Sign in with Google</button>
+    </div>
+
     <div v-if="showMain">
-      <FilterBar @change-folder="connectStorage" @diagnose="diagOpen = true" @backup="backupOpen = true" />
+      <FilterBar :can-change-folder="isFile" @change-folder="connectStorage" @diagnose="diagOpen = true" @backup="backupOpen = true" />
       <TransitionGroup name="card" tag="div" class="grid">
         <EntryCard v-for="e in visible" :key="e.id" :entry="e" @open="dialog.open(e)" @delete="deleteEntry(e.id)" />
       </TransitionGroup>

@@ -257,7 +257,7 @@ function saveKey() {
 
         <div v-if="keyBox" class="suggest-box">
           <div class="suggest-head">Groq API key needed</div>
-          <p class="form-sub" style="margin-bottom:8px;">Put it in <code>secrets.json</code> in your data folder, or paste it here. Pasted keys are stored only in this browser.</p>
+          <p class="form-sub" style="margin-bottom:8px;">Paste it here; it's stored only in this browser. (In file mode it can also come from <code>secrets.json</code> in your data folder.)</p>
           <div class="title-row">
             <div class="field"><input v-model="keyInput" type="password" placeholder="gsk_…" autocomplete="off"></div>
             <button type="button" class="btn small" @click="saveKey">Save key</button>

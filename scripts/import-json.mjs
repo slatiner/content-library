@@ -8,6 +8,7 @@
 // upserted on (user_id, id), so a second run updates instead of duplicating.
 
 import { readFile } from 'node:fs/promises';
+import { entryToRow, parseYear } from '../app/src/lib/storage/rows.js';
 
 const args = process.argv.slice(2);
 const opt = (name, fallback) => {
@@ -24,13 +25,6 @@ if (!ownerEmail) {
 
 const MEDIA = ['film', 'book', 'series', 'music'];
 
-function parseYear(v) {
-  const s = String(v ?? '').trim();
-  if (!s) return null;
-  const m = s.match(/\d{4}/) || s.match(/^\d{1,4}$/);
-  return m ? Number(m[0]) : undefined; // undefined = unparseable
-}
-
 function toRow(e, userId) {
   const problems = [];
   if (!e.id) problems.push('missing id');
@@ -38,37 +32,10 @@ function toRow(e, userId) {
   if (!String(e.title ?? '').trim()) problems.push('empty title');
   const rating = Number(e.rating ?? 0);
   if (!Number.isInteger(rating) || rating < 0 || rating > 5) problems.push(`bad rating ${e.rating}`);
-  const year = parseYear(e.year);
-  if (year === undefined) problems.push(`unparseable year "${e.year}"`);
+  if (parseYear(e.year) === undefined) problems.push(`unparseable year "${e.year}"`);
   const date = String(e.dateConsumed ?? '').trim();
   if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) problems.push(`bad dateConsumed "${date}"`);
-  if (problems.length) return { problems };
-
-  const text = (v) => String(v ?? '').trim();
-  const orNull = (v) => text(v) || null;
-  return {
-    row: {
-      user_id: userId,
-      id: e.id,
-      medium: e.medium,
-      title: text(e.title),
-      year,
-      author: text(e.author),
-      director: text(e.director),
-      cast_members: text(e.cast),
-      platform: text(e.platform),
-      stream_url: text(e.streamUrl),
-      date_consumed: date || null,
-      rating,
-      cover_url: text(e.coverUrl),
-      insights: text(e.insights),
-      wikidata_id: orNull(e.wikidataId),
-      openlibrary_id: orNull(e.openlibraryId),
-      itunes_id: orNull(e.itunesId),
-      visibility: e.visibility || 'private',
-      date_added: new Date(Number(e.dateAdded) || Date.now()).toISOString(),
-    },
-  };
+  return problems.length ? { problems } : { row: entryToRow(e, userId) };
 }
 
 const secrets = JSON.parse(await readFile('secrets.json', 'utf8'));

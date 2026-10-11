@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { filters, ask, askLibrary, clearAsk } from '../state.js';
 import { MEDIA, MEDIUM_TAG_LABEL } from '../lib/entries.js';
 
+defineProps({ canChangeFolder: { type: Boolean, default: false } });
 const emit = defineEmits(['change-folder', 'diagnose', 'backup']);
 
 const openPop = ref(null); // 'date' | 'more' | null
@@ -66,7 +67,7 @@ function menu(event) { openPop.value = null; emit(event); }
       <div ref="morePop" class="popover-wrap" style="margin-left:auto;">
         <button class="icon-btn" title="More options" @click.stop="togglePop('more')">⚙</button>
         <div class="popover" :class="{ open: openPop === 'more' }">
-          <button class="btn ghost small full" @click="menu('change-folder')">Change folder</button>
+          <button v-if="canChangeFolder" class="btn ghost small full" @click="menu('change-folder')">Change folder</button>
           <button class="btn ghost small full" @click="menu('diagnose')">Diagnose connection</button>
           <button class="btn ghost small full" @click="menu('backup')">Export / Import JSON</button>
         </div>

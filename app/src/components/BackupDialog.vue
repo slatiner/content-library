@@ -49,7 +49,7 @@ async function replace() {
   <div class="overlay" :class="{ open }" @click.self="open = false">
     <div class="form-panel">
       <h2>Export / Import JSON</h2>
-      <p class="form-sub">Your data file already does this automatically. Use this as a manual backup, or to move data between machines/browsers.</p>
+      <p class="form-sub">Your library is saved automatically. Use this as a manual backup, or to move data between machines, browsers or accounts.</p>
       <div class="field">
         <label>Current data — copy this</label>
         <textarea ref="exportEl" :value="exportText" class="mono" readonly style="min-height:110px;font-size:11px;"></textarea>

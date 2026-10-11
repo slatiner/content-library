@@ -1,22 +1,32 @@
 // App state shared by the components (Vue's built-in reactivity; no Pinia).
 import { reactive, ref } from 'vue';
 import { MEDIA } from './lib/entries.js';
-import { createFileStorage } from './lib/storage/index.js';
+import { createFileStorage, createSupabaseStorage } from './lib/storage/index.js';
+import { STORAGE, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './config.js';
 import { llmJson, FIND_TASK, normalizeFind, askChipsFor } from './lib/llm.js';
 
 export const entries = ref([]);
-export const connection = reactive({ state: 'checking', text: 'Checking for a connected data file…' });
+export const connection = reactive({ state: 'checking', text: 'Loading…', account: '', kind: STORAGE });
 
-export function setConnection(state, text) { connection.state = state; connection.text = text; }
+export function setConnection(state, text, account = '') {
+  connection.state = state; connection.text = text; connection.account = account;
+}
 
-let storage = createFileStorage(setConnection);
+let storage = STORAGE === 'file'
+  ? createFileStorage(setConnection)
+  : createSupabaseStorage(setConnection, { url: SUPABASE_URL, key: SUPABASE_PUBLISHABLE_KEY });
 // Tests swap in a fake adapter.
-export function useStorage(adapter) { storage = adapter; }
+export function useStorage(adapter) { storage = adapter; connection.kind = adapter.kind; }
 
 function loaded(list) { if (list) entries.value = list; }
 export const initStorage = async () => loaded(await storage.init());
 export const connectStorage = async () => loaded(await storage.connect());
 export const reconnectStorage = async () => loaded(await storage.reconnect());
+export async function signOut() {
+  await storage.signOut();
+  entries.value = [];
+  clearAsk();
+}
 
 // Create or update. Keeps fields the form doesn't know about (e.g. external ids).
 export async function saveEntry(entry) {
@@ -26,7 +36,7 @@ export async function saveEntry(entry) {
   try {
     await storage.saveEntry(i >= 0 ? entries.value[i] : entry, entries.value);
   } catch (e) {
-    alert('Saved in memory but could not write to the file: ' + (e.message || e) + '\nUse Export/Import to back this up manually.');
+    alert('Saved in this page but not stored: ' + (e.message || e) + '\nUse Export/Import to back this up manually.');
   }
 }
 
@@ -35,7 +45,7 @@ export function deleteEntry(id) {
   const label = entry ? `"${entry.title}"` : 'this entry';
   if (!confirm(`Delete ${label}? This can't be undone.`)) return;
   entries.value = entries.value.filter((e) => e.id !== id);
-  storage.deleteEntry(id, entries.value).catch(() => {});
+  storage.deleteEntry(id, entries.value).catch((e) => alert((e && e.message) || e));
 }
 
 // Export/Import: returns how many were added.

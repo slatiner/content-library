@@ -10,15 +10,18 @@ const EXAMPLE = JSON.parse(readFileSync('media-archive-data.example.json', 'utf8
 
 let state, App, adapter;
 
-function fakeAdapter(initial, connState = 'ok') {
+function fakeAdapter(initial, connState = 'ok', kind = 'file') {
   const calls = [];
+  const account = kind === 'supabase' ? 'me@example.com' : '';
   return {
+    kind,
     calls,
     async init() {
-      state.setConnection(connState, connState === 'ok' ? 'Connected' : 'Reconnect to your folder');
+      state.setConnection(connState, connState === 'ok' ? 'Connected' : 'Not connected', connState === 'ok' ? account : '');
       return connState === 'ok' ? structuredClone(initial) : null;
     },
-    async connect() { return null; },
+    async connect() { calls.push(['connect']); return null; },
+    async signOut() { calls.push(['signOut']); state.setConnection('signedOut', 'Signed out.'); },
     async reconnect() { state.setConnection('ok', 'Connected'); return structuredClone(initial); },
     async saveEntry(entry, all) { calls.push(['save', entry, all.length]); },
     async deleteEntry(id, all) { calls.push(['delete', id, all.length]); },
@@ -41,11 +44,11 @@ function fakeFetch(url, init) {
   return json({});
 }
 
-async function mountApp(initial = EXAMPLE, connState = 'ok') {
+async function mountApp(initial = EXAMPLE, connState = 'ok', kind = 'file') {
   vi.resetModules();
   state = await import('./state.js');
   App = (await import('./App.vue')).default;
-  adapter = fakeAdapter(initial, connState);
+  adapter = fakeAdapter(initial, connState, kind);
   state.useStorage(adapter);
   const wrapper = mount(App, { attachTo: document.body });
   await flushPromises();
@@ -113,6 +116,28 @@ describe('library view', () => {
     await btn.trigger('click');
     await flushPromises();
     expect(w.findAll('.card')).toHaveLength(4);
+  });
+});
+
+describe('signing in (Supabase storage)', () => {
+  it('signed out: shows only the sign-in button, which starts Google sign-in', async () => {
+    const w = await mountApp(EXAMPLE, 'signedOut', 'supabase');
+    expect(w.find('.card').exists()).toBe(false);
+    expect(w.find('.add-new-btn').exists()).toBe(false);
+    await w.findAll('button').find((b) => b.text() === 'Sign in with Google').trigger('click');
+    expect(adapter.calls).toEqual([['connect']]);
+  });
+
+  it('signed in: shows the account, no folder controls, and signs out', async () => {
+    const w = await mountApp(EXAMPLE, 'ok', 'supabase');
+    expect(w.find('.account').text()).toContain('me@example.com');
+    await w.find('.icon-btn').trigger('click');
+    expect(w.findAll('.popover button').map((b) => b.text())).not.toContain('Change folder');
+    await w.findAll('.account button').find((b) => b.text() === 'Sign out').trigger('click');
+    await flushPromises();
+    expect(adapter.calls.at(-1)).toEqual(['signOut']);
+    expect(w.find('.card').exists()).toBe(false);
+    expect(w.text()).toContain('Sign in with Google');
   });
 });
 
