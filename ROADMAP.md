@@ -31,14 +31,14 @@ Run `gh issue list --label phase-1-music` (etc.) to see live status for a phase.
 | 0 | Foundation | ✅ Done | — |
 | 1 | Music content type | ✅ Done | [Phase 1](../../milestone/1) |
 | 2 | Natural-language add/find assistant | ✅ Done | [Phase 2](../../milestone/2) |
-| 3 | Backend foundation (DB) | 🔲 Not started | [Phase 3](../../milestone/3) |
+| 3 | Backend foundation (DB) | 🔶 In progress | [Phase 3](../../milestone/3) |
 | 4 | Auth & multi-user | 🔲 Not started | [Phase 4](../../milestone/4) |
 | 5 | Reconnect assistant to backend | 🔲 Not started | [Phase 5](../../milestone/5) |
 | 6 | Sharing & recommendations | 🔲 Not started | [Phase 6](../../milestone/6) |
 
 ## Decisions
 
-### Backend and hosting: open, decide in #11 (researched 2026-10-11)
+### Backend and hosting: Supabase free + free static host (decided 2026-10-11, #11)
 
 The app is going to be a public multi-user service (next decision), so a backend
 with built-in auth and declarative per-user access rules is worth more than it
@@ -62,16 +62,25 @@ was for a single-user tool. Hand-written auth means owning the security.
   shortages, idle instances reclaimed, a reported June 2026 allowance cut that
   could not be confirmed).
 - **Not evaluated:** Render, Fly.io, Railway, Netlify, Vercel.
-- **Current lean, not a decision:** at zero cost, Supabase free for the database
-  and auth (ready-made login and per-user rules, so less security code to own) with
-  the static page on a free static host (Cloudflare Pages or GitHub Pages); the
-  one-week pause is handled by a scheduled keep-alive or accepted early on. If a
-  monthly cost is acceptable, PocketBase on a VPS. Cloudflare Workers + D1 if the
-  owner prefers no vendor database and is happy to write the auth code.
-- **Still needed from the owner:** whether paying about €6/month for a VPS is
-  acceptable. That is what decides PocketBase against the free options. A custom
-  domain is optional to start (free subdomains exist on Cloudflare Pages and
-  GitHub Pages).
+- **Decision (owner, 2026-10-11): Supabase free tier for the database and auth,
+  with the static page on a free static host (Cloudflare Pages or GitHub Pages).**
+  Zero cost, ready-made Google login and per-user row rules (so less security code
+  to own), and standard Postgres that can move to a self-hosted Supabase or another
+  Postgres later. Fallback if the free limits or the pause become a problem:
+  PocketBase on a VPS (about €6/month). A custom domain is optional to start;
+  free subdomains exist on both static hosts.
+- **Keep-alive:** a scheduled daily request (for example a free GitHub Actions
+  cron) so the project doesn't pause after a week idle. Or accept the pause while
+  it only holds the owner's data.
+- **Secrets:** the page may contain only Supabase's public key, which is safe
+  because per-user rules protect the data. The secret (service role) key never
+  goes in the HTML; it belongs in `secrets.json`.
+- **The Groq key** can't stay in the page once others use it. Proxy it through a
+  server-side function (Supabase Edge Function or a Cloudflare Worker) in Phase 5.
+- **To verify while setting up (#12):** that a daily keep-alive ping is fine under
+  Supabase's terms; whether an EU region can be chosen at project creation (for EU
+  users' data); whether sign-up needs a payment card; the Google login setup; and
+  the free Edge Function limits.
 - **Never upload the whole project folder to a public web root.** `secrets.json`
   and `media-archive-data.json` would become readable. Deploy only the HTML file
   and backend code.
@@ -179,7 +188,9 @@ existing JSON data into it but stays single-user — multi-user is Phase 4.
 
 Because the app is headed for many users, design the schema for that now: store
 canonical external IDs on entries, decide catalogue versus per-user entries, and
-plan backups (see Decisions). The hosting choice is made here too (#11).
+plan backups (see Decisions). Hosting is decided: Supabase free tier plus a free
+static host. Do this work on a branch so the current file-based app stays usable
+until the switch.
 
 ## Phase 4 — Auth & multi-user
 
