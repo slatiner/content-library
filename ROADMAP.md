@@ -20,8 +20,9 @@ Run `gh issue list --label phase-1-music` (etc.) to see live status for a phase.
 - **Goal beyond a personal tool:** eventually invite other people to create
   accounts and keep their own libraries, and later share and recommend between
   users. This shapes the Phase 3 and 4 decisions (see Decisions).
-- **Hosting is the one accepted cost.** The owner has a paid HostGator account
-  (plan type not yet confirmed); see the hosting decision below.
+- **Hosting is the one accepted cost.** The owner currently has no hosting (a
+  HostGator subscription turned out to have lapsed, October 2026); see the hosting
+  decision below.
 
 ## Status
 
@@ -56,21 +57,21 @@ was for a single-user tool. Hand-written auth means owning the security.
   pricing page). D1's limits (about 5 GB, daily read/write caps) come from
   secondary sources only. Also fits the Phase 5 key proxy. Auth and API are custom
   code.
-- **HostGator** (the owner's paid account, plan unconfirmed). Serving the static
-  page works on any plan. Third-party reviews list PHP, MySQL, cron and SSH on
-  shared plans. PocketBase probably can't run on shared hosting (it is a
-  persistent process; HostGator's own policy was not found). Its comparison chart
-  lists scheduled backups as unavailable on shared plans. Would mean custom PHP
-  auth and API.
+- **HostGator:** ruled out. The owner's subscription has ended.
 - **Oracle Always Free:** not recommended (card required, frequent capacity
   shortages, idle instances reclaimed, a reported June 2026 allowance cut that
   could not be confirmed).
 - **Not evaluated:** Render, Fly.io, Railway, Netlify, Vercel.
-- **Current lean, not a decision:** HostGator only if the plan has SSH and the
-  owner is happy to own the auth code. Otherwise PocketBase on a VPS (least code,
-  matches this roadmap) or Cloudflare (no cost, more code).
-- **Still needed from the owner:** HostGator plan type, PHP version, whether a
-  Terminal/SSH tool and "Setup Node.js App" exist in cPanel, and the domain to use.
+- **Current lean, not a decision:** at zero cost, Supabase free for the database
+  and auth (ready-made login and per-user rules, so less security code to own) with
+  the static page on a free static host (Cloudflare Pages or GitHub Pages); the
+  one-week pause is handled by a scheduled keep-alive or accepted early on. If a
+  monthly cost is acceptable, PocketBase on a VPS. Cloudflare Workers + D1 if the
+  owner prefers no vendor database and is happy to write the auth code.
+- **Still needed from the owner:** whether paying about €6/month for a VPS is
+  acceptable. That is what decides PocketBase against the free options. A custom
+  domain is optional to start (free subdomains exist on Cloudflare Pages and
+  GitHub Pages).
 - **Never upload the whole project folder to a public web root.** `secrets.json`
   and `media-archive-data.json` would become readable. Deploy only the HTML file
   and backend code.
