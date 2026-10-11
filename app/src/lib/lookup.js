@@ -89,6 +89,44 @@ async function fetchWikipediaLeadImage(pageTitle) {
   } catch (e) { return ''; }
 }
 
+// TVmaze has real portrait posters for TV shows, and allows browser requests (CORS *).
+async function fetchTvmazePoster(title) {
+  try {
+    const r = await fetch(`https://api.tvmaze.com/singlesearch/shows?q=${encodeURIComponent(title)}`);
+    if (!r.ok) return '';
+    const d = await r.json();
+    return (d.image && (d.image.original || d.image.medium)) || '';
+  } catch (e) { return ''; }
+}
+
+// Load an image to read its size. Resolves { w, h }, or null if it doesn't load.
+function imageSize(url, timeoutMs = 8000) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const timer = setTimeout(() => done(null), timeoutMs);
+    function done(v) { clearTimeout(timer); img.onload = img.onerror = null; resolve(v); }
+    img.onload = () => done({ w: img.naturalWidth, h: img.naturalHeight });
+    img.onerror = () => done(null);
+    img.src = url;
+  });
+}
+
+// Cards are 2:3 portrait. Try each source in order and keep the first portrait
+// image; SVGs (usually logos) and wide images are skipped. If nothing portrait
+// turns up, fall back to the first image that loads.
+async function pickPortraitCover(sources) {
+  let fallback = '';
+  for (const source of sources) {
+    const url = await source();
+    if (!url || /\.svg($|[?/])/i.test(url)) continue;
+    const size = await imageSize(url);
+    if (!size || !size.w) continue;
+    if (size.h / size.w >= 1.2) return url;
+    if (!fallback) fallback = url;
+  }
+  return fallback;
+}
+
 // iTunes Search API sends no Access-Control-Allow-Origin header, so a plain
 // fetch() is blocked by CORS from any browser origin (not just file://).
 // JSONP (a <script> tag, not subject to CORS) is the API's own intended
@@ -143,16 +181,16 @@ export async function applyWikidataDetails(qid, form) {
     if (y) form.year = y;
   }
   if (!form.coverUrl.trim()) {
-    let cover = '';
-    if (form.medium !== 'book') {
-      const enTitle = entity.sitelinks && entity.sitelinks.enwiki && entity.sitelinks.enwiki.title;
-      if (enTitle) cover = await fetchWikipediaLeadImage(enTitle);
-    }
-    if (!cover) {
-      const img = firstImageFilename(claims);
-      if (img) cover = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(img)}?width=600`;
-    }
-    if (!cover) cover = await fetchCoverFallback(form.medium, form.title.trim(), form.author.trim());
+    const enTitle = entity.sitelinks && entity.sitelinks.enwiki && entity.sitelinks.enwiki.title;
+    const img = firstImageFilename(claims);
+    const title = form.title.trim();
+    const sources = [
+      form.medium === 'series' && (() => fetchTvmazePoster(title)),
+      form.medium !== 'book' && enTitle && (() => fetchWikipediaLeadImage(enTitle)),
+      img && (() => `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(img)}?width=600`),
+      () => fetchCoverFallback(form.medium, title, form.author.trim()),
+    ].filter(Boolean);
+    const cover = await pickPortraitCover(sources);
     if (cover) form.coverUrl = cover;
   }
   return true;
