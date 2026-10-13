@@ -15,8 +15,8 @@ Run `gh issue list --label phase-1-music` (etc.) to see live status for a phase.
 - **No spending beyond hosting.** Every tool/service chosen below has a free tier
   or is self-hostable at no cost.
 - One consequence: **Sign in with Apple requires a paid Apple Developer account
-  ($99/yr)**, which conflicts with the constraint above. It's deferred rather
-  than dropped — revisit if that changes.
+  ($99/yr)**, which conflicts with the constraint above. It is on the Phase 4
+  plan (#21) but waits for the owner to confirm that cost.
 - **Goal beyond a personal tool:** eventually invite other people to create
   accounts and keep their own libraries, and later share and recommend between
   users. This shapes the Phase 3 and 4 decisions (see Decisions).
@@ -284,16 +284,23 @@ the new app. See Decisions, "Move to Vue + Vite".
 
 ## Phase 4 — Auth & multi-user
 
-**Status (2026-10-11):** the app runs on Supabase with Google sign-in (#15, #17,
+**Status (2026-10-13):** the app runs on Supabase with Google sign-in (#15, #17,
 #18, #19 done). Only the owner can sign in: new sign-ups and the email provider are
-off until invite codes (#28). Next: free static hosting (#40) and the keep-alive
-(#39), then invites, privacy basics and visibility.
+off until invite codes (#28). The keep-alive (#39) is written and waiting to be
+applied. Next: free static hosting (#40), then invites, privacy basics,
+visibility, and Sign in with Apple (#21, below).
 
 Mostly configuration once Phase 3's tool is in place. Google login and the
 per-user rules (#17–#19) ship together with the app switch (#15), not after it.
 Start with **Google**
-OAuth (free); GitHub is a good second option given the audience. **Apple
-Sign-In is deferred** — see Constraints above. This phase must also decide
+OAuth (free); GitHub is a good second option given the audience.
+
+**Sign in with Apple (#21): on the roadmap, after hosting (#40).** Added at the
+owner's request on 2026-10-13. Supabase supports it, but it needs a paid Apple
+Developer Program account ($99/yr), which breaks the "no spending beyond hosting"
+rule. It also needs the deployed domain from #40, and Apple's client secret
+expires every six months and has to be regenerated. The owner confirms the $99/yr
+before it's built. This phase must also decide
 the visibility model (private, friends, public; notes private by default) since
 it affects the schema. It is also where the app starts holding other people's
 data, so it covers invite-only sign-up, privacy basics (policy, data export,
