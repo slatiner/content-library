@@ -286,8 +286,8 @@ the new app. See Decisions, "Move to Vue + Vite".
 
 **Status (2026-10-13):** the app runs on Supabase with Google sign-in (#15, #17,
 #18, #19 done). Only the owner can sign in: new sign-ups and the email provider are
-off until invite codes (#28). The keep-alive (#39) is written and waiting to be
-applied. Next: free static hosting (#40), then invites, privacy basics,
+off until invite codes (#28). The keep-alive (#39) runs every two days on GitHub
+Actions. Next: free static hosting (#40), then invites, privacy basics,
 visibility, and Sign in with Apple (#21, below).
 
 Mostly configuration once Phase 3's tool is in place. Google login and the
