@@ -168,29 +168,30 @@ select{padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius)
 /* Card show/hide (replaces the old manual fade) */
 .card-enter-active,.card-leave-active{transition:opacity .12s ease,transform .12s ease;}
 .card-enter-from,.card-leave-to{opacity:0;transform:scale(0.96);}
-header.top .account{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-soft);}
+header.top h1{margin-right:auto;}
+header.top .account-menu{align-self:center;}
+.avatar-btn{background:none;border:none;padding:0;cursor:pointer;border-radius:50%;display:inline-flex;}
+.avatar-btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px;}
+.menu-who{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--ink-soft);padding:0 2px 8px;margin-bottom:6px;border-bottom:1px solid var(--line);overflow-wrap:anywhere;}
+.menu-who b{color:var(--ink);font-weight:600;}
 .avatar{display:inline-flex;width:26px;height:26px;border-radius:50%;overflow:hidden;flex:none;background:var(--line);color:var(--ink);align-items:center;justify-content:center;font-size:11px;font-weight:600;letter-spacing:0.02em;}
 .avatar img{width:100%;height:100%;object-fit:cover;display:block;}
 
-/* Medium tags and the ⚙ menu in the filter row. */
+/* Medium tags in the filter row. */
 .medium-tags{display:flex;gap:8px;flex-wrap:wrap;}
-.settings-wide{margin-left:auto;}
-.settings-narrow{display:none;}
 
-/* Phones: account and ⚙ on the title line, the search box full width, and
+/* Phones: the account menu on the title line, the search box full width, and
    date and sort on a line of their own. */
 @media (max-width: 640px){
   header.top{align-items:center;}
   header.top .header-right{display:contents;}
   header.top{row-gap:4px;}
   header.top h1{order:1;margin-right:auto;}
-  header.top .account{order:2;}
-  .settings-narrow{display:block;order:3;}
+  header.top .account-menu{order:2;}
   header.top::after{content:'';order:4;flex-basis:100%;}
   header.top .counts{order:5;flex:1 1 auto;}
   header.top .counts span:first-child{margin-left:0;}
   header.top .add-new-btn{order:6;}
-  .settings-wide{display:none;}
   .filter-row input[type=text]{flex:1 1 100%;max-width:none;}
   .filter-row select{flex:1;}
   .filter-row .medium-tags{flex:1 1 100%;}

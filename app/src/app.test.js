@@ -143,25 +143,28 @@ describe('signing in (Supabase storage)', () => {
     expect(w.find('.avatar-initials').text()).toBe('AL');
   });
 
-  it('the header ⚙ menu (shown on phones) works like the filter-row one', async () => {
+  it('file mode: the ⚙ menu has folder actions and no Sign out', async () => {
     const w = await mountApp();
-    const header = w.find('header.top');
-    await header.find('.settings-narrow .icon-btn').trigger('click');
-    expect(header.find('.settings-narrow .popover').classes()).toContain('open');
-    await header.findAll('.settings-narrow .popover button').find((b) => b.text() === 'Export / Import JSON').trigger('click');
-    expect(w.find('.settings-wide').exists()).toBe(true);
-    expect(header.find('.settings-narrow .popover').classes()).not.toContain('open');
+    expect(w.find('.avatar-btn').exists()).toBe(false);
+    await w.find('.account-menu .icon-btn').trigger('click');
+    const labels = w.findAll('.account-menu .popover button').map((b) => b.text());
+    expect(labels).toEqual(['Change folder', 'Diagnose connection', 'Export / Import JSON']);
   });
 
   it('signed in: shows the account, no folder controls, and signs out', async () => {
     const w = await mountApp(EXAMPLE, 'ok', 'supabase');
     // An avatar instead of the email: initials when there's no picture, email on hover.
-    expect(w.find('.account').text()).not.toContain('me@example.com');
+    expect(w.find('.header-right').text() + w.find('.avatar-btn').text()).not.toContain('me@example.com');
     expect(w.find('.avatar').attributes('title')).toBe('Ada Lovelace (me@example.com)');
     expect(w.find('.avatar-initials').text()).toBe('AL');
-    await w.find('.icon-btn').trigger('click');
-    expect(w.findAll('.popover button').map((b) => b.text())).not.toContain('Change folder');
-    await w.findAll('.account button').find((b) => b.text() === 'Sign out').trigger('click');
+    expect(w.find('.icon-btn').exists()).toBe(false);
+    // One menu, opened from the avatar: who you are, settings, Sign out.
+    await w.find('.avatar-btn').trigger('click');
+    const menu = w.find('.account-menu .popover');
+    expect(menu.classes()).toContain('open');
+    expect(menu.find('.menu-who').text()).toContain('me@example.com');
+    expect(menu.findAll('button').map((b) => b.text())).toEqual(['Diagnose connection', 'Export / Import JSON', 'Sign out']);
+    await menu.findAll('button').find((b) => b.text() === 'Sign out').trigger('click');
     await flushPromises();
     expect(adapter.calls.at(-1)).toEqual(['signOut']);
     expect(w.find('.card').exists()).toBe(false);

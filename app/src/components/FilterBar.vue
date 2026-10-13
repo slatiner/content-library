@@ -2,10 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { filters, ask, askLibrary, clearAsk } from '../state.js';
 import { MEDIA, MEDIUM_TAG_LABEL } from '../lib/entries.js';
-import SettingsMenu from './SettingsMenu.vue';
 
-defineProps({ canChangeFolder: { type: Boolean, default: false } });
-const emit = defineEmits(['change-folder', 'diagnose', 'backup']);
 
 const openPop = ref(null); // 'date' | null
 const datePop = ref(null);
@@ -61,8 +58,6 @@ function onSearchEnter(e) {
           <input type="checkbox" :checked="filters.mediums.includes(m)">{{ MEDIUM_TAG_LABEL[m] }}
         </label>
       </div>
-      <SettingsMenu class="settings-wide" :can-change-folder="canChangeFolder"
-        @change-folder="emit('change-folder')" @diagnose="emit('diagnose')" @backup="emit('backup')" />
     </div>
     <div v-if="ask.status || ask.chips.length" class="ask-row">
       <span class="ask-status">{{ ask.status }}</span>
