@@ -131,6 +131,16 @@ describe('signing in (Supabase storage)', () => {
     expect(adapter.calls).toEqual([['connect']]);
   });
 
+  it('the header ⚙ menu (shown on phones) works like the filter-row one', async () => {
+    const w = await mountApp();
+    const header = w.find('header.top');
+    await header.find('.settings-narrow .icon-btn').trigger('click');
+    expect(header.find('.settings-narrow .popover').classes()).toContain('open');
+    await header.findAll('.settings-narrow .popover button').find((b) => b.text() === 'Export / Import JSON').trigger('click');
+    expect(w.find('.settings-wide').exists()).toBe(true);
+    expect(header.find('.settings-narrow .popover').classes()).not.toContain('open');
+  });
+
   it('signed in: shows the account, no folder controls, and signs out', async () => {
     const w = await mountApp(EXAMPLE, 'ok', 'supabase');
     expect(w.find('.account').text()).toContain('me@example.com');

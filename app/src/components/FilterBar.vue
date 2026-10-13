@@ -2,17 +2,16 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { filters, ask, askLibrary, clearAsk } from '../state.js';
 import { MEDIA, MEDIUM_TAG_LABEL } from '../lib/entries.js';
+import SettingsMenu from './SettingsMenu.vue';
 
 defineProps({ canChangeFolder: { type: Boolean, default: false } });
 const emit = defineEmits(['change-folder', 'diagnose', 'backup']);
 
-const openPop = ref(null); // 'date' | 'more' | null
+const openPop = ref(null); // 'date' | null
 const datePop = ref(null);
-const morePop = ref(null);
 function togglePop(name) { openPop.value = openPop.value === name ? null : name; }
 function onDocClick(e) {
-  const el = openPop.value === 'date' ? datePop.value : openPop.value === 'more' ? morePop.value : null;
-  if (el && !el.contains(e.target)) openPop.value = null;
+  if (openPop.value === 'date' && datePop.value && !datePop.value.contains(e.target)) openPop.value = null;
 }
 onMounted(() => document.addEventListener('click', onDocClick));
 onBeforeUnmount(() => document.removeEventListener('click', onDocClick));
@@ -33,8 +32,6 @@ function onSearchEnter(e) {
   const q = filters.search.trim();
   if (q) { e.preventDefault(); askLibrary(q); }
 }
-
-function menu(event) { openPop.value = null; emit(event); }
 </script>
 
 <template>
@@ -59,19 +56,13 @@ function menu(event) { openPop.value = null; emit(event); }
         <option value="year_desc">Year, newest</option>
         <option value="title_asc">Title, A–Z</option>
       </select>
-      <div style="display:flex;gap:8px;">
+      <div class="medium-tags">
         <label v-for="m in MEDIA" :key="m" class="tag-check" :class="[m, { active: filters.mediums.includes(m) }]" @click.prevent="toggleMedium(m)">
           <input type="checkbox" :checked="filters.mediums.includes(m)">{{ MEDIUM_TAG_LABEL[m] }}
         </label>
       </div>
-      <div ref="morePop" class="popover-wrap" style="margin-left:auto;">
-        <button class="icon-btn" title="More options" @click.stop="togglePop('more')">⚙</button>
-        <div class="popover" :class="{ open: openPop === 'more' }">
-          <button v-if="canChangeFolder" class="btn ghost small full" @click="menu('change-folder')">Change folder</button>
-          <button class="btn ghost small full" @click="menu('diagnose')">Diagnose connection</button>
-          <button class="btn ghost small full" @click="menu('backup')">Export / Import JSON</button>
-        </div>
-      </div>
+      <SettingsMenu class="settings-wide" :can-change-folder="canChangeFolder"
+        @change-folder="emit('change-folder')" @diagnose="emit('diagnose')" @backup="emit('backup')" />
     </div>
     <div v-if="ask.status || ask.chips.length" class="ask-row">
       <span class="ask-status">{{ ask.status }}</span>
