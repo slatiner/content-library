@@ -21,6 +21,10 @@ file=$(find "$work/artifact" -name '*.tgz.age' | head -1)
 echo "Restoring $(basename "$file")"
 mkdir "$work/dump"
 age -d -i "$key" "$file" | tar -C "$work/dump" -xzf -
+# roles.sql grants platform settings (GRANT SET ON PARAMETER ...) that only
+# Supabase's own admin can set. A fresh project already has them; skip those
+# lines here, and do the same when restoring into a real new project.
+sed -i '' '/^GRANT SET ON PARAMETER/d' "$work/dump/roles.sql"
 
 # A fresh, empty local project (no migrations), like a new Supabase project.
 cd "$work"

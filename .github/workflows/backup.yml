@@ -33,7 +33,7 @@ jobs:
           mkdir dump
           supabase db dump --db-url "$DB_URL" -f dump/roles.sql --role-only
           supabase db dump --db-url "$DB_URL" -f dump/schema.sql
-          supabase db dump --db-url "$DB_URL" -f dump/data.sql --use-copy --data-only
+          supabase db dump --db-url "$DB_URL" -f dump/data.sql --use-copy --data-only -x storage.buckets_vectors -x storage.vector_indexes
           grep -q 'COPY "public"."entries"' dump/data.sql
           grep -q 'COPY "auth"."users"' dump/data.sql
           wc -c dump/*
