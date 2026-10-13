@@ -5,6 +5,7 @@ media-archive-data.json
 secrets.json
 .env
 .env.*
+content-library-backup.key
 
 # Node / Vite
 node_modules/
