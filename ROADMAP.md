@@ -287,7 +287,9 @@ the new app. See Decisions, "Move to Vue + Vite".
 **Status (2026-10-13):** the app runs on Supabase with Google sign-in (#15, #17,
 #18, #19 done). Only the owner can sign in: new sign-ups and the email provider are
 off until invite codes (#28). The keep-alive (#39) runs every two days on GitHub
-Actions. Next: free static hosting (#40), then invites, privacy basics,
+Actions. Hosting (#40): GitHub Pages at
+https://slatiner.github.io/content-library/, built from `main` by
+`.github/workflows/pages.yml` (tests, build, upload `dist/` only). Next: invites, privacy basics,
 visibility, and Sign in with Apple (#21, below).
 
 Mostly configuration once Phase 3's tool is in place. Google login and the
