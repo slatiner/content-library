@@ -27,6 +27,9 @@ function fakeAdapter(initial, connState = 'ok', kind = 'file') {
     async deleteEntry(id, all) { calls.push(['delete', id, all.length]); },
     async replaceAll(all) { calls.push(['replaceAll', all.length]); },
     async readSecrets() { return { groq: { apiKey: 'gsk_test' } }; },
+    ...(kind === 'supabase' && {
+      async llmEndpoint() { return { url: 'https://proj.supabase.co/functions/v1/groq', headers: { Authorization: 'Bearer user-token', apikey: 'sb_publishable_x' } }; },
+    }),
   };
 }
 
@@ -35,7 +38,7 @@ let groqAnswer;
 // groqAnswer is one answer, or { library_filter, library_entry } keyed by task.
 function fakeFetch(url, init) {
   const json = (body, status = 200) => Promise.resolve(new Response(JSON.stringify(body), { status }));
-  if (url.startsWith('https://api.groq.com/')) {
+  if (url.startsWith('https://api.groq.com/') || url.endsWith('/functions/v1/groq')) {
     const task = JSON.parse(init.body).response_format.json_schema.name;
     const answer = groqAnswer && groqAnswer[task] ? groqAnswer[task] : groqAnswer;
     return json({ choices: [{ message: { content: JSON.stringify(answer) } }] });
@@ -232,6 +235,37 @@ describe('add and edit', () => {
     const [, saved] = adapter.calls.at(-1);
     expect(saved).toMatchObject({ medium: 'film', title: 'Perfect Blue', director: 'Satoshi Kon', rating: 4, dateConsumed: '2026-10-01', insights: 'anime night' });
     expect(w.find('.overlay.open').exists()).toBe(false);
+  });
+});
+
+describe('assistant online', () => {
+  it('Describe it online goes through the Supabase proxy, with no key in the browser', async () => {
+    groqAnswer = { intent: 'add', medium: 'film', title: 'Perfect Blue', year: null, creator: null, rating: null, dateConsumed: null, note: null, platform: null, url: null };
+    const w = await mountApp(EXAMPLE, 'ok', 'supabase');
+    await w.find('.add-new-btn').trigger('click');
+    const input = w.find('#aiInput');
+    await input.setValue('Perfect Blue');
+    await input.trigger('keydown', { key: 'Enter' });
+    await flushPromises();
+    const [url, init] = fetch.mock.calls.find(([u]) => u.includes('groq'));
+    expect(url).toBe('https://proj.supabase.co/functions/v1/groq');
+    expect(init.headers.Authorization).toBe('Bearer user-token');
+    expect(init.headers.Authorization).not.toContain('gsk_');
+    expect(w.find('.pv-title').text()).toBe('Perfect Blue');
+  });
+
+  it('Describe it online: an expired sign-in says so instead of asking for a key', async () => {
+    fetch.mockImplementation((url, init) => (url.endsWith('/functions/v1/groq')
+      ? Promise.resolve(new Response('{}', { status: 401 }))
+      : fakeFetch(url, init)));
+    const w = await mountApp(EXAMPLE, 'ok', 'supabase');
+    await w.find('.add-new-btn').trigger('click');
+    const input = w.find('#aiInput');
+    await input.setValue('Perfect Blue');
+    await input.trigger('keydown', { key: 'Enter' });
+    await flushPromises();
+    expect(w.text()).toContain('Your sign-in has expired');
+    expect(w.text()).not.toContain('API key');
   });
 });
 

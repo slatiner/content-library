@@ -88,7 +88,16 @@ export function createSupabaseStorage(setStatus, { url, key, client } = {}) {
       if (error) fail('Could not remove old entries', error);
     },
 
-    // No data folder online; the Groq key comes from this browser instead.
+    // No data folder online.
     async readSecrets() { return null; },
+
+    // The assistant's Groq proxy (supabase/functions/groq), called with the
+    // signed-in user's token. null when signed out.
+    async llmEndpoint() {
+      const { data } = await sb.auth.getSession();
+      const token = data && data.session && data.session.access_token;
+      if (!token) return null;
+      return { url: `${url}/functions/v1/groq`, headers: { Authorization: `Bearer ${token}`, apikey: key } };
+    },
   };
 }

@@ -75,6 +75,8 @@ Rules:
 export const ADD_TASK = { name: 'library_entry', schema: EXTRACT_SCHEMA, prompt: buildExtractPrompt };
 export const FIND_TASK = { name: 'library_filter', schema: FIND_SCHEMA, prompt: buildFindPrompt };
 
+// key is a Groq API key (file mode), or { url, headers } for the Supabase proxy
+// (supabase/functions/groq), which holds the key server side.
 async function groqRequest(key, text, temperature, task) {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
     const err = new Error("You're offline. Check your connection and try again.");
@@ -84,10 +86,11 @@ async function groqRequest(key, text, temperature, task) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 20000);
   try {
-    return await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const proxy = typeof key === 'object';
+    return await fetch(proxy ? key.url : 'https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       signal: ctrl.signal,
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
+      headers: { 'Content-Type': 'application/json', ...(proxy ? key.headers : { Authorization: 'Bearer ' + key }) },
       body: JSON.stringify({
         model: GROQ_MODEL,
         messages: [{ role: 'system', content: task.prompt() }, { role: 'user', content: text }],
@@ -106,7 +109,7 @@ async function groqRequest(key, text, temperature, task) {
   }
 }
 
-// key: the Groq API key, or null (throws code NO_KEY).
+// key: the Groq API key, the proxy endpoint, or null (throws code NO_KEY).
 export async function llmJson(key, text, task) {
   if (!key) { const err = new Error('No API key'); err.code = 'NO_KEY'; throw err; }
   let r = await groqRequest(key, text, 0, task);
@@ -116,8 +119,14 @@ export async function llmJson(key, text, task) {
     if (body && body.error && body.error.code === 'json_validate_failed') r = await groqRequest(key, text, 0.3, task);
   }
   if (!r.ok) {
+    if (typeof key === 'object' && r.status === 401) {
+      const err = new Error('Your sign-in has expired. Reload the page and sign in again.');
+      err.code = 'AUTH';
+      throw err;
+    }
     const err = new Error(
       r.status === 401 ? 'Groq rejected the API key.' :
+      r.status === 502 ? 'The assistant\'s server key was rejected by Groq. Check GROQ_API_KEY in Supabase.' :
       r.status === 429 ? 'Groq rate limit reached (free tier). Wait a minute and try again.' :
       r.status >= 500 ? `Groq is having trouble right now (HTTP ${r.status}). Try again shortly.` :
       `Groq returned an error (HTTP ${r.status}).`

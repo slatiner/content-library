@@ -64,6 +64,8 @@ export async function replaceEntries(incoming) {
 // ---- Groq key: secrets.json in the data folder, then a key pasted into this browser ----
 let groqKey = null;
 export async function ensureGroqKey() {
+  // Online, the assistant goes through the Supabase proxy; no key in the browser.
+  if (storage.llmEndpoint) return storage.llmEndpoint();
   if (groqKey) return groqKey;
   const s = await storage.readSecrets();
   const k = s && s.groq && typeof s.groq.apiKey === 'string' ? s.groq.apiKey.trim() : '';

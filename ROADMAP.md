@@ -320,6 +320,14 @@ user cannot read another's data.
 
 ## Phase 5 — Reconnect the assistant, add real search
 
+**Pulled forward (2026-10-13): the Groq key is server side (#24).** The online
+app calls `supabase/functions/groq`, which checks the caller is signed in, allows
+only the app's model and token cap, and holds the key as the Supabase secret
+`GROQ_API_KEY`. Every signed-in user shares the owner's key and quota, which is
+fine while sign-up is closed; per-user limits (#25) come before invites open
+widely. File mode (`VITE_STORAGE=file`) still uses a key from `secrets.json` or
+the browser. Redeploy with `supabase functions deploy groq --no-verify-jwt`.
+
 Points Phase 2's assistant at the Phase 3/4 backend instead of the local file,
 and adds the "find" half properly — natural-language search only makes sense
 once there's a real queryable DB behind it. Also moves the LLM API key

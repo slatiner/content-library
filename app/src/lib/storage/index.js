@@ -15,6 +15,8 @@
 //   deleteEntry(id, all)    delete one entry (all = the full list after the change)
 //   replaceAll(all)         replace the whole library (Export/Import "Replace all")
 //   readSecrets()           secrets.json from the data folder, or null
+//   llmEndpoint()           (supabase only) { url, headers } of the assistant's
+//                           Groq proxy for the signed-in user, or null
 //
 // The file version passes `all` straight to disk. A row-based backend (#15)
 // uses entry/id and ignores `all`.
