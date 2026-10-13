@@ -121,7 +121,7 @@ docs and changelog, the rest from third-party sources and marked as such):
   The $25/month Pro plan removes pausing.
 - **Assume no backups.** One blog says the free tier keeps zero days of backups
   (not confirmed in Supabase's backup docs). Restoring a paused project gives only
-  the state at pause. So we need our own regular export (#27).
+  the state at pause. So we need our own regular export (#27, now a weekly encrypted dump).
 - **Email login is throttled.** The built-in auth email is about 2 messages an hour
   for the whole project, and only to team members' addresses (third-party
   sources). Use Google login only, or add custom SMTP (another provider; default
@@ -260,6 +260,15 @@ Flash) called directly from the browser. It will be re-pointed at the real
 backend in Phase 5, not rebuilt.
 
 ## Phase 3 — Backend foundation
+
+**Status (2026-10-13):** Supabase is live with keep-alive (#39) and hosting
+(#40). Canonical ids (#26): lookups now store them, and
+`scripts/backfill-ids.mjs` fills existing entries (dry run first; unclear
+matches are left for a manual Look up). Backups (#27): a weekly GitHub Action
+dumps roles, schema and data (including auth users), encrypts with `age`, and
+keeps 90 days of artifacts; `scripts/restore-test.sh` restores the latest into a
+throwaway local Supabase. Keep the age private key outside the repo; without it
+the backups can't be read.
 
 The original plan had "build a DB" and "add auth" as separate steps. They're
 combined here: pick a free, open-source backend-as-a-service that bundles a
