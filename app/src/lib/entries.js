@@ -29,10 +29,16 @@ export function emptyForm() {
 
 export const ID_FIELDS = ['wikidataId', 'openlibraryId', 'itunesId'];
 
+// Lowercase letters and digits only, accents dropped ("Cóndor" = "condor"), for
+// comparing titles and names.
+export function normText(s) {
+  return String(s ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+}
+
 // Title and medium, ignoring case and punctuation, so "paprika" still matches
 // "Paprika" but "Paprika 2" doesn't.
 export function linkKey({ title, medium }) {
-  return `${medium}|${String(title ?? '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '')}`;
+  return `${medium}|${normText(title)}`;
 }
 
 export function personLine(e) {

@@ -14,7 +14,7 @@ import { readFile } from 'node:fs/promises';
 import { linkKey } from '../app/src/lib/entries.js';
 import {
   wikidataSearch, candidateMatchesMedium, wikidataGetEntity, wikidataYear,
-  openLibraryWork, openLibrarySearchWork,
+  openLibraryWork, openLibrarySearchWork, findItunesAlbum,
 } from '../app/src/lib/lookup.js';
 
 const dryRun = process.argv.includes('--dry-run');
@@ -61,15 +61,12 @@ async function matchWikidata(e) {
 }
 
 async function matchItunes(e) {
-  const term = encodeURIComponent(`${e.title} ${e.author || ''}`.trim());
-  const res = await fetch(`https://itunes.apple.com/search?term=${term}&media=music&entity=album&limit=5`);
-  if (!res.ok) return { why: `iTunes HTTP ${res.status}` };
-  const artist = linkKey({ title: e.author });
-  const hits = ((await res.json()).results || []).filter((r) =>
-    linkKey({ title: r.collectionName }).startsWith(linkKey({ title: e.title }))
-    && (!e.author || linkKey({ title: r.artistName }).includes(artist.slice(1))));
-  if (!hits.length) return { why: 'no matching album' };
-  const r = hits[0];
+  const r = await findItunesAlbum(e.title, e.author, async (u) => {
+    const res = await fetch(u);
+    if (!res.ok) throw new Error(`iTunes HTTP ${res.status}`);
+    return res.json();
+  });
+  if (!r) return { why: 'no matching album' };
   return { ids: { itunes_id: String(r.collectionId) }, label: `${r.collectionName} — ${r.artistName} (${(r.releaseDate || '').slice(0, 4)})` };
 }
 

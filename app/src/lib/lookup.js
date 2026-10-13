@@ -1,7 +1,7 @@
 // Metadata and cover lookups. These run in the user's browser (see ROADMAP.md).
 // Functions that fill details take a form object and only fill empty fields,
 // except the canonical ids (#26), which always follow the latest match.
-import { linkKey } from './entries.js';
+import { linkKey, normText } from './entries.js';
 
 function link(form, ids) {
   Object.assign(form, ids);
@@ -228,15 +228,29 @@ export async function applyWikidataDetails(qid, form) {
   return true;
 }
 
+// Find an album on iTunes. Music entries are albums, and the album's
+// collectionId is its id. Only an album whose name starts with the title (so
+// "OK Computer OKNOTOK" still counts) and, if given, by that artist is accepted.
+// The album search misses some albums (new releases, e.g. "Reality Awaits" in
+// October 2026), so songs are searched next and their album is used.
+// get(url) returns the parsed JSON: jsonp in the browser, fetch in scripts.
+export async function findItunesAlbum(title, artist, get = jsonp) {
+  const term = encodeURIComponent(artist ? `${title} ${artist}` : title);
+  const want = normText(title);
+  const by = normText(artist);
+  const fits = (r) => r.collectionId && normText(r.collectionName).startsWith(want)
+    && (!by || normText(r.artistName).includes(by) || by.includes(normText(r.artistName)));
+  const albums = await get(`https://itunes.apple.com/search?term=${term}&media=music&entity=album&limit=10`);
+  const album = ((albums && albums.results) || []).find(fits);
+  if (album) return album;
+  const songs = await get(`https://itunes.apple.com/search?term=${term}&media=music&entity=song&limit=25`);
+  return ((songs && songs.results) || []).find(fits) || null;
+}
+
 export async function applyItunesMusicDetails(form) {
-  const title = form.title.trim();
-  const artist = form.author.trim();
-  const term = artist ? `${title} ${artist}` : title;
-  // entity=album: music entries are albums, and the album's collectionId is its id.
-  const d = await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=music&entity=album&limit=1`);
-  const hit = d.results && d.results[0];
+  const hit = await findItunesAlbum(form.title.trim(), form.author.trim());
   if (!hit) return false;
-  if (hit.collectionId) link(form, { wikidataId: '', openlibraryId: '', itunesId: String(hit.collectionId) });
+  link(form, { wikidataId: '', openlibraryId: '', itunesId: String(hit.collectionId) });
   if (!form.author.trim() && hit.artistName) form.author = hit.artistName;
   if (!form.year.trim() && hit.releaseDate) form.year = hit.releaseDate.slice(0, 4);
   if (!form.coverUrl.trim() && hit.artworkUrl100) form.coverUrl = hit.artworkUrl100.replace('100x100bb', '600x600bb');
