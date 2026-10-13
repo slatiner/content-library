@@ -31,7 +31,7 @@ Run `gh issue list --label phase-1-music` (etc.) to see live status for a phase.
 | 0 | Foundation | ✅ Done | — |
 | 1 | Music content type | ✅ Done | [Phase 1](../../milestone/1) |
 | 2 | Natural-language add/find assistant | ✅ Done | [Phase 2](../../milestone/2) |
-| 3 | Backend foundation (DB) | 🔶 In progress | [Phase 3](../../milestone/3) |
+| 3 | Backend foundation (DB) | ✅ Done | [Phase 3](../../milestone/3) |
 | 3.5 | Port to Vue + Vite | ✅ Done | [Phase 3.5](../../milestone/7) |
 | 4 | Auth & multi-user | 🔶 In progress | [Phase 4](../../milestone/4) |
 | 5 | Reconnect assistant to backend | 🔲 Not started | [Phase 5](../../milestone/5) |
@@ -261,7 +261,7 @@ backend in Phase 5, not rebuilt.
 
 ## Phase 3 — Backend foundation
 
-**Status (2026-10-13):** Supabase is live with keep-alive (#39) and hosting
+**Status: done (2026-10-13).** Supabase is live with keep-alive (#39) and hosting
 (#40). Canonical ids (#26): lookups now store them, and
 `scripts/backfill-ids.mjs` fills existing entries (dry run first; unclear
 matches are left for a manual Look up). Backups (#27): a weekly GitHub Action
@@ -294,12 +294,15 @@ the new app. See Decisions, "Move to Vue + Vite".
 ## Phase 4 — Auth & multi-user
 
 **Status (2026-10-13):** the app runs on Supabase with Google sign-in (#15, #17,
-#18, #19 done). Only the owner can sign in: new sign-ups and the email provider are
-off until invite codes (#28). The keep-alive (#39) runs every two days on GitHub
-Actions. Hosting (#40): GitHub Pages at
-https://slatiner.github.io/content-library/, built from `main` by
-`.github/workflows/pages.yml` (tests, build, upload `dist/` only). Next: invites, privacy basics,
-visibility, and Sign in with Apple (#21, below).
+#18, #19 done), hosted on GitHub Pages at https://slatiner.github.io/content-library/
+(#40, built by `.github/workflows/pages.yml`). Only the owner can sign in:
+new sign-ups and the email provider are off until invite codes (#28).
+
+**Next, in order:** invite codes (#28), then authorization tests (#31), the
+visibility model (#20), privacy basics (#29), licences check (#30), and Sign in
+with Apple (#21, below) once the owner approves the $99/yr. Per-user assistant
+limits (#25, Phase 5) should land before invites go beyond a few friends, since
+every signed-in user shares the owner's Groq key and quota (#24).
 
 Mostly configuration once Phase 3's tool is in place. Google login and the
 per-user rules (#17–#19) ship together with the app switch (#15), not after it.
