@@ -6,10 +6,11 @@ import { STORAGE, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './config.js';
 import { llmJson, FIND_TASK, normalizeFind, askChipsFor } from './lib/llm.js';
 
 export const entries = ref([]);
-export const connection = reactive({ state: 'checking', text: 'Loading…', account: '', kind: STORAGE });
+export const connection = reactive({ state: 'checking', text: 'Loading…', account: '', profile: null, kind: STORAGE });
 
-export function setConnection(state, text, account = '') {
-  connection.state = state; connection.text = text; connection.account = account;
+// profile: { name, avatarUrl } from the sign-in provider, when there is one.
+export function setConnection(state, text, account = '', profile = null) {
+  connection.state = state; connection.text = text; connection.account = account; connection.profile = profile;
 }
 
 let storage = STORAGE === 'file'

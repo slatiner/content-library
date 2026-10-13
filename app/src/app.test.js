@@ -17,7 +17,8 @@ function fakeAdapter(initial, connState = 'ok', kind = 'file') {
     kind,
     calls,
     async init() {
-      state.setConnection(connState, connState === 'ok' ? 'Connected' : 'Not connected', connState === 'ok' ? account : '');
+      const profile = kind === 'supabase' ? { name: 'Ada Lovelace', avatarUrl: '' } : null;
+      state.setConnection(connState, connState === 'ok' ? 'Connected' : 'Not connected', connState === 'ok' ? account : '', profile);
       return connState === 'ok' ? structuredClone(initial) : null;
     },
     async connect() { calls.push(['connect']); return null; },
@@ -131,6 +132,17 @@ describe('signing in (Supabase storage)', () => {
     expect(adapter.calls).toEqual([['connect']]);
   });
 
+  it('shows the Google picture, and initials if it fails to load', async () => {
+    const w = await mountApp(EXAMPLE, 'ok', 'supabase');
+    state.setConnection('ok', 'Connected', 'me@example.com', { name: 'Ada Lovelace', avatarUrl: 'https://lh3.googleusercontent.com/a/pic' });
+    await flushPromises();
+    const img = w.find('.avatar img');
+    expect(img.attributes('src')).toBe('https://lh3.googleusercontent.com/a/pic');
+    expect(img.attributes('referrerpolicy')).toBe('no-referrer');
+    await img.trigger('error');
+    expect(w.find('.avatar-initials').text()).toBe('AL');
+  });
+
   it('the header ⚙ menu (shown on phones) works like the filter-row one', async () => {
     const w = await mountApp();
     const header = w.find('header.top');
@@ -143,7 +155,10 @@ describe('signing in (Supabase storage)', () => {
 
   it('signed in: shows the account, no folder controls, and signs out', async () => {
     const w = await mountApp(EXAMPLE, 'ok', 'supabase');
-    expect(w.find('.account').text()).toContain('me@example.com');
+    // An avatar instead of the email: initials when there's no picture, email on hover.
+    expect(w.find('.account').text()).not.toContain('me@example.com');
+    expect(w.find('.avatar').attributes('title')).toBe('Ada Lovelace (me@example.com)');
+    expect(w.find('.avatar-initials').text()).toBe('AL');
     await w.find('.icon-btn').trigger('click');
     expect(w.findAll('.popover button').map((b) => b.text())).not.toContain('Change folder');
     await w.findAll('.account button').find((b) => b.text() === 'Sign out').trigger('click');

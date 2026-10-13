@@ -4,6 +4,7 @@ import { entries, connection, initStorage, connectStorage, reconnectStorage, sig
 import { countByMedium, filterAndSort } from './lib/entries.js';
 import FilterBar from './components/FilterBar.vue';
 import SettingsMenu from './components/SettingsMenu.vue';
+import Avatar from './components/Avatar.vue';
 import EntryCard from './components/EntryCard.vue';
 import EntryDialog from './components/EntryDialog.vue';
 import BackupDialog from './components/BackupDialog.vue';
@@ -36,7 +37,7 @@ onMounted(initStorage);
           <span><b>{{ counts.book }}</b> books</span><span><b>{{ counts.film }}</b> films</span><span><b>{{ counts.series }}</b> series</span><span><b>{{ counts.music }}</b> music</span>
         </div>
         <span v-if="connection.account && connection.state === 'ok'" class="account">
-          <span class="account-email">{{ connection.account }}</span>
+          <Avatar :email="connection.account" :name="connection.profile?.name || ''" :src="connection.profile?.avatarUrl || ''" />
           <button class="btn ghost small" @click="signOut">Sign out</button>
         </span>
         <button v-if="showMain" class="add-new-btn" @click="dialog.open(null)">+ Add new</button>

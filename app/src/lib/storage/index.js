@@ -2,9 +2,10 @@
 // of these, so the backend can change (file -> Supabase -> PocketBase) without
 // touching the views.
 //
-// An adapter is created with setStatus(state, text, account), which it calls to
-// report the connection: state is 'checking' | 'none' | 'signedOut' | 'ok' |
-// 'warn' | 'unsupported'; account is the signed-in email, if any.
+// An adapter is created with setStatus(state, text, account, profile), which it
+// calls to report the connection: state is 'checking' | 'none' | 'signedOut' |
+// 'ok' | 'warn' | 'unsupported'; account is the signed-in email, if any; profile
+// is { name, avatarUrl } from the sign-in provider, or null.
 // kind is 'file' or 'supabase'.
 // It provides:
 //   init()                  restore a previous connection; entries[] or null

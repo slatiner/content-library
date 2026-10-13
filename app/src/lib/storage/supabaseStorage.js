@@ -25,14 +25,20 @@ export function createSupabaseStorage(setStatus, { url, key, client } = {}) {
     return all.map(rowToEntry);
   }
 
+  // Google's name and picture come with the default sign-in scopes.
+  function profile() {
+    const m = (user && user.user_metadata) || {};
+    return { name: m.full_name || m.name || '', avatarUrl: m.avatar_url || m.picture || '' };
+  }
+
   async function startSession(session) {
     user = session.user;
     try {
       const entries = await loadAll();
-      setStatus('ok', `Signed in as ${user.email}`, user.email);
+      setStatus('ok', `Signed in as ${user.email}`, user.email, profile());
       return entries;
     } catch (e) {
-      setStatus('warn', `${e.message}. Check your connection, then click Retry.`, user.email);
+      setStatus('warn', `${e.message}. Check your connection, then click Retry.`, user.email, profile());
       return null;
     }
   }

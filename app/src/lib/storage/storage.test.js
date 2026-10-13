@@ -76,7 +76,7 @@ describe('Supabase adapter', () => {
     const rows = EXAMPLE.map((e) => entryToRow(e, 'u1'));
     const { storage, status } = adapterWith({ session, rows });
     expect(await storage.init()).toEqual(EXAMPLE);
-    expect(status.at(-1)).toEqual(['ok', 'Signed in as me@example.com', 'me@example.com']);
+    expect(status.at(-1)).toEqual(['ok', 'Signed in as me@example.com', 'me@example.com', { name: '', avatarUrl: '' }]);
   });
 
   it('a load error is reported, not thrown', async () => {
