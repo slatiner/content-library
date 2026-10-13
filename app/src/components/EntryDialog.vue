@@ -1,7 +1,7 @@
 <script setup>
 import { computed, nextTick, reactive, ref } from 'vue';
 import { entries, saveEntry, ensureGroqKey, forgetGroqKey, setGroqKey } from '../state.js';
-import { MEDIA, emptyForm, personLine, uid } from '../lib/entries.js';
+import { MEDIA, ID_FIELDS, emptyForm, linkKey, personLine, uid } from '../lib/entries.js';
 import { lookupTitle, applyWikidataDetails } from '../lib/lookup.js';
 import { llmJson, ADD_TASK, fillFormFromExtraction } from '../lib/llm.js';
 import Stars from './Stars.vue';
@@ -36,6 +36,7 @@ function open(entry) {
       form[k] = typeof form[k] === 'string' ? String(entry[k]) : entry[k];
     }
     form.rating = Number(entry.rating) || 0;
+    if (ID_FIELDS.some((k) => form[k])) form.linkedFor = linkKey(form);
   }
   formStatus.value = '';
   if (entry) {
@@ -65,6 +66,9 @@ function onTab(v) {
 function collectEntry() {
   const t = (s) => String(s ?? '').trim();
   const existing = editingId.value ? entries.value.find((e) => e.id === editingId.value) : null;
+  // Ids found for another title or medium would point at the wrong work.
+  const linked = form.linkedFor === linkKey(form);
+  const ids = Object.fromEntries(ID_FIELDS.map((k) => [k, linked ? t(form[k]) : '']));
   return {
     id: editingId.value || uid(),
     medium: form.medium,
@@ -79,6 +83,7 @@ function collectEntry() {
     rating: form.rating,
     coverUrl: t(form.coverUrl),
     insights: t(form.insights),
+    ...ids,
     dateAdded: existing ? existing.dateAdded || Date.now() : Date.now(),
   };
 }

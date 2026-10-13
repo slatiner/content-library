@@ -1,5 +1,30 @@
 // Metadata and cover lookups. These run in the user's browser (see ROADMAP.md).
-// Functions that fill details take a form object and only fill empty fields.
+// Functions that fill details take a form object and only fill empty fields,
+// except the canonical ids (#26), which always follow the latest match.
+import { linkKey } from './entries.js';
+
+function link(form, ids) {
+  Object.assign(form, ids);
+  form.linkedFor = linkKey(form);
+}
+
+// Open Library work id (OL…W) from a Wikidata item's P648 claims, if any.
+export function openLibraryWork(claims) {
+  const vals = ((claims && claims.P648) || []).map((c) => c.mainsnak && c.mainsnak.datavalue && c.mainsnak.datavalue.value);
+  return vals.find((v) => typeof v === 'string' && /^OL\d+W$/.test(v)) || '';
+}
+
+// Open Library work id by search, kept only when the found title matches.
+export async function openLibrarySearchWork(title, author) {
+  try {
+    const q = encodeURIComponent(title + (author ? ' ' + author : ''));
+    const r = await fetch(`https://openlibrary.org/search.json?q=${q}&limit=1&fields=key,title`);
+    if (!r.ok) return '';
+    const doc = ((await r.json()).docs || [])[0];
+    if (!doc || linkKey({ title: doc.title }) !== linkKey({ title })) return '';
+    return (String(doc.key || '').match(/OL\d+W$/) || [''])[0];
+  } catch (e) { return ''; }
+}
 
 const MEDIUM_KEYWORDS = {
   film: ['film', 'movie'],
@@ -25,7 +50,7 @@ export function candidateMatchesMedium(c, medium) {
   return MEDIUM_KEYWORDS[medium].some((k) => desc.includes(k));
 }
 
-async function wikidataGetEntity(qid) {
+export async function wikidataGetEntity(qid) {
   const url = `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${qid}&props=claims|sitelinks&format=json&origin=*`;
   const r = await fetch(url);
   if (!r.ok) throw new Error('Wikidata entity HTTP ' + r.status);
@@ -43,6 +68,10 @@ function firstClaimQids(claims, propList, limit) {
     }
   }
   return [];
+}
+
+export function wikidataYear(entity, medium) {
+  return firstClaimYear(entity && entity.claims, MEDIUM_PROPS[medium] && MEDIUM_PROPS[medium].date);
 }
 
 function firstClaimYear(claims, propList) {
@@ -165,6 +194,9 @@ export async function applyWikidataDetails(qid, form) {
   if (!entity) return false;
   const claims = entity.claims;
   const props = MEDIUM_PROPS[form.medium];
+  let openlibraryId = '';
+  if (form.medium === 'book') openlibraryId = openLibraryWork(claims) || await openLibrarySearchWork(form.title.trim(), form.author.trim());
+  link(form, { wikidataId: qid, openlibraryId, itunesId: '' });
 
   const peopleQids = firstClaimQids(claims, props.people, 3);
   const castQids = props.cast ? firstClaimQids(claims, props.cast, 6) : [];
@@ -200,9 +232,11 @@ export async function applyItunesMusicDetails(form) {
   const title = form.title.trim();
   const artist = form.author.trim();
   const term = artist ? `${title} ${artist}` : title;
-  const d = await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=music&limit=1`);
+  // entity=album: music entries are albums, and the album's collectionId is its id.
+  const d = await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=music&entity=album&limit=1`);
   const hit = d.results && d.results[0];
   if (!hit) return false;
+  if (hit.collectionId) link(form, { wikidataId: '', openlibraryId: '', itunesId: String(hit.collectionId) });
   if (!form.author.trim() && hit.artistName) form.author = hit.artistName;
   if (!form.year.trim() && hit.releaseDate) form.year = hit.releaseDate.slice(0, 4);
   if (!form.coverUrl.trim() && hit.artworkUrl100) form.coverUrl = hit.artworkUrl100.replace('100x100bb', '600x600bb');

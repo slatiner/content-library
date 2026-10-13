@@ -21,7 +21,18 @@ export function emptyForm() {
   return {
     medium: 'book', title: '', year: '', author: '', director: '', cast: '',
     platform: '', streamUrl: '', dateConsumed: '', rating: 0, coverUrl: '', insights: '',
+    // Canonical external ids (#26), kept but not shown. linkedFor is the
+    // linkKey() they were found for; saving under another title or medium drops them.
+    wikidataId: '', openlibraryId: '', itunesId: '', linkedFor: '',
   };
+}
+
+export const ID_FIELDS = ['wikidataId', 'openlibraryId', 'itunesId'];
+
+// Title and medium, ignoring case and punctuation, so "paprika" still matches
+// "Paprika" but "Paprika 2" doesn't.
+export function linkKey({ title, medium }) {
+  return `${medium}|${String(title ?? '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '')}`;
 }
 
 export function personLine(e) {

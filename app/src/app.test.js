@@ -173,11 +173,46 @@ describe('add and edit', () => {
     const w = await mountApp(withId);
     await w.findAll('.card').find((c) => c.text().includes('Paprika')).trigger('click');
     expect(w.find('.view-tabs').isVisible()).toBe(false);
-    await w.find('.title-row input').setValue('Paprika (film)');
+    await w.find('.title-row input').setValue('paprika');
     await w.findAll('.form-actions button').find((b) => b.text() === 'Save').trigger('click');
     await flushPromises();
     const [, saved] = adapter.calls.at(-1);
-    expect(saved).toMatchObject({ id: EXAMPLE[0].id, title: 'Paprika (film)', wikidataId: 'Q1', dateAdded: EXAMPLE[0].dateAdded });
+    expect(saved).toMatchObject({ id: EXAMPLE[0].id, title: 'paprika', wikidataId: 'Q1', dateAdded: EXAMPLE[0].dateAdded });
+  });
+
+  it('drops external ids when the title changes to another work', async () => {
+    const withId = EXAMPLE.map((e, i) => (i === 0 ? { ...e, wikidataId: 'Q1' } : e));
+    const w = await mountApp(withId);
+    await w.findAll('.card').find((c) => c.text().includes('Paprika')).trigger('click');
+    await w.find('.title-row input').setValue('Perfect Blue');
+    await w.findAll('.form-actions button').find((b) => b.text() === 'Save').trigger('click');
+    await flushPromises();
+    const [, saved] = adapter.calls.at(-1);
+    expect(saved).toMatchObject({ title: 'Perfect Blue', wikidataId: '', openlibraryId: '', itunesId: '' });
+  });
+
+  it('Look up stores the Wikidata id, and Open Library work id for books', async () => {
+    const entity = { claims: { P648: [{ mainsnak: { datavalue: { value: 'OL123W' } } }] } };
+    fetch.mockImplementation((url, init) => {
+      const json = (body) => Promise.resolve(new Response(JSON.stringify(body)));
+      if (url.includes('wbsearchentities')) return json({ search: [{ id: 'Q42', label: 'Dune', description: '1965 novel by Frank Herbert' }] });
+      if (url.includes('wbgetentities')) return json({ entities: { Q42: entity } });
+      return fakeFetch(url, init);
+    });
+    const w = await mountApp();
+    await w.find('.add-new-btn').trigger('click');
+    await w.findAll('.view-tabs button')[1].trigger('click');
+    await w.findAll('.medium-toggle button').find((b) => b.text() === 'Book').trigger('click');
+    const manual = w.findAll('.form-panel')[0];
+    await manual.find('.title-row input').setValue('Dune');
+    // A cover already set skips the image checks, which jsdom can't load.
+    await manual.find('input[placeholder^="Auto-filled by Look up"]').setValue('https://example.com/dune.jpg');
+    await manual.findAll('button').find((b) => b.text() === 'Look up').trigger('click');
+    await flushPromises();
+    await manual.findAll('.form-actions button').find((b) => b.text() === 'Save').trigger('click');
+    await flushPromises();
+    const [, saved] = adapter.calls.at(-1);
+    expect(saved).toMatchObject({ title: 'Dune', wikidataId: 'Q42', openlibraryId: 'OL123W', itunesId: '' });
   });
 
   it('Describe it: send, preview, Enter again adds', async () => {
