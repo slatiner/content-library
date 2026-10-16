@@ -126,6 +126,7 @@ export async function llmJson(key, text, task) {
     }
     const err = new Error(
       r.status === 401 ? 'Groq rejected the API key.' :
+      r.status === 403 ? 'Redeem an invite code to use the assistant.' :
       r.status === 502 ? 'The assistant\'s server key was rejected by Groq. Check GROQ_API_KEY in Supabase.' :
       r.status === 429 ? 'Groq rate limit reached (free tier). Wait a minute and try again.' :
       r.status >= 500 ? `Groq is having trouble right now (HTTP ${r.status}). Try again shortly.` :

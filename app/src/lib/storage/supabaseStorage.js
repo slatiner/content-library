@@ -1,6 +1,7 @@
 // Supabase version of the storage adapter (see ./index.js). Signs in with
 // Google; each entry is one row, so saves touch only the changed entry. Row-level
-// security limits every query to the signed-in user's rows.
+// security limits every query to the signed-in user's rows. A new account has to
+// redeem an invite code before it can read or write anything (#28).
 import { createClient } from '@supabase/supabase-js';
 import { entryToRow, rowToEntry } from './rows.js';
 
@@ -9,6 +10,7 @@ const PAGE = 1000; // PostgREST's default maximum rows per request
 export function createSupabaseStorage(setStatus, { url, key, client } = {}) {
   const sb = client || createClient(url, key, { auth: { flowType: 'pkce', detectSessionInUrl: true, persistSession: true } });
   let user = null;
+  let isAdmin = false;
 
   function fail(what, error) {
     throw new Error(`${what}: ${(error && error.message) || error}`);
@@ -28,12 +30,20 @@ export function createSupabaseStorage(setStatus, { url, key, client } = {}) {
   // Google's name and picture come with the default sign-in scopes.
   function profile() {
     const m = (user && user.user_metadata) || {};
-    return { name: m.full_name || m.name || '', avatarUrl: m.avatar_url || m.picture || '' };
+    return { name: m.full_name || m.name || '', avatarUrl: m.avatar_url || m.picture || '', isAdmin };
   }
 
   async function startSession(session) {
     user = session.user;
     try {
+      const { data: member, error } = await sb.from('members').select('is_admin').eq('user_id', user.id).maybeSingle();
+      if (error) fail('Could not check your account', error);
+      if (!member) {
+        isAdmin = false;
+        setStatus('needsInvite', 'Enter your invite code to finish signing up.', user.email, profile());
+        return null;
+      }
+      isAdmin = member.is_admin;
       const entries = await loadAll();
       setStatus('ok', `Signed in as ${user.email}`, user.email, profile());
       return entries;
@@ -68,6 +78,7 @@ export function createSupabaseStorage(setStatus, { url, key, client } = {}) {
     async signOut() {
       await sb.auth.signOut();
       user = null;
+      isAdmin = false;
       setStatus('signedOut', 'Signed out.');
     },
 
@@ -92,6 +103,30 @@ export function createSupabaseStorage(setStatus, { url, key, client } = {}) {
       if (all.length) del = del.not('id', 'in', `(${all.map((e) => `"${String(e.id).replace(/"/g, '')}"`).join(',')})`);
       const { error } = await del;
       if (error) fail('Could not remove old entries', error);
+    },
+
+    // Redeem an invite code; on success loads the (empty) library. Throws the
+    // database's message ("already used", "expired"...) on failure.
+    async redeemInvite(code) {
+      const { error } = await sb.rpc('redeem_invite', { p_code: code });
+      if (error) throw new Error(error.message);
+      const { data } = await sb.auth.getSession();
+      return startSession(data.session);
+    },
+
+    // Admins only: a new single-use code, as { code, expiresAt }.
+    async createInvite() {
+      const { data, error } = await sb.rpc('create_invite');
+      if (error) fail('Could not create an invite', error);
+      return { code: data.code, expiresAt: data.expires_at };
+    },
+
+    // Admins only: recent invites, newest first, as { code, createdAt, expiresAt, usedAt }.
+    async listInvites() {
+      const { data, error } = await sb.from('invites').select('code, created_at, expires_at, used_at')
+        .order('created_at', { ascending: false }).limit(20);
+      if (error) fail('Could not load invites', error);
+      return data.map((r) => ({ code: r.code, createdAt: r.created_at, expiresAt: r.expires_at, usedAt: r.used_at }));
     },
 
     // No data folder online.

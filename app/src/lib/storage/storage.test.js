@@ -28,15 +28,19 @@ describe('row mapping', () => {
 
 // A fake supabase-js client. Query builders record their calls and resolve
 // to { data, error } when awaited.
-function fakeClient({ session = null, rows = [], error = null } = {}) {
+// member is the caller's members row (null = hasn't redeemed an invite); rpc
+// maps a function name to its { data, error }.
+function fakeClient({ session = null, rows = [], error = null, member = { is_admin: false }, rpc = {} } = {}) {
   const log = [];
+  const db = { member }; // tests change db.member to simulate the database
   const builder = (table) => {
     const q = { table, calls: [] };
     const chain = new Proxy(q, {
       get(target, prop) {
         if (prop === 'then') {
           log.push(q);
-          const data = q.calls[0][0] === 'select' ? rows.slice(...rangeOf(q)) : null;
+          const data = q.table === 'members' ? db.member
+            : q.calls[0][0] === 'select' ? rows.slice(...rangeOf(q)) : null;
           return (resolve) => resolve({ data, error });
         }
         return (...args) => { q.calls.push([prop, ...args]); return chain; };
@@ -47,7 +51,9 @@ function fakeClient({ session = null, rows = [], error = null } = {}) {
   const rangeOf = (q) => { const r = q.calls.find((c) => c[0] === 'range'); return r ? [r[1], r[2] + 1] : []; };
   return {
     log,
+    db,
     from: builder,
+    rpc: async (name, args) => { log.push({ rpc: name, args }); return rpc[name] || { data: null, error: null }; },
     auth: {
       getSession: async () => ({ data: { session }, error: null }),
       signInWithOAuth: async (opts) => { log.push({ oauth: opts }); return { error: null }; },
@@ -76,7 +82,7 @@ describe('Supabase adapter', () => {
     const rows = EXAMPLE.map((e) => entryToRow(e, 'u1'));
     const { storage, status } = adapterWith({ session, rows });
     expect(await storage.init()).toEqual(EXAMPLE);
-    expect(status.at(-1)).toEqual(['ok', 'Signed in as me@example.com', 'me@example.com', { name: '', avatarUrl: '' }]);
+    expect(status.at(-1)).toEqual(['ok', 'Signed in as me@example.com', 'me@example.com', { name: '', avatarUrl: '', isAdmin: false }]);
   });
 
   it('a load error is reported, not thrown', async () => {
@@ -124,5 +130,36 @@ describe('Supabase adapter', () => {
       ['eq', 'user_id', 'u1'],
       ['not', 'id', 'in', `("${EXAMPLE[0].id}","${EXAMPLE[1].id}")`],
     ]);
+  });
+
+  it('an account without an invite is asked for one and loads nothing', async () => {
+    const { storage, client, status } = adapterWith({ session, member: null, rows: [entryToRow(EXAMPLE[0], 'u1')] });
+    expect(await storage.init()).toBe(null);
+    expect(status.at(-1)[0]).toBe('needsInvite');
+    expect(client.log.some((q) => q.table === 'entries')).toBe(false);
+  });
+
+  it('redeeming an invite calls redeem_invite, then loads the library', async () => {
+    const { storage, client, status } = adapterWith({ session, member: null });
+    await storage.init();
+    client.log.length = 0;
+    client.db.member = { is_admin: false }; // what redeem_invite does
+    expect(await storage.redeemInvite('abcd-1234-ef56')).toEqual([]);
+    expect(client.log[0]).toEqual({ rpc: 'redeem_invite', args: { p_code: 'abcd-1234-ef56' } });
+    expect(status.at(-1)[0]).toBe('ok');
+  });
+
+  it('a rejected invite code throws the database message', async () => {
+    const { storage } = adapterWith({ session, member: null, rpc: { redeem_invite: { data: null, error: { message: 'That invite code has expired. Ask for a new one.' } } } });
+    await storage.init();
+    await expect(storage.redeemInvite('x')).rejects.toThrow('That invite code has expired. Ask for a new one.');
+  });
+
+  it('admins are flagged in the profile and can create invites', async () => {
+    const created = { code: 'ABCD-1234-EF56', expires_at: '2026-10-30T00:00:00Z' };
+    const { storage, status } = adapterWith({ session, member: { is_admin: true }, rpc: { create_invite: { data: created, error: null } } });
+    await storage.init();
+    expect(status.at(-1)[3].isAdmin).toBe(true);
+    expect(await storage.createInvite()).toEqual({ code: 'ABCD-1234-EF56', expiresAt: '2026-10-30T00:00:00Z' });
   });
 });

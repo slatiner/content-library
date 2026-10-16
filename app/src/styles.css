@@ -164,6 +164,11 @@ select{padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius)
 
 .setup{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:24px;text-align:center;}
 .setup p{font-size:13px;color:var(--ink-soft);line-height:1.6;max-width:440px;margin:0 auto 16px;}
+.redeem-row{display:flex;gap:8px;justify-content:center;max-width:360px;margin:0 auto 12px;}
+.redeem-row input{flex:1;min-width:0;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);font-size:13px;color:var(--ink);text-transform:uppercase;letter-spacing:.05em;}
+.setup .redeem-error{color:var(--warn);}
+.invite-code{font-size:20px;letter-spacing:.08em;margin:4px 0 8px;}
+.invite-list{list-style:none;padding:0;margin:0;font-size:11px;line-height:1.9;color:var(--ink-soft);}
 
 /* Card show/hide (replaces the old manual fade) */
 .card-enter-active,.card-leave-active{transition:opacity .12s ease,transform .12s ease;}

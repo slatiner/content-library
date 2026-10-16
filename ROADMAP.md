@@ -298,7 +298,17 @@ the new app. See Decisions, "Move to Vue + Vite".
 (#40, built by `.github/workflows/pages.yml`). Only the owner can sign in:
 new sign-ups and the email provider are off until invite codes (#28).
 
-**Next, in order:** invite codes (#28), then authorization tests (#31), the
+**Invite codes (#28): built 2026-10-16, awaiting deploy and verification.**
+Google sign-in can't carry a code into account creation, so sign-up opens but
+a new account can do nothing until it redeems a code (`members` and `invites`
+tables, `redeem_invite` / `create_invite` functions, a restrictive members-only
+policy on `entries`, and a membership check in the Groq proxy). Only admins
+(the owner) create codes, from "Invite someone" in the account menu; codes are
+single-use and expire after 14 days, and an `?invite=CODE` link fills the code
+in. Accounts that never redeem stay empty; a cleanup for them isn't built yet.
+`supabase/tests/invites_check.sql` checks the rules on a local database.
+
+**Next, in order:** authorization tests (#31), the
 visibility model (#20), privacy basics (#29), licences check (#30), and Sign in
 with Apple (#21, below) once the owner approves the $99/yr. Per-user assistant
 limits (#25, Phase 5) should land before invites go beyond a few friends, since

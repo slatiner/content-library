@@ -8,7 +8,7 @@ import { llmJson, FIND_TASK, normalizeFind, askChipsFor } from './lib/llm.js';
 export const entries = ref([]);
 export const connection = reactive({ state: 'checking', text: 'Loading…', account: '', profile: null, kind: STORAGE });
 
-// profile: { name, avatarUrl } from the sign-in provider, when there is one.
+// profile: { name, avatarUrl, isAdmin } from the sign-in provider, when there is one.
 export function setConnection(state, text, account = '', profile = null) {
   connection.state = state; connection.text = text; connection.account = account; connection.profile = profile;
 }
@@ -28,6 +28,11 @@ export async function signOut() {
   entries.value = [];
   clearAsk();
 }
+
+// Invites (#28). redeemInvite throws a message to show next to the code field.
+export const redeemInvite = async (code) => loaded(await storage.redeemInvite(code));
+export const createInvite = () => storage.createInvite();
+export const listInvites = () => storage.listInvites();
 
 // Create or update. Keeps fields the form doesn't know about (e.g. external ids).
 export async function saveEntry(entry) {

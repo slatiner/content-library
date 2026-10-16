@@ -18,7 +18,8 @@ function fakeAdapter(initial, connState = 'ok', kind = 'file') {
     calls,
     async init() {
       const profile = kind === 'supabase' ? { name: 'Ada Lovelace', avatarUrl: '' } : null;
-      state.setConnection(connState, connState === 'ok' ? 'Connected' : 'Not connected', connState === 'ok' ? account : '', profile);
+      const signedIn = connState === 'ok' || connState === 'needsInvite';
+      state.setConnection(connState, connState === 'ok' ? 'Connected' : 'Not connected', signedIn ? account : '', profile);
       return connState === 'ok' ? structuredClone(initial) : null;
     },
     async connect() { calls.push(['connect']); return null; },
@@ -29,6 +30,20 @@ function fakeAdapter(initial, connState = 'ok', kind = 'file') {
     async replaceAll(all) { calls.push(['replaceAll', all.length]); },
     async readSecrets() { return { groq: { apiKey: 'gsk_test' } }; },
     ...(kind === 'supabase' && {
+      // 'GOOD-CODE' joins; anything else is rejected like the database does.
+      async redeemInvite(code) {
+        calls.push(['redeem', code]);
+        if (code !== 'GOOD-CODE') throw new Error('That invite code isn\'t valid. Check it and try again.');
+        state.setConnection('ok', 'Connected', account, { name: 'Ada Lovelace', avatarUrl: '', isAdmin: false });
+        return [];
+      },
+      async createInvite() { calls.push(['createInvite']); return { code: 'ABCD-1234-EF56', expiresAt: '2026-10-30T00:00:00Z' }; },
+      async listInvites() {
+        return [
+          { code: 'ABCD-1234-EF56', createdAt: '2026-10-16T00:00:00Z', expiresAt: '2099-10-30T00:00:00Z', usedAt: null },
+          { code: '0000-1111-2222', createdAt: '2026-09-01T00:00:00Z', expiresAt: '2026-09-15T00:00:00Z', usedAt: null },
+        ];
+      },
       async llmEndpoint() { return { url: 'https://proj.supabase.co/functions/v1/groq', headers: { Authorization: 'Bearer user-token', apikey: 'sb_publishable_x' } }; },
     }),
   };
@@ -169,6 +184,53 @@ describe('signing in (Supabase storage)', () => {
     expect(adapter.calls.at(-1)).toEqual(['signOut']);
     expect(w.find('.card').exists()).toBe(false);
     expect(w.text()).toContain('Sign in with Google');
+  });
+});
+
+describe('invites', () => {
+  it('a new account without an invite sees only the code field; a bad code shows the error', async () => {
+    const w = await mountApp(EXAMPLE, 'needsInvite', 'supabase');
+    expect(w.find('.card').exists()).toBe(false);
+    expect(w.find('.add-new-btn').exists()).toBe(false);
+    expect(w.find('.redeem').text()).toContain('me@example.com');
+    await w.find('.redeem input').setValue('nope');
+    await w.find('.redeem').trigger('submit');
+    await flushPromises();
+    expect(w.find('.redeem-error').text()).toContain("isn't valid");
+    await w.find('.redeem input').setValue('GOOD-CODE');
+    await w.find('.redeem').trigger('submit');
+    await flushPromises();
+    expect(adapter.calls.at(-1)).toEqual(['redeem', 'GOOD-CODE']);
+    expect(w.find('.redeem').exists()).toBe(false);
+    expect(w.text()).toContain('Nothing here yet');
+  });
+
+  it('an invite link survives the sign-in round trip and fills in the code', async () => {
+    window.history.replaceState(null, '', '/?invite=ABCD-1234-EF56');
+    let w = await mountApp(EXAMPLE, 'signedOut', 'supabase');
+    expect(w.text()).toContain("You've been invited");
+    expect(window.location.search).toBe('');
+    w.unmount();
+    w = await mountApp(EXAMPLE, 'needsInvite', 'supabase');
+    expect(w.find('.redeem input').element.value).toBe('ABCD-1234-EF56');
+    localStorage.clear();
+  });
+
+  it('only admins see Invite someone; it creates a code and lists recent ones', async () => {
+    const w = await mountApp(EXAMPLE, 'ok', 'supabase');
+    await w.find('.avatar-btn').trigger('click');
+    expect(w.findAll('.account-menu .popover button').map((b) => b.text())).not.toContain('Invite someone');
+    state.setConnection('ok', 'Connected', 'me@example.com', { name: 'Ada Lovelace', avatarUrl: '', isAdmin: true });
+    await flushPromises();
+    await w.findAll('.account-menu .popover button').find((b) => b.text() === 'Invite someone').trigger('click');
+    await flushPromises();
+    expect(w.find('.invite-list').text()).toContain('unused, expires');
+    expect(w.find('.invite-list').text()).toContain('expired');
+    await w.findAll('button').find((b) => b.text() === 'Create invite code').trigger('click');
+    await flushPromises();
+    expect(adapter.calls.at(-1)).toEqual(['createInvite']);
+    expect(w.find('.invite-code').text()).toBe('ABCD-1234-EF56');
+    expect(w.find('.invite-new input').element.value).toMatch(/\?invite=ABCD-1234-EF56$/);
   });
 });
 

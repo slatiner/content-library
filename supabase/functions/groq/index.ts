@@ -2,6 +2,7 @@
 // store (GROQ_API_KEY) and never reaches the browser. Only signed-in users may
 // call it; the function checks the caller's session with Supabase Auth itself
 // (deployed with --no-verify-jwt, which also lets the CORS preflight through).
+// Only members may use it (#28): an account that hasn't redeemed an invite gets 403.
 // Requests are passed to Groq as they are, limited to the app's model and token
 // cap so the shared quota can't be spent on anything else.
 
@@ -37,6 +38,14 @@ Deno.serve(async (req) => {
     headers: { authorization: auth, apikey },
   });
   if (!who.ok) return reply(401, { error: { code: 'not_signed_in', message: 'Sign in to use the assistant.' } });
+  const member = await fetch(`${Deno.env.get('SUPABASE_URL')}/rest/v1/rpc/is_member`, {
+    method: 'POST',
+    headers: { authorization: auth, apikey, 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (!member.ok || (await member.json()) !== true) {
+    return reply(403, { error: { code: 'not_member', message: 'Redeem an invite code to use the assistant.' } });
+  }
 
   let body: Record<string, unknown>;
   try {
