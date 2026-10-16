@@ -45,6 +45,30 @@ export async function wikidataSearch(title) {
   return (d.search || []).map((c) => ({ id: c.id, label: c.label || title, description: c.description || '' }));
 }
 
+// Wikidata "instance of" (P31) classes per medium, for the typed search below.
+const MEDIUM_CLASSES = {
+  // film, animated film, television film, animated feature film, documentary film, short film
+  film: ['Q11424', 'Q24869', 'Q506240', 'Q202866', 'Q93204', 'Q24862'],
+  // television series, miniseries, web series, anime television series, animated television series, animated series
+  series: ['Q5398426', 'Q1259759', 'Q526877', 'Q63952888', 'Q117467246', 'Q581714'],
+  // literary work, book, novel, written work, graphic novel, short story, novel series
+  book: ['Q7725634', 'Q571', 'Q8261', 'Q47461344', 'Q725377', 'Q49084', 'Q1667921'],
+};
+
+// Full-text search limited to items of the medium's classes, so a film lookup
+// only suggests films. Returns the same shape as wikidataSearch, best first.
+export async function wikidataSearchMedium(title, medium) {
+  const filter = 'haswbstatement:' + MEDIUM_CLASSES[medium].map((q) => 'P31=' + q).join('|');
+  const url = `https://www.wikidata.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(title + ' ' + filter)}&gsrlimit=8&prop=entityterms&wbetterms=label|description&wbetlanguage=en&format=json&origin=*`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('Wikidata search HTTP ' + r.status);
+  const pages = Object.values(((await r.json()).query || {}).pages || {});
+  return pages.sort((a, b) => (a.index || 0) - (b.index || 0)).map((p) => {
+    const t = p.entityterms || {};
+    return { id: p.title, label: (t.label && t.label[0]) || title, description: (t.description && t.description[0]) || '' };
+  });
+}
+
 export function candidateMatchesMedium(c, medium) {
   const desc = (c.description || '').toLowerCase();
   return MEDIUM_KEYWORDS[medium].some((k) => desc.includes(k));
@@ -276,6 +300,19 @@ export async function lookupTitle(form) {
     }
   }
   try {
+    // Typed search first: every suggestion is of the right medium. One exact
+    // title match is filled straight away; otherwise the user picks.
+    const typed = await wikidataSearchMedium(title, form.medium);
+    if (typed.length) {
+      const exact = typed.filter((c) => normText(c.label) === normText(title));
+      const only = typed.length === 1 ? typed[0] : exact.length === 1 ? exact[0] : null;
+      if (only) {
+        await applyWikidataDetails(only.id, form);
+        return { status: `Filled from Wikidata (${only.label}).` };
+      }
+      return { choices: typed, uncertain: false };
+    }
+    // Nothing typed (items missing an "instance of" we know): plain search.
     const candidates = await wikidataSearch(title);
     if (!candidates.length) return { status: 'No match found for this title.' };
     const matched = candidates.filter((c) => candidateMatchesMedium(c, form.medium));

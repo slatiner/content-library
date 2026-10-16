@@ -246,6 +246,44 @@ describe('add and edit', () => {
     expect(saved).toMatchObject({ title: 'Dune', wikidataId: 'Q42', openlibraryId: 'OL123W', itunesId: '' });
   });
 
+  it('Look up suggests only items of the chosen medium, and fills a single exact match', async () => {
+    const urls = [];
+    const page = (index, title, label, description) => ({ index, title, entityterms: { label: [label], description: [description] } });
+    fetch.mockImplementation((url, init) => {
+      const json = (body) => Promise.resolve(new Response(JSON.stringify(body)));
+      if (url.includes('generator=search')) {
+        urls.push(decodeURIComponent(url));
+        const heat = url.includes('Heat');
+        return json({ query: { pages: heat
+          ? { a: page(2, 'Q2', 'Heat', '1972 film'), b: page(1, 'Q1', 'Heat', '1995 film'), c: page(3, 'Q3', 'White Heat', '1949 film') }
+          : { a: page(1, 'Q9', 'Paprika', '2006 film'), b: page(2, 'Q8', 'Paprika Girl', '1990 film') } } });
+      }
+      if (url.includes('wbgetentities')) return json({ entities: { Q9: { claims: {} } } });
+      return fakeFetch(url, init);
+    });
+    const w = await mountApp();
+    await w.find('.add-new-btn').trigger('click');
+    await w.findAll('.view-tabs button')[1].trigger('click');
+    await w.findAll('.medium-toggle button').find((b) => b.text() === 'Film').trigger('click');
+    const manual = w.findAll('.form-panel')[0];
+    await manual.find('.title-row input').setValue('Heat');
+    await manual.findAll('button').find((b) => b.text() === 'Look up').trigger('click');
+    await flushPromises();
+    expect(urls[0]).toContain('haswbstatement:P31=Q11424');
+    expect(manual.findAll('.suggest-item').map((b) => b.text())).toEqual([
+      expect.stringContaining('1995 film'), expect.stringContaining('1972 film'), expect.stringContaining('1949 film'),
+    ]);
+    await manual.find('.suggest-skip').trigger('click');
+    await manual.find('.title-row input').setValue('Paprika');
+    await manual.find('input[placeholder^="Auto-filled by Look up"]').setValue('https://example.com/p.jpg');
+    await manual.findAll('button').find((b) => b.text() === 'Look up').trigger('click');
+    await flushPromises();
+    expect(manual.findAll('.suggest-item')).toHaveLength(0);
+    await manual.findAll('.form-actions button').find((b) => b.text() === 'Save').trigger('click');
+    await flushPromises();
+    expect(adapter.calls.at(-1)[1]).toMatchObject({ title: 'Paprika', wikidataId: 'Q9' });
+  });
+
   it('Describe it: send, preview, Enter again adds', async () => {
     groqAnswer = { intent: 'add', medium: 'film', title: 'Perfect Blue', year: null, creator: 'Satoshi Kon', rating: 4, dateConsumed: '2026-10-01', note: 'anime night', platform: null, url: null };
     const w = await mountApp();
