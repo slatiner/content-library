@@ -1,7 +1,7 @@
 <script setup>
 import { computed, nextTick, reactive, ref } from 'vue';
 import { entries, connection, saveEntry, ensureGroqKey, forgetGroqKey, setGroqKey, shareLink, shareUrl } from '../state.js';
-import { MEDIA, ID_FIELDS, LEVELS, LEVEL_LABEL, emptyForm, linkKey, personLine, uid } from '../lib/entries.js';
+import { MEDIA, DONE_VERB, ID_FIELDS, LEVELS, LEVEL_LABEL, emptyForm, linkKey, personLine, uid } from '../lib/entries.js';
 import { lookupTitle, applyWikidataDetails } from '../lib/lookup.js';
 import { llmJson, ADD_TASK, fillFormFromExtraction } from '../lib/llm.js';
 import Stars from './Stars.vue';
@@ -304,7 +304,7 @@ function saveKey() {
               <div class="pv-title">{{ preview.title }}<span v-if="preview.year" class="yr"> ({{ preview.year }})</span></div>
               <div v-if="personLine(preview)" class="pv-meta">{{ personLine(preview) }}</div>
               <Stars :n="preview.rating" style="margin-top:4px;" />
-              <div class="pv-meta">{{ preview.dateConsumed ? `Consumed ${preview.dateConsumed}` : 'No date' }}</div>
+              <div class="pv-meta">{{ preview.dateConsumed ? `${DONE_VERB[preview.medium] || 'Finished'} ${preview.dateConsumed}` : 'No date' }}</div>
               <div v-if="preview.insights" class="pv-note">{{ preview.insights }}</div>
             </div>
           </div>
@@ -353,7 +353,7 @@ function saveKey() {
         <div v-if="m === 'music'" class="field"><label>Listen link</label><input v-model="form.streamUrl" type="text" placeholder="Spotify, YouTube, SoundCloud, Mixcloud…"></div>
 
         <div class="row-two">
-          <div class="field"><label>Date consumed</label><input v-model="form.dateConsumed" type="date"></div>
+          <div class="field"><label>Date {{ DONE_VERB[m].toLowerCase() }}</label><input v-model="form.dateConsumed" type="date"></div>
           <div class="field">
             <label>Rating</label>
             <div class="star-pick"><span v-for="i in 5" :key="i" :class="{ on: i <= form.rating }" @click="form.rating = i">★</span></div>

@@ -9,6 +9,8 @@ export const LEVEL_LABEL = { private: 'Only me', friends: 'Friends', public: 'Pu
 export const levelOf = (entry, libraryDefault) => entry.visibility || libraryDefault || 'private';
 export const MEDIUM_PLURAL = { book: 'books', film: 'films', series: 'series', music: 'music' };
 export const MEDIUM_TAG_LABEL = { book: 'Books', film: 'Films', series: 'Series', music: 'Music' };
+// What "consumed" means for each medium, in the UI copy.
+export const DONE_VERB = { book: 'Read', film: 'Watched', series: 'Watched', music: 'Listened' };
 
 export const SORT_LABEL = {
   dateConsumed_desc: 'recently consumed',

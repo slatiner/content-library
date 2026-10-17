@@ -183,9 +183,9 @@ export function askChipsFor(f) {
   if (f.minRating && f.maxRating) chips.push(f.minRating === f.maxRating ? `rated ${f.minRating}` : `rated ${f.minRating}–${f.maxRating}`);
   else if (f.minRating) chips.push(`rated ${f.minRating}+`);
   else if (f.maxRating) chips.push(`rated up to ${f.maxRating}`);
-  if (f.consumedFrom && f.consumedTo) chips.push(`consumed ${f.consumedFrom} → ${f.consumedTo}`);
-  else if (f.consumedFrom) chips.push(`consumed since ${f.consumedFrom}`);
-  else if (f.consumedTo) chips.push(`consumed until ${f.consumedTo}`);
+  if (f.consumedFrom && f.consumedTo) chips.push(`finished ${f.consumedFrom} → ${f.consumedTo}`);
+  else if (f.consumedFrom) chips.push(`finished since ${f.consumedFrom}`);
+  else if (f.consumedTo) chips.push(`finished until ${f.consumedTo}`);
   if (f.releasedFrom && f.releasedTo) chips.push(`released ${f.releasedFrom}–${f.releasedTo}`);
   else if (f.releasedFrom) chips.push(`released ${f.releasedFrom} or later`);
   else if (f.releasedTo) chips.push(`released ${f.releasedTo} or earlier`);

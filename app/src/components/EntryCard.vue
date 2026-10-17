@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { personLine } from '../lib/entries.js';
+import { DONE_VERB, personLine } from '../lib/entries.js';
 import Stars from './Stars.vue';
 import MediumIcon from './MediumIcon.vue';
 
@@ -25,7 +25,7 @@ const hasHover = computed(() => props.entry.dateConsumed || props.entry.insights
       <div v-else class="ph" :class="entry.medium">{{ entry.title }}</div>
       <div v-if="hasHover" class="hover-info">
         <div v-if="people" class="hi-people">{{ people }}</div>
-        <div v-if="entry.dateConsumed" class="hi-date">Consumed {{ entry.dateConsumed }}</div>
+        <div v-if="entry.dateConsumed" class="hi-date">{{ DONE_VERB[entry.medium] || 'Finished' }} {{ entry.dateConsumed }}</div>
         <div v-if="entry.insights" class="hi-note">{{ entry.insights }}</div>
         <a v-if="entry.streamUrl" class="hi-listen" :href="entry.streamUrl" target="_blank" rel="noopener noreferrer" @click.stop>Listen ↗</a>
       </div>

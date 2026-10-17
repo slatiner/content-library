@@ -1,21 +1,6 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { filters, ask, askLibrary, clearAsk } from '../state.js';
 import { MEDIA, MEDIUM_TAG_LABEL } from '../lib/entries.js';
-
-
-const openPop = ref(null); // 'date' | null
-const datePop = ref(null);
-function togglePop(name) { openPop.value = openPop.value === name ? null : name; }
-function onDocClick(e) {
-  if (openPop.value === 'date' && datePop.value && !datePop.value.contains(e.target)) openPop.value = null;
-}
-onMounted(() => document.addEventListener('click', onDocClick));
-onBeforeUnmount(() => document.removeEventListener('click', onDocClick));
-
-const dateLabel = computed(() => (filters.dateFrom || filters.dateTo)
-  ? `${filters.dateFrom || '…'} – ${filters.dateTo || '…'}` : 'Date range');
-function clearDates() { filters.dateFrom = ''; filters.dateTo = ''; }
 
 // With every type on, clicking one shows only that type; otherwise clicks toggle.
 function toggleMedium(m) {
@@ -35,19 +20,8 @@ function onSearchEnter(e) {
   <div class="filter-bar">
     <div class="filter-row">
       <input v-model="filters.search" type="text" placeholder="Search, ask, or log something…" @keydown.enter="onSearchEnter">
-      <div ref="datePop" class="popover-wrap">
-        <button class="input-btn" @click.stop="togglePop('date')">📅 <span>{{ dateLabel }}</span></button>
-        <div class="popover" :class="{ open: openPop === 'date' }">
-          <div class="field"><label>From</label><input v-model="filters.dateFrom" type="date"></div>
-          <div class="field"><label>To</label><input v-model="filters.dateTo" type="date"></div>
-          <div class="pop-actions">
-            <button class="btn ghost small" @click="clearDates">Clear</button>
-            <button class="btn small" @click="openPop = null">Apply</button>
-          </div>
-        </div>
-      </div>
       <select v-model="filters.sortBy">
-        <option value="dateConsumed_desc">Recently consumed</option>
+        <option value="dateConsumed_desc">Recently finished</option>
         <option value="dateAdded_desc">Recently added</option>
         <option value="rating_desc">Highest rated</option>
         <option value="year_desc">Year, newest</option>

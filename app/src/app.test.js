@@ -121,15 +121,26 @@ describe('library view', () => {
     expect(titles(w)).toEqual(['Paprika']);
   });
 
-  it('sorts by title and filters by date range', async () => {
+  it('sorts by title; dates set by an ask still filter, with no date control', async () => {
     const w = await mountApp();
+    expect(w.find('.filter-bar input[type=date]').exists()).toBe(false);
     await w.find('select').setValue('title_asc');
     expect(titles(w)).toEqual(['In Rainbows', 'Paprika', 'Silo', 'Steppenwolf']);
-    const [from, to] = w.findAll('.popover input[type=date]');
-    await from.setValue('2026-08-05');
-    await to.setValue('2026-08-12');
+    state.filters.dateFrom = '2026-08-05';
+    state.filters.dateTo = '2026-08-12';
+    await flushPromises();
     expect(titles(w)).toEqual(['Paprika']);
-    expect(w.find('.input-btn').text()).toContain('2026-08-05 – 2026-08-12');
+  });
+
+  it('says read, watched or listened instead of consumed', async () => {
+    const w = await mountApp();
+    const hover = (t) => w.findAll('.card').find((c) => c.text().includes(t)).find('.hi-date').text();
+    expect(hover('Steppenwolf')).toMatch(/^Read /);
+    expect(hover('Paprika')).toMatch(/^Watched /);
+    expect(hover('In Rainbows')).toMatch(/^Listened /);
+    expect(w.text()).not.toMatch(/consumed/i);
+    await w.findAll('.card').find((c) => c.text().includes('Steppenwolf')).trigger('click');
+    expect(w.findAll('.field label').map((l) => l.text())).toContain('Date read');
   });
 
   it('deletes an entry after confirming', async () => {
