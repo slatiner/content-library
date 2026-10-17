@@ -35,6 +35,7 @@ Run `gh issue list --label phase-1-music` (etc.) to see live status for a phase.
 | 3.5 | Port to Vue + Vite | ✅ Done | [Phase 3.5](../../milestone/7) |
 | 4 | Auth & multi-user | 🔶 In progress | [Phase 4](../../milestone/4) |
 | 5 | Reconnect assistant to backend | 🔲 Not started | [Phase 5](../../milestone/5) |
+| 5.5 | Wishlist | 🔲 Not started | [Phase 5.5](../../milestone/8) |
 | 6 | Sharing & recommendations | 🔲 Not started | [Phase 6](../../milestone/6) |
 
 ## Decisions
@@ -365,6 +366,20 @@ server-side: a client-side key is fine solo, but becomes a shared, abusable
 quota once multiple users exist. Decide here whether users share one key with
 per-user limits or bring their own, and review Groq's terms for EEA/UK/CH users
 before opening the assistant to anyone else.
+
+## Phase 5.5 — Wishlist
+
+Added at the owner's request on 2026-10-17 (#47). A wishlist next to the
+consumed library: the same cards, filters and dialogs, with a toggle between
+**Consumed** and **Wishlist**. Likely a `status` column on entries (consumed /
+wishlist) rather than a second table, so a wish moves to consumed in place,
+keeping its id, cover and external ids. The open decisions (moving a wish to
+consumed, which fields a wish has, sharing, assistant phrasing, counts and sort)
+are listed on #47.
+
+Placed before Phase 6 so that a friend's recommendation (#36) can land in the
+wishlist. It depends only on the visibility model (#20), so it can be pulled
+earlier if wanted.
 
 ## Phase 6 — Sharing & recommendations
 
