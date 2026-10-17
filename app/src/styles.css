@@ -203,7 +203,9 @@ header.top .account-menu{align-self:center;}
   header.top .counts span:first-child{margin-left:0;}
   header.top .add-new-btn{order:6;}
   .filter-row input[type=text]{flex:1 1 100%;max-width:none;}
-  .filter-row select{flex:1;}
-  .filter-row .medium-tags{flex:1 1 100%;}
+  /* Type tags and sort share one line: compact tags, the select takes the rest. */
+  .filter-row .medium-tags{flex:0 1 auto;flex-wrap:nowrap;gap:4px;order:1;}
+  .filter-row .medium-tags .tag-check{padding:6px 8px;font-size:11px;}
+  .filter-row select{flex:1 1 0;min-width:0;order:2;}
   .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
 }
