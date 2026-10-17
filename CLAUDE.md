@@ -86,8 +86,10 @@ Learned over several sessions. Follow these by default.
   verify; it burns tokens.
 - Cheap checks are welcome and have caught real bugs: `npm run build`, and the
   Vitest component tests (`npm test`, `app/src/app.test.js`) that click the real
-  components with a fake storage adapter and network. Add a test with each
-  change. Say what was and wasn't covered. Real folder permissions, the real
+  components with a fake storage adapter and network. Database rules have a
+  pgTAP suite (`npm run test:db` after `supabase start`, in
+  `supabase/tests/database/`); extend it with any schema or policy change.
+  Add a test with each change. Say what was and wasn't covered. Real folder permissions, the real
   file write, and live lookups and image loading can't be simulated.
 - Several bugs only showed up in real use. When the owner reports one, ask for the
   exact message they see before guessing.

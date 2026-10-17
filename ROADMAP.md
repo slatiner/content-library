@@ -305,10 +305,17 @@ policy on `entries`, and a membership check in the Groq proxy). Only admins
 (the owner) create codes, from "Invite someone" in the account menu; codes are
 single-use and expire after 14 days, and an `?invite=CODE` link fills the code
 in. Accounts that never redeem stay empty; a cleanup for them isn't built yet.
-`supabase/tests/invites_check.sql` checks the rules on a local database.
 
-**Next, in order:** authorization tests (#31), the
-visibility model (#20), privacy basics (#29), licences check (#30), and Sign in
+**Authorization tests (#31): done for today's rules (2026-10-17).**
+`npm run test:db` (needs `supabase start`) runs a pgTAP suite,
+`supabase/tests/database/authz.test.sql`, on the local database: per-user
+entries, members-only access, invites, signed-out access, and checks over every
+table (row-level security on, no grants to anon beyond keepalive, no TRUNCATE
+etc.), so a new table that forgets them fails. `supabase/tests/rls_check.sql`
+repeats the key checks on the live project with the real second account, and
+rolls back. #31 stays open for the visibility levels, which get tests with #20.
+
+**Next, in order:** the visibility model (#20, with its tests under #31), privacy basics (#29), licences check (#30), and Sign in
 with Apple (#21, below) once the owner approves the $99/yr. Per-user assistant
 limits (#25, Phase 5) should land before invites go beyond a few friends, since
 every signed-in user shares the owner's Groq key and quota (#24).
