@@ -37,6 +37,18 @@ function fakeAdapter(initial, connState = 'ok', kind = 'file') {
         state.setConnection('ok', 'Connected', account, { name: 'Ada Lovelace', avatarUrl: '', isAdmin: false });
         return [];
       },
+      async setDefaultVisibility(level) {
+        calls.push(['setDefault', level]);
+        state.setConnection('ok', 'Connected', account, { ...state.connection.profile, defaultVisibility: level });
+      },
+      async shareLink(entryId) { calls.push(['shareLink', entryId]); return 'tok123'; },
+      async listShareLinks() { return [{ token: 'tok123', entryId: null, createdAt: '2026-10-17T00:00:00Z' }]; },
+      async revokeShareLink(token) { calls.push(['revoke', token]); },
+      async sharedByLink(token) {
+        calls.push(['sharedByLink', token]);
+        if (token !== 'tok123') return null;
+        return { ownerName: 'Ada Lovelace', entries: structuredClone(initial).map((e) => ({ ...e, insights: '' })) };
+      },
       async createInvite() { calls.push(['createInvite']); return { code: 'ABCD-1234-EF56', expiresAt: '2026-10-30T00:00:00Z' }; },
       async listInvites() {
         return [
@@ -178,7 +190,7 @@ describe('signing in (Supabase storage)', () => {
     const menu = w.find('.account-menu .popover');
     expect(menu.classes()).toContain('open');
     expect(menu.find('.menu-who').text()).toContain('me@example.com');
-    expect(menu.findAll('button').map((b) => b.text())).toEqual(['Diagnose connection', 'Export / Import JSON', 'Sign out']);
+    expect(menu.findAll('button').map((b) => b.text())).toEqual(['Sharing', 'Diagnose connection', 'Export / Import JSON', 'Sign out']);
     await menu.findAll('button').find((b) => b.text() === 'Sign out').trigger('click');
     await flushPromises();
     expect(adapter.calls.at(-1)).toEqual(['signOut']);
@@ -231,6 +243,80 @@ describe('invites', () => {
     expect(adapter.calls.at(-1)).toEqual(['createInvite']);
     expect(w.find('.invite-code').text()).toBe('ABCD-1234-EF56');
     expect(w.find('.invite-new input').element.value).toMatch(/\?invite=ABCD-1234-EF56$/);
+  });
+});
+
+describe('sharing', () => {
+  it('online, an entry follows the library default unless set, and shows a badge when not public', async () => {
+    const w = await mountApp(EXAMPLE, 'ok', 'supabase');
+    state.setConnection('ok', 'Connected', 'me@example.com', { name: 'Ada Lovelace', avatarUrl: '', defaultVisibility: 'public' });
+    await flushPromises();
+    // EXAMPLE[1] (Steppenwolf) is explicitly private; the rest follow the default.
+    expect(w.findAll('.level-badge').map((b) => b.text())).toEqual(['Only me']);
+    const card = w.findAll('.card').find((c) => c.text().includes('Paprika'));
+    await card.trigger('click');
+    const select = w.find('.visibility-field select');
+    expect(select.element.value).toBe('');
+    expect(select.find('option').text()).toContain('Library default (Public');
+    await select.setValue('friends');
+    await w.findAll('.form-actions button').find((b) => b.text() === 'Save').trigger('click');
+    await flushPromises();
+    expect(adapter.calls.at(-1)[1]).toMatchObject({ title: 'Paprika', visibility: 'friends' });
+    expect(w.findAll('.level-badge').map((b) => b.text()).sort()).toEqual(['Friends', 'Only me']);
+  });
+
+  it('an entry can be shared by link from its form', async () => {
+    const w = await mountApp(EXAMPLE, 'ok', 'supabase');
+    await w.findAll('.card')[0].trigger('click');
+    await w.findAll('button').find((b) => b.text() === 'Copy share link').trigger('click');
+    await flushPromises();
+    expect(adapter.calls.at(-1)).toEqual(['shareLink', EXAMPLE.find((e) => e.title === 'In Rainbows').id]);
+  });
+
+  it('file mode has no sharing controls', async () => {
+    const w = await mountApp();
+    expect(w.find('.level-badge').exists()).toBe(false);
+    await w.findAll('.card')[0].trigger('click');
+    expect(w.find('.visibility-field').exists()).toBe(false);
+  });
+
+  it('Sharing settings change the default, copy a library link and revoke links', async () => {
+    const w = await mountApp(EXAMPLE, 'ok', 'supabase');
+    await w.find('.avatar-btn').trigger('click');
+    await w.findAll('.account-menu .popover button').find((b) => b.text() === 'Sharing').trigger('click');
+    await flushPromises();
+    const panel = w.findAll('.form-panel').find((p) => p.find('h2').text() === 'Sharing');
+    await panel.find('select').setValue('public');
+    await flushPromises();
+    expect(adapter.calls).toContainEqual(['setDefault', 'public']);
+    await panel.findAll('button').find((b) => b.text() === 'Copy library link').trigger('click');
+    await flushPromises();
+    expect(adapter.calls).toContainEqual(['shareLink', null]);
+    expect(panel.find('.share-list').text()).toContain('Whole library');
+    await panel.findAll('button').find((b) => b.text() === 'Revoke').trigger('click');
+    await flushPromises();
+    expect(adapter.calls.at(-1)).toEqual(['revoke', 'tok123']);
+  });
+
+  it('a share link opens a read-only library without signing in', async () => {
+    window.history.replaceState(null, '', '/?share=tok123');
+    const w = await mountApp(EXAMPLE, 'signedOut', 'supabase');
+    expect(adapter.calls[0]).toEqual(['sharedByLink', 'tok123']);
+    expect(w.find('.filebar').text()).toContain('Shared by Ada Lovelace');
+    expect(w.findAll('.card')).toHaveLength(4);
+    expect(w.find('.card .del').exists()).toBe(false);
+    expect(w.find('.add-new-btn').exists()).toBe(false);
+    expect(w.text()).not.toContain('Sign in with Google');
+    expect(w.find('.hi-note').exists()).toBe(false);
+    window.history.replaceState(null, '', '/');
+  });
+
+  it('a revoked share link says so', async () => {
+    window.history.replaceState(null, '', '/?share=gone');
+    const w = await mountApp(EXAMPLE, 'signedOut', 'supabase');
+    expect(w.find('.filebar').text()).toContain('revoked');
+    expect(w.find('.card').exists()).toBe(false);
+    window.history.replaceState(null, '', '/');
   });
 });
 

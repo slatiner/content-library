@@ -7,10 +7,11 @@ import Avatar from './Avatar.vue';
 defineProps({
   canChangeFolder: { type: Boolean, default: false },
   canInvite: { type: Boolean, default: false },
+  canShare: { type: Boolean, default: false },
   account: { type: String, default: '' },
   profile: { type: Object, default: null },
 });
-const emit = defineEmits(['change-folder', 'invite', 'diagnose', 'backup', 'sign-out']);
+const emit = defineEmits(['change-folder', 'sharing', 'invite', 'diagnose', 'backup', 'sign-out']);
 
 const open = ref(false);
 const root = ref(null);
@@ -33,6 +34,7 @@ function menu(event) { open.value = false; emit(event); }
         <span>{{ account }}</span>
       </div>
       <button v-if="canChangeFolder" class="btn ghost small full" @click="menu('change-folder')">Change folder</button>
+      <button v-if="canShare" class="btn ghost small full" @click="menu('sharing')">Sharing</button>
       <button v-if="canInvite" class="btn ghost small full" @click="menu('invite')">Invite someone</button>
       <button class="btn ghost small full" @click="menu('diagnose')">Diagnose connection</button>
       <button class="btn ghost small full" @click="menu('backup')">Export / Import JSON</button>

@@ -8,7 +8,7 @@ import { llmJson, FIND_TASK, normalizeFind, askChipsFor } from './lib/llm.js';
 export const entries = ref([]);
 export const connection = reactive({ state: 'checking', text: 'Loading…', account: '', profile: null, kind: STORAGE });
 
-// profile: { name, avatarUrl, isAdmin } from the sign-in provider, when there is one.
+// profile: { name, avatarUrl, isAdmin, defaultVisibility } from the sign-in provider, when there is one.
 export function setConnection(state, text, account = '', profile = null) {
   connection.state = state; connection.text = text; connection.account = account; connection.profile = profile;
 }
@@ -33,6 +33,27 @@ export async function signOut() {
 export const redeemInvite = async (code) => loaded(await storage.redeemInvite(code));
 export const createInvite = () => storage.createInvite();
 export const listInvites = () => storage.listInvites();
+
+// Sharing (#20).
+export const setDefaultVisibility = (level) => storage.setDefaultVisibility(level);
+export const shareLink = (entryId = null) => storage.shareLink(entryId);
+export const listShareLinks = () => storage.listShareLinks();
+export const revokeShareLink = (token) => storage.revokeShareLink(token);
+export const shareUrl = (token) => `${window.location.origin}${window.location.pathname}?share=${token}`;
+
+// Viewing someone's share link (?share=TOKEN): a read-only library, no sign-in.
+export const shared = reactive({ owner: '' });
+export async function openShared(token) {
+  try {
+    const r = await storage.sharedByLink(token);
+    if (!r) { setConnection('shared', 'This link has been revoked or doesn\'t exist.'); return; }
+    shared.owner = r.ownerName;
+    entries.value = r.entries;
+    setConnection('shared', r.ownerName ? `Shared by ${r.ownerName}` : 'Shared with you');
+  } catch (e) {
+    setConnection('shared', `${e.message}. Check your connection and reload.`);
+  }
+}
 
 // Create or update. Keeps fields the form doesn't know about (e.g. external ids).
 export async function saveEntry(entry) {
@@ -133,6 +154,8 @@ export function clearAsk() {
 
 export async function askLibrary(text) {
   if (ask.busy) return;
+  // A shared view has no assistant; the text search already applies.
+  if (connection.state === 'shared') return;
   ask.busy = true;
   setAsk('Thinking…', []);
   try {

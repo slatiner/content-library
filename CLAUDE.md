@@ -134,6 +134,8 @@ changes nothing the app shows.
   Brooklyn"). Resolve relative dates from today's date: "just saw it" is today,
   "mid May" is the 15th, "a year ago" is the same date a year back.
 - Only set a rating the owner gave. Otherwise leave it at 0 and mention that.
+- Leave `visibility` as `""` so the entry follows the library default (public
+  for the owner). Set `"private"` or `"friends"` only when the owner asks.
 - Covers should be portrait (about 2:3) and at least ~300px wide. Sources that
   worked: the Wikipedia REST summary `originalimage` (films), TVmaze `original`
   image (series posters, free and high-res), Open Library

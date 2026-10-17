@@ -30,7 +30,7 @@ describe('row mapping', () => {
 // to { data, error } when awaited.
 // member is the caller's members row (null = hasn't redeemed an invite); rpc
 // maps a function name to its { data, error }.
-function fakeClient({ session = null, rows = [], error = null, member = { is_admin: false }, rpc = {} } = {}) {
+function fakeClient({ session = null, rows = [], error = null, member = { is_admin: false, default_visibility: 'private' }, rpc = {} } = {}) {
   const log = [];
   const db = { member }; // tests change db.member to simulate the database
   const builder = (table) => {
@@ -82,7 +82,7 @@ describe('Supabase adapter', () => {
     const rows = EXAMPLE.map((e) => entryToRow(e, 'u1'));
     const { storage, status } = adapterWith({ session, rows });
     expect(await storage.init()).toEqual(EXAMPLE);
-    expect(status.at(-1)).toEqual(['ok', 'Signed in as me@example.com', 'me@example.com', { name: '', avatarUrl: '', isAdmin: false }]);
+    expect(status.at(-1)).toEqual(['ok', 'Signed in as me@example.com', 'me@example.com', { name: '', avatarUrl: '', isAdmin: false, defaultVisibility: 'private' }]);
   });
 
   it('a load error is reported, not thrown', async () => {
@@ -153,6 +153,36 @@ describe('Supabase adapter', () => {
     const { storage } = adapterWith({ session, member: null, rpc: { redeem_invite: { data: null, error: { message: 'That invite code has expired. Ask for a new one.' } } } });
     await storage.init();
     await expect(storage.redeemInvite('x')).rejects.toThrow('That invite code has expired. Ask for a new one.');
+  });
+
+  it('an empty visibility follows the library default: stored as null', async () => {
+    expect(entryToRow({ ...EXAMPLE[0], visibility: '' }, 'u1').visibility).toBe(null);
+    expect(rowToEntry({ ...entryToRow(EXAMPLE[0], 'u1'), visibility: null }).visibility).toBe('');
+  });
+
+  it('a share link returns the sharer and entries, without notes', async () => {
+    const row = entryToRow(EXAMPLE[0], 'u1');
+    delete row.insights; delete row.user_id; delete row.visibility;
+    const { storage, client } = adapterWith({ rpc: { shared_by_link: { data: [{ owner_name: 'Ada', entry: row }], error: null } } });
+    const r = await storage.sharedByLink('tok');
+    expect(client.log[0]).toEqual({ rpc: 'shared_by_link', args: { p_token: 'tok' } });
+    expect(r.ownerName).toBe('Ada');
+    expect(r.entries[0]).toMatchObject({ id: EXAMPLE[0].id, title: EXAMPLE[0].title, insights: '' });
+  });
+
+  it('an unknown or revoked share link returns null', async () => {
+    const { storage } = adapterWith({ rpc: { shared_by_link: { data: [], error: null } } });
+    expect(await storage.sharedByLink('gone')).toBe(null);
+  });
+
+  it('changing the library default updates own members row and the profile', async () => {
+    const { storage, client, status } = adapterWith({ session });
+    await storage.init();
+    client.log.length = 0;
+    await storage.setDefaultVisibility('public');
+    expect(client.log[0].table).toBe('members');
+    expect(client.log[0].calls).toEqual([['update', { default_visibility: 'public' }], ['eq', 'user_id', 'u1']]);
+    expect(status.at(-1)[3].defaultVisibility).toBe('public');
   });
 
   it('admins are flagged in the profile and can create invites', async () => {

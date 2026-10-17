@@ -11,6 +11,7 @@ export function createSupabaseStorage(setStatus, { url, key, client } = {}) {
   const sb = client || createClient(url, key, { auth: { flowType: 'pkce', detectSessionInUrl: true, persistSession: true } });
   let user = null;
   let isAdmin = false;
+  let defaultVisibility = 'private';
 
   function fail(what, error) {
     throw new Error(`${what}: ${(error && error.message) || error}`);
@@ -30,13 +31,13 @@ export function createSupabaseStorage(setStatus, { url, key, client } = {}) {
   // Google's name and picture come with the default sign-in scopes.
   function profile() {
     const m = (user && user.user_metadata) || {};
-    return { name: m.full_name || m.name || '', avatarUrl: m.avatar_url || m.picture || '', isAdmin };
+    return { name: m.full_name || m.name || '', avatarUrl: m.avatar_url || m.picture || '', isAdmin, defaultVisibility };
   }
 
   async function startSession(session) {
     user = session.user;
     try {
-      const { data: member, error } = await sb.from('members').select('is_admin').eq('user_id', user.id).maybeSingle();
+      const { data: member, error } = await sb.from('members').select('is_admin, default_visibility').eq('user_id', user.id).maybeSingle();
       if (error) fail('Could not check your account', error);
       if (!member) {
         isAdmin = false;
@@ -44,6 +45,7 @@ export function createSupabaseStorage(setStatus, { url, key, client } = {}) {
         return null;
       }
       isAdmin = member.is_admin;
+      defaultVisibility = member.default_visibility;
       const entries = await loadAll();
       setStatus('ok', `Signed in as ${user.email}`, user.email, profile());
       return entries;
@@ -127,6 +129,43 @@ export function createSupabaseStorage(setStatus, { url, key, client } = {}) {
         .order('created_at', { ascending: false }).limit(20);
       if (error) fail('Could not load invites', error);
       return data.map((r) => ({ code: r.code, createdAt: r.created_at, expiresAt: r.expires_at, usedAt: r.used_at }));
+    },
+
+    // ---- Sharing (#20) ----
+
+    async setDefaultVisibility(level) {
+      const { error } = await sb.from('members').update({ default_visibility: level }).eq('user_id', user.id);
+      if (error) fail('Could not change your library setting', error);
+      defaultVisibility = level;
+      setStatus('ok', `Signed in as ${user.email}`, user.email, profile());
+    },
+
+    // The secret link token for one entry, or for the library when entryId is null.
+    async shareLink(entryId = null) {
+      const { data, error } = await sb.rpc('get_share_link', { p_entry_id: entryId });
+      if (error) fail('Could not create a share link', error);
+      return data;
+    },
+
+    // The user's links, as { token, entryId (null = library), createdAt }.
+    async listShareLinks() {
+      const { data, error } = await sb.from('share_links').select('token, entry_id, created_at').order('created_at');
+      if (error) fail('Could not load your share links', error);
+      return data.map((r) => ({ token: r.token, entryId: r.entry_id, createdAt: r.created_at }));
+    },
+
+    async revokeShareLink(token) {
+      const { error } = await sb.from('share_links').delete().eq('token', token);
+      if (error) fail('Could not revoke the link', error);
+    },
+
+    // What a share link shows; works signed out. { ownerName, entries } or null
+    // for an unknown or revoked link. Shared entries have no notes.
+    async sharedByLink(token) {
+      const { data, error } = await sb.rpc('shared_by_link', { p_token: token });
+      if (error) fail('Could not open this link', error);
+      if (!data.length) return null;
+      return { ownerName: data[0].owner_name, entries: data.map((r) => rowToEntry(r.entry)) };
     },
 
     // No data folder online.

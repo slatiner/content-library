@@ -16,7 +16,7 @@
     "wikidataId": "",
     "openlibraryId": "",
     "itunesId": "",
-    "visibility": "private",
+    "visibility": "",
     "dateAdded": 1700000000000
   },
   {
@@ -56,7 +56,7 @@
     "wikidataId": "",
     "openlibraryId": "",
     "itunesId": "",
-    "visibility": "private",
+    "visibility": "",
     "dateAdded": 1700000020000
   },
   {
@@ -76,7 +76,7 @@
     "wikidataId": "",
     "openlibraryId": "",
     "itunesId": "",
-    "visibility": "private",
+    "visibility": "",
     "dateAdded": 1700000030000
   }
 ]

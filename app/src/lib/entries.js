@@ -2,6 +2,11 @@
 // media-archive-data.example.json.
 
 export const MEDIA = ['book', 'film', 'series', 'music'];
+
+// Visibility levels (#20). An entry's '' follows the library default.
+export const LEVELS = ['private', 'friends', 'public'];
+export const LEVEL_LABEL = { private: 'Only me', friends: 'Friends', public: 'Public (members, and anyone with a link)' };
+export const levelOf = (entry, libraryDefault) => entry.visibility || libraryDefault || 'private';
 export const MEDIUM_PLURAL = { book: 'books', film: 'films', series: 'series', music: 'music' };
 export const MEDIUM_TAG_LABEL = { book: 'Books', film: 'Films', series: 'Series', music: 'Music' };
 
@@ -21,6 +26,7 @@ export function emptyForm() {
   return {
     medium: 'book', title: '', year: '', author: '', director: '', cast: '',
     platform: '', streamUrl: '', dateConsumed: '', rating: 0, coverUrl: '', insights: '',
+    visibility: '', // '' follows the library default (#20)
     // Canonical external ids (#26), kept but not shown. linkedFor is the
     // linkKey() they were found for; saving under another title or medium drops them.
     wikidataId: '', openlibraryId: '', itunesId: '', linkedFor: '',

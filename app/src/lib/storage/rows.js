@@ -33,7 +33,8 @@ export function entryToRow(e, userId) {
     wikidata_id: orNull(e.wikidataId),
     openlibrary_id: orNull(e.openlibraryId),
     itunes_id: orNull(e.itunesId),
-    visibility: e.visibility || 'private',
+    // '' follows the library's default level (#20).
+    visibility: e.visibility || null,
     date_added: new Date(Number(e.dateAdded) || Date.now()).toISOString(),
   };
   if (userId) row.user_id = userId;
@@ -58,7 +59,7 @@ export function rowToEntry(r) {
     wikidataId: r.wikidata_id || '',
     openlibraryId: r.openlibrary_id || '',
     itunesId: r.itunes_id || '',
-    visibility: r.visibility || 'private',
+    visibility: r.visibility || '',
     dateAdded: Date.parse(r.date_added) || Date.now(),
   };
 }

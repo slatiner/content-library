@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
-import { entries, connection, initStorage, connectStorage, reconnectStorage, signOut, redeemInvite, filters, ask, deleteEntry, onAddRequest } from './state.js';
-import { countByMedium, filterAndSort } from './lib/entries.js';
+import { entries, connection, initStorage, connectStorage, reconnectStorage, signOut, redeemInvite, openShared, filters, ask, deleteEntry, onAddRequest } from './state.js';
+import { countByMedium, filterAndSort, levelOf } from './lib/entries.js';
 import FilterBar from './components/FilterBar.vue';
 import SettingsMenu from './components/SettingsMenu.vue';
 import EntryCard from './components/EntryCard.vue';
@@ -9,6 +9,7 @@ import EntryDialog from './components/EntryDialog.vue';
 import BackupDialog from './components/BackupDialog.vue';
 import DiagnosticsDialog from './components/DiagnosticsDialog.vue';
 import InviteDialog from './components/InviteDialog.vue';
+import SharingDialog from './components/SharingDialog.vue';
 
 const counts = computed(() => countByMedium(entries.value));
 const visible = computed(() => filterAndSort(entries.value, filters, ask.criteria));
@@ -18,6 +19,10 @@ const showMain = computed(() => connection.state === 'ok' || connection.state ==
 const showSetup = computed(() => connection.state === 'none');
 const showSignIn = computed(() => connection.state === 'signedOut');
 const showRedeem = computed(() => connection.state === 'needsInvite');
+const showShared = computed(() => connection.state === 'shared');
+const isOnline = computed(() => connection.kind === 'supabase');
+// Badges only online, where levels mean something.
+const levelFor = (e) => (isOnline.value ? levelOf(e, connection.profile?.defaultVisibility) : '');
 const isFile = computed(() => connection.kind === 'file');
 const dot = computed(() => (connection.state === 'warn' || connection.state === 'unsupported') ? 'warn' : '');
 
@@ -25,6 +30,7 @@ const dialog = ref(null);
 const backupOpen = ref(false);
 const diagOpen = ref(false);
 const inviteOpen = ref(false);
+const sharingOpen = ref(false);
 
 // An invite link (?invite=CODE) is kept across the Google sign-in round trip,
 // which returns to the page without the query.
@@ -54,7 +60,9 @@ async function redeem() {
 }
 
 onAddRequest((text) => dialog.value.describe(text));
-onMounted(initStorage);
+// A share link (?share=TOKEN) opens that read-only view instead of the user's own library.
+const shareToken = new URLSearchParams(window.location.search).get('share');
+onMounted(() => (shareToken ? openShared(shareToken) : initStorage()));
 </script>
 
 <template>
@@ -67,9 +75,9 @@ onMounted(initStorage);
         </div>
         <button v-if="showMain" class="add-new-btn" @click="dialog.open(null)">+ Add new</button>
       </div>
-      <SettingsMenu v-if="showMain" :can-change-folder="isFile" :can-invite="!!connection.profile?.isAdmin"
+      <SettingsMenu v-if="showMain" :can-change-folder="isFile" :can-share="isOnline" :can-invite="!!connection.profile?.isAdmin"
         :account="connection.state === 'ok' ? connection.account : ''" :profile="connection.profile"
-        @change-folder="connectStorage" @invite="inviteOpen = true" @diagnose="diagOpen = true" @backup="backupOpen = true" @sign-out="signOut" />
+        @change-folder="connectStorage" @sharing="sharingOpen = true" @invite="inviteOpen = true" @diagnose="diagOpen = true" @backup="backupOpen = true" @sign-out="signOut" />
     </header>
 
     <div v-if="connection.state !== 'ok'" class="filebar">
@@ -108,10 +116,18 @@ onMounted(initStorage);
       <button class="btn ghost small" type="button" @click="signOut">Sign out</button>
     </form>
 
+    <div v-if="showShared && entries.length" class="shared-view">
+      <FilterBar />
+      <TransitionGroup name="card" tag="div" class="grid">
+        <EntryCard v-for="e in visible" :key="e.id" :entry="e" readonly />
+      </TransitionGroup>
+      <div v-if="!visible.length" class="empty">No matches.</div>
+    </div>
+
     <div v-if="showMain">
       <FilterBar />
       <TransitionGroup name="card" tag="div" class="grid">
-        <EntryCard v-for="e in visible" :key="e.id" :entry="e" @open="dialog.open(e)" @delete="deleteEntry(e.id)" />
+        <EntryCard v-for="e in visible" :key="e.id" :entry="e" :level="levelFor(e)" @open="dialog.open(e)" @delete="deleteEntry(e.id)" />
       </TransitionGroup>
       <div v-if="!visible.length" class="empty">
         {{ entries.length
@@ -125,4 +141,5 @@ onMounted(initStorage);
   <BackupDialog v-model:open="backupOpen" />
   <DiagnosticsDialog v-model:open="diagOpen" />
   <InviteDialog v-model:open="inviteOpen" />
+  <SharingDialog v-model:open="sharingOpen" />
 </template>

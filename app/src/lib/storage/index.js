@@ -5,8 +5,8 @@
 // An adapter is created with setStatus(state, text, account, profile), which it
 // calls to report the connection: state is 'checking' | 'none' | 'signedOut' |
 // 'needsInvite' | 'ok' | 'warn' | 'unsupported'; account is the signed-in email,
-// if any; profile is { name, avatarUrl, isAdmin } from the sign-in provider and
-// the account's membership, or null.
+// if any; profile is { name, avatarUrl, isAdmin, defaultVisibility } from the
+// sign-in provider and the account's membership, or null.
 // kind is 'file' or 'supabase'.
 // It provides:
 //   init()                  restore a previous connection; entries[] or null
@@ -16,6 +16,11 @@
 //   redeemInvite(code)      (supabase only) join with an invite code; entries[] or null
 //   createInvite()          (supabase only, admins) { code, expiresAt }
 //   listInvites()           (supabase only, admins) recent invites
+//   setDefaultVisibility(l) (supabase only) the library's default level (#20)
+//   shareLink(entryId)      (supabase only) secret link token; null entryId = library
+//   listShareLinks()        (supabase only) [{ token, entryId, createdAt }]
+//   revokeShareLink(token)  (supabase only)
+//   sharedByLink(token)     (supabase only, works signed out) { ownerName, entries } or null
 //   saveEntry(entry, all)   create or update one entry (all = the full list after the change)
 //   deleteEntry(id, all)    delete one entry (all = the full list after the change)
 //   replaceAll(all)         replace the whole library (Export/Import "Replace all")

@@ -1,7 +1,7 @@
 <script setup>
 import { computed, nextTick, reactive, ref } from 'vue';
-import { entries, saveEntry, ensureGroqKey, forgetGroqKey, setGroqKey } from '../state.js';
-import { MEDIA, ID_FIELDS, emptyForm, linkKey, personLine, uid } from '../lib/entries.js';
+import { entries, connection, saveEntry, ensureGroqKey, forgetGroqKey, setGroqKey, shareLink, shareUrl } from '../state.js';
+import { MEDIA, ID_FIELDS, LEVELS, LEVEL_LABEL, emptyForm, linkKey, personLine, uid } from '../lib/entries.js';
 import { lookupTitle, applyWikidataDetails } from '../lib/lookup.js';
 import { llmJson, ADD_TASK, fillFormFromExtraction } from '../lib/llm.js';
 import Stars from './Stars.vue';
@@ -19,6 +19,9 @@ const suggest = ref(null);     // { choices, uncertain } | null
 const lookupBusy = ref(false);
 
 const m = computed(() => form.medium);
+// Sharing (#20) exists online only.
+const online = computed(() => connection.kind === 'supabase');
+const defaultLabel = computed(() => `Library default (${LEVEL_LABEL[connection.profile?.defaultVisibility || 'private']})`);
 const labels = computed(() => ({
   year: m.value === 'book' ? 'Year published' : 'Year released',
   author: m.value === 'music' ? 'Artist' : 'Author',
@@ -83,9 +86,19 @@ function collectEntry() {
     rating: form.rating,
     coverUrl: t(form.coverUrl),
     insights: t(form.insights),
+    visibility: form.visibility,
     ...ids,
     dateAdded: existing ? existing.dateAdded || Date.now() : Date.now(),
   };
+}
+
+// A link that shows this one entry to anyone who has it, whatever its level.
+async function copyShareLink() {
+  try {
+    const url = shareUrl(await shareLink(editingId.value));
+    try { await navigator.clipboard.writeText(url); formStatus.value = 'Link copied. Anyone with it can see this entry (not your notes).'; }
+    catch (e) { formStatus.value = `Copy this link: ${url}`; }
+  } catch (e) { formStatus.value = e.message; }
 }
 
 // Returns false (and says why in formStatus) when the entry can't be saved.
@@ -349,6 +362,15 @@ function saveKey() {
 
         <div class="field"><label>Cover URL</label><input v-model="form.coverUrl" type="text" placeholder="Auto-filled by Look up, or paste your own"></div>
         <div class="field"><label>Insights</label><textarea v-model="form.insights" placeholder="Notes, reactions, quotes, whatever's worth keeping."></textarea></div>
+
+        <div v-if="online" class="field visibility-field">
+          <label>Who can see this <span class="label-note">(notes stay private)</span></label>
+          <select v-model="form.visibility">
+            <option value="">{{ defaultLabel }}</option>
+            <option v-for="l in LEVELS" :key="l" :value="l">{{ LEVEL_LABEL[l] }}</option>
+          </select>
+          <button v-if="editingId" class="btn ghost small" style="margin-top:8px;" @click="copyShareLink">Copy share link</button>
+        </div>
 
         <div class="status">{{ formStatus }}</div>
         <div class="form-actions">

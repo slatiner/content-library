@@ -315,7 +315,18 @@ etc.), so a new table that forgets them fails. `supabase/tests/rls_check.sql`
 repeats the key checks on the live project with the real second account, and
 rolls back. #31 stays open for the visibility levels, which get tests with #20.
 
-**Next, in order:** the visibility model (#20, with its tests under #31), privacy basics (#29), licences check (#30), and Sign in
+**Visibility (#20): built 2026-10-17, awaiting deploy and verification.** The
+library has a default level (private / friends / public) and each entry can
+override it (`entries.visibility` null = follow the default). The owner's
+default is public, and existing entries follow it; new accounts start private.
+"Public" means every member, plus non-members through a secret share link
+(`?share=TOKEN`, one entry or the library's public entries, revocable).
+Nobody can browse without a link. Others read only through `shared_entries` /
+`shared_by_link`, which never include notes; the entries table stays
+owner-only. Friends-level entries wait for friendships (#34), whose table
+already exists empty. Viewing another member's library in the app is #35.
+
+**Next, in order:** privacy basics (#29), licences check (#30), and Sign in
 with Apple (#21, below) once the owner approves the $99/yr. Per-user assistant
 limits (#25, Phase 5) should land before invites go beyond a few friends, since
 every signed-in user shares the owner's Groq key and quota (#24).
