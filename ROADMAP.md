@@ -295,10 +295,9 @@ the new app. See Decisions, "Move to Vue + Vite".
 
 **Status (2026-10-13):** the app runs on Supabase with Google sign-in (#15, #17,
 #18, #19 done), hosted on GitHub Pages at https://slatiner.github.io/content-library/
-(#40, built by `.github/workflows/pages.yml`). Only the owner can sign in:
-new sign-ups and the email provider are off until invite codes (#28).
+(#40, built by `.github/workflows/pages.yml`).
 
-**Invite codes (#28): built 2026-10-16, awaiting deploy and verification.**
+**Invite codes (#28): done (live and verified 2026-10-17).** New user sign-ups are on (email provider still off).
 Google sign-in can't carry a code into account creation, so sign-up opens but
 a new account can do nothing until it redeems a code (`members` and `invites`
 tables, `redeem_invite` / `create_invite` functions, a restrictive members-only
