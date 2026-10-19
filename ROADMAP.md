@@ -35,7 +35,7 @@ Run `gh issue list --label phase-1-music` (etc.) to see live status for a phase.
 | 3.5 | Port to Vue + Vite | ✅ Done | [Phase 3.5](../../milestone/7) |
 | 4 | Auth & multi-user | ✅ Done | [Phase 4](../../milestone/4) |
 | 5 | Reconnect assistant to backend | 🔶 In progress | [Phase 5](../../milestone/5) |
-| 5.5 | Wishlist | 🔶 Awaiting verification | [Phase 5.5](../../milestone/8) |
+| 5.5 | Wishlist | ✅ Done | [Phase 5.5](../../milestone/8) |
 | 6 | Sharing & recommendations | 🔲 Not started | [Phase 6](../../milestone/6) |
 
 ## Decisions
