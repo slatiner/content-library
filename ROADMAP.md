@@ -15,8 +15,8 @@ Run `gh issue list --label phase-1-music` (etc.) to see live status for a phase.
 - **No spending beyond hosting.** Every tool/service chosen below has a free tier
   or is self-hostable at no cost.
 - One consequence: **Sign in with Apple requires a paid Apple Developer account
-  ($99/yr)**, which conflicts with the constraint above. It is on the Phase 4
-  plan (#21) but waits for the owner to confirm that cost.
+  ($99/yr)**, which conflicts with the constraint above. Deferred by the owner
+  on 2026-10-19 (#21 closed as not planned; reopen if that changes).
 - **Goal beyond a personal tool:** eventually invite other people to create
   accounts and keep their own libraries, and later share and recommend between
   users. This shapes the Phase 3 and 4 decisions (see Decisions).
@@ -314,9 +314,9 @@ entries, members-only access, invites, signed-out access, and checks over every
 table (row-level security on, no grants to anon beyond keepalive, no TRUNCATE
 etc.), so a new table that forgets them fails. `supabase/tests/rls_check.sql`
 repeats the key checks on the live project with the real second account, and
-rolls back. #31 stays open for the visibility levels, which get tests with #20.
+rolls back. Visibility-level tests were added with #20; verified 2026-10-19.
 
-**Visibility (#20): built 2026-10-17, awaiting deploy and verification.** The
+**Visibility (#20): done (built 2026-10-17, verified 2026-10-19).** The
 library has a default level (private / friends / public) and each entry can
 override it (`entries.visibility` null = follow the default). The owner's
 default is public, and existing entries follow it; new accounts start private.
@@ -327,8 +327,8 @@ Nobody can browse without a link. Others read only through `shared_entries` /
 owner-only. Friends-level entries wait for friendships (#34), whose table
 already exists empty. Viewing another member's library in the app is #35.
 
-**Next, in order:** privacy basics (#29), licences check (#30), and Sign in
-with Apple (#21, below) once the owner approves the $99/yr. Per-user assistant
+**Next, in order:** privacy basics (#29), then the licences check (#30). Sign
+in with Apple (#21) is deferred (below). Per-user assistant
 limits (#25, Phase 5) should land before invites go beyond a few friends, since
 every signed-in user shares the owner's Groq key and quota (#24).
 
@@ -337,7 +337,7 @@ per-user rules (#17–#19) ship together with the app switch (#15), not after it
 Start with **Google**
 OAuth (free); GitHub is a good second option given the audience.
 
-**Sign in with Apple (#21): on the roadmap, after hosting (#40).** Added at the
+**Sign in with Apple (#21): deferred 2026-10-19, owner not paying Apple for now.** Added at the
 owner's request on 2026-10-13. Supabase supports it, but it needs a paid Apple
 Developer Program account ($99/yr), which breaks the "no spending beyond hosting"
 rule. It also needs the deployed domain from #40, and Apple's client secret
