@@ -1,48 +1,42 @@
-// Tests for the iTunes album matching, with a fake network.
+// Tests for the MusicBrainz album matching (#30), with a fake network.
 import { describe, it, expect } from 'vitest';
-import { findItunesAlbum } from './lookup.js';
+import { findMusicBrainzAlbum } from './lookup.js';
 
-const album = (collectionName, artistName, collectionId) => ({ wrapperType: 'collection', collectionName, artistName, collectionId });
-const song = (collectionName, artistName, collectionId) => ({ wrapperType: 'track', trackName: 'x', collectionName, artistName, collectionId });
+const group = (title, artist, id, type = 'Album') => ({ id, title, 'primary-type': type, 'artist-credit': [{ name: artist }] });
 
-function fakeGet(albums, songs) {
+function fakeGet(groups) {
   const calls = [];
-  const get = async (url) => {
-    calls.push(url);
-    return { results: url.includes('entity=album') ? albums : songs };
-  };
+  const get = async (url) => { calls.push(decodeURIComponent(url)); return { 'release-groups': groups }; };
   return { get, calls };
 }
 
-describe('findItunesAlbum', () => {
-  it('skips albums whose title does not match, then finds the album through its songs', async () => {
-    const { get, calls } = fakeGet(
-      [album('Comedown Machine', 'The Strokes', 1), album('Angles', 'The Strokes', 2)],
-      [song('Reality Awaits', 'The Strokes', 3)],
-    );
-    const hit = await findItunesAlbum('Reality Awaits', 'The Strokes', get);
-    expect(hit.collectionId).toBe(3);
-    expect(calls).toHaveLength(2);
+describe('findMusicBrainzAlbum', () => {
+  it('searches by title and artist and takes the matching album', async () => {
+    const { get, calls } = fakeGet([group('Comedown Machine', 'The Strokes', 'a1'), group('Reality Awaits', 'The Strokes', 'a2')]);
+    expect((await findMusicBrainzAlbum('Reality Awaits', 'The Strokes', get)).id).toBe('a2');
+    expect(calls[0]).toContain('releasegroup:"Reality Awaits" AND artist:"The Strokes"');
   });
 
-  it('takes a matching album without searching songs, allowing editions', async () => {
-    const { get, calls } = fakeGet([album('OK Computer OKNOTOK 1997 2017', 'Radiohead', 7)], []);
-    expect((await findItunesAlbum('ok computer', 'radiohead', get)).collectionId).toBe(7);
-    expect(calls).toHaveLength(1);
+  it('accepts titles that contain each other, ignoring accents', async () => {
+    const { get } = fakeGet([group('Los Ojos Del Cóndor', 'Hermanos Gutiérrez', 'c1')]);
+    expect((await findMusicBrainzAlbum('Ojos del Condor', 'Hermanos Gutierrez', get)).id).toBe('c1');
+    const { get: get2 } = fakeGet([group('OK Computer OKNOTOK 1997 2017', 'Radiohead', 'r1')]);
+    expect((await findMusicBrainzAlbum('ok computer', 'radiohead', get2)).id).toBe('r1');
   });
 
-  it('respects the artist when one is given', async () => {
-    const { get } = fakeGet([album('Reality Awaits', 'Purple Fog Side', 4)], [song('Reality Awaits', 'The Strokes', 3)]);
-    expect((await findItunesAlbum('Reality Awaits', 'The Strokes', get)).collectionId).toBe(3);
+  it('respects the artist and prefers albums over singles', async () => {
+    const { get } = fakeGet([
+      group('Reality Awaits', 'Purple Fog Side', 'x'),
+      group('Reality Awaits', 'The Strokes', 's', 'Single'),
+      group('Reality Awaits', 'The Strokes', 'a'),
+    ]);
+    expect((await findMusicBrainzAlbum('Reality Awaits', 'The Strokes', get)).id).toBe('a');
   });
 
-  it('ignores accents in titles and artists', async () => {
-    const { get } = fakeGet([album('Los Ojos Del Cóndor', 'Hermanos Gutiérrez', 5)], []);
-    expect((await findItunesAlbum('los ojos del condor', 'Hermanos Gutierrez', get)).collectionId).toBe(5);
-  });
-
-  it('returns null when nothing matches', async () => {
-    const { get } = fakeGet([album('Angles', 'The Strokes', 2)], [song('Angles', 'The Strokes', 2)]);
-    expect(await findItunesAlbum('Reality Awaits', 'The Strokes', get)).toBe(null);
+  it('keeps quotes in a title from breaking the query', async () => {
+    const { get, calls } = fakeGet([]);
+    expect(await findMusicBrainzAlbum('Say "Hi"', '', get)).toBe(null);
+    expect(calls[0]).toContain('releasegroup:"Say  Hi"');
+    expect(calls[0]).not.toContain('artist:');
   });
 });

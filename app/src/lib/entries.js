@@ -31,11 +31,12 @@ export function emptyForm() {
     visibility: '', // '' follows the library default (#20)
     // Canonical external ids (#26), kept but not shown. linkedFor is the
     // linkKey() they were found for; saving under another title or medium drops them.
-    wikidataId: '', openlibraryId: '', itunesId: '', linkedFor: '',
+    // itunesId is from before MusicBrainz (#30); lookups no longer set it.
+    wikidataId: '', openlibraryId: '', musicbrainzId: '', itunesId: '', linkedFor: '',
   };
 }
 
-export const ID_FIELDS = ['wikidataId', 'openlibraryId', 'itunesId'];
+export const ID_FIELDS = ['wikidataId', 'openlibraryId', 'musicbrainzId', 'itunesId'];
 
 // Lowercase letters and digits only, accents dropped ("Cóndor" = "condor"), for
 // comparing titles and names.

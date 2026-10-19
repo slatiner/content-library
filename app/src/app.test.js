@@ -475,7 +475,37 @@ describe('add and edit', () => {
     await manual.findAll('.form-actions button').find((b) => b.text() === 'Save').trigger('click');
     await flushPromises();
     const [, saved] = adapter.calls.at(-1);
-    expect(saved).toMatchObject({ title: 'Dune', wikidataId: 'Q42', openlibraryId: 'OL123W', itunesId: '' });
+    expect(saved).toMatchObject({ title: 'Dune', wikidataId: 'Q42', openlibraryId: 'OL123W', musicbrainzId: '', itunesId: '' });
+    // Wikimedia's User-Agent policy (#30).
+    const wd = fetch.mock.calls.filter(([u]) => u.includes('wikidata.org'));
+    expect(wd.length).toBeGreaterThan(0);
+    wd.forEach(([, init]) => expect(init.headers['Api-User-Agent']).toContain('github.com/slatiner/content-library'));
+  });
+
+  it('Look up for music fills from MusicBrainz and stores its id', async () => {
+    fetch.mockImplementation((url, init) => {
+      if (url.startsWith('https://musicbrainz.org/ws/2/release-group')) {
+        return Promise.resolve(new Response(JSON.stringify({ 'release-groups': [
+          { id: 'mb-1', title: 'OK Computer', 'primary-type': 'Album', 'first-release-date': '1997-05-21', 'artist-credit': [{ name: 'Radiohead' }] },
+        ] })));
+      }
+      return fakeFetch(url, init);
+    });
+    const w = await mountApp();
+    await w.find('.add-new-btn').trigger('click');
+    await w.findAll('.view-tabs button')[1].trigger('click');
+    await w.findAll('.medium-toggle button').find((b) => b.text() === 'Music').trigger('click');
+    const manual = w.findAll('.form-panel')[0];
+    await manual.find('.title-row input').setValue('OK Computer');
+    await manual.find('input[placeholder^="Auto-filled by Look up"]').setValue('https://example.com/okc.jpg');
+    await manual.findAll('button').find((b) => b.text() === 'Look up').trigger('click');
+    await flushPromises();
+    expect(w.text()).toContain('Filled artist, year, and cover from MusicBrainz');
+    await manual.findAll('.form-actions button').find((b) => b.text() === 'Save').trigger('click');
+    await flushPromises();
+    const [, saved] = adapter.calls.at(-1);
+    expect(saved).toMatchObject({ title: 'OK Computer', year: '1997', musicbrainzId: 'mb-1', itunesId: '' });
+    expect(fetch.mock.calls.some(([u]) => u.includes('itunes.apple.com'))).toBe(false);
   });
 
   it('Look up suggests only items of the chosen medium, and fills a single exact match', async () => {

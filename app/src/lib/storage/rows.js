@@ -32,6 +32,7 @@ export function entryToRow(e, userId) {
     insights: text(e.insights),
     wikidata_id: orNull(e.wikidataId),
     openlibrary_id: orNull(e.openlibraryId),
+    musicbrainz_id: orNull(e.musicbrainzId),
     itunes_id: orNull(e.itunesId),
     // '' follows the library's default level (#20).
     visibility: e.visibility || null,
@@ -58,6 +59,7 @@ export function rowToEntry(r) {
     insights: r.insights || '',
     wikidataId: r.wikidata_id || '',
     openlibraryId: r.openlibrary_id || '',
+    musicbrainzId: r.musicbrainz_id || '',
     itunesId: r.itunes_id || '',
     visibility: r.visibility || '',
     dateAdded: Date.parse(r.date_added) || Date.now(),

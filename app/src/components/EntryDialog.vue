@@ -119,7 +119,7 @@ async function manualLookup() {
   if (!form.title.trim()) { formStatus.value = 'Type a title first.'; return; }
   suggest.value = null;
   lookupBusy.value = true;
-  formStatus.value = form.medium === 'music' ? 'Looking up on iTunes…' : 'Looking up on Wikidata…';
+  formStatus.value = form.medium === 'music' ? 'Looking up on MusicBrainz…' : 'Looking up on Wikidata…';
   const res = await lookupTitle(form);
   lookupBusy.value = false;
   if (res.choices) {

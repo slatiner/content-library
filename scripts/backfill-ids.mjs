@@ -4,7 +4,7 @@
 //   node scripts/backfill-ids.mjs [--dry-run]
 //
 // Films, series and books get a Wikidata id (books also an Open Library work
-// id); music gets the iTunes album id. A match is kept only when the title and
+// id); music gets the MusicBrainz release-group id (#30). A match is kept only when the title and
 // medium agree and, if the entry has a year, the year is within one. Anything
 // unclear is listed and left alone. Writes only the three id columns, using the
 // secret key from secrets.json. Requests are spaced out: Wikidata answers bursts
@@ -14,7 +14,7 @@ import { readFile } from 'node:fs/promises';
 import { linkKey } from '../app/src/lib/entries.js';
 import {
   wikidataSearch, candidateMatchesMedium, wikidataGetEntity, wikidataYear,
-  openLibraryWork, openLibrarySearchWork, findItunesAlbum,
+  openLibraryWork, openLibrarySearchWork, findMusicBrainzAlbum,
 } from '../app/src/lib/lookup.js';
 
 const dryRun = process.argv.includes('--dry-run');
@@ -60,17 +60,14 @@ async function matchWikidata(e) {
   return { ids, label: `${c.label} (${year || '?'}) — ${c.description}` };
 }
 
-async function matchItunes(e) {
-  const r = await findItunesAlbum(e.title, e.author, async (u) => {
-    const res = await fetch(u);
-    if (!res.ok) throw new Error(`iTunes HTTP ${res.status}`);
-    return res.json();
-  });
+async function matchMusicBrainz(e) {
+  const r = await findMusicBrainzAlbum(e.title, e.author);
   if (!r) return { why: 'no matching album' };
-  return { ids: { itunes_id: String(r.collectionId) }, label: `${r.collectionName} — ${r.artistName} (${(r.releaseDate || '').slice(0, 4)})` };
+  const artist = ((r['artist-credit'] || [])[0] || {}).name || '';
+  return { ids: { musicbrainz_id: r.id }, label: `${r.title} — ${artist} (${(r['first-release-date'] || '').slice(0, 4)})` };
 }
 
-const rows = await api('/rest/v1/entries?select=user_id,id,medium,title,year,author&wikidata_id=is.null&openlibrary_id=is.null&itunes_id=is.null&order=medium,title');
+const rows = await api('/rest/v1/entries?select=user_id,id,medium,title,year,author&wikidata_id=is.null&openlibrary_id=is.null&itunes_id=is.null&musicbrainz_id=is.null&order=medium,title');
 console.log(`${rows.length} entries without ids${dryRun ? ' (dry run, nothing written)' : ''}\n`);
 
 const skipped = [];
@@ -78,7 +75,7 @@ let filled = 0;
 for (const e of rows) {
   let m;
   try {
-    m = e.medium === 'music' ? await matchItunes(e) : await matchWikidata(e);
+    m = e.medium === 'music' ? await matchMusicBrainz(e) : await matchWikidata(e);
   } catch (err) {
     m = { why: err.message };
   }

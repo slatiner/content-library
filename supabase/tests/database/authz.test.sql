@@ -10,7 +10,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(68);
+select plan(69);
 
 -- ---- Every table, including future ones ----
 
@@ -46,6 +46,11 @@ select is(
   (select array_agg(a.attname::text order by 1) from pg_attribute a
     where a.attrelid = 'public.shared_entry'::regclass and a.attname in ('insights', 'user_id', 'visibility')),
   null, 'what others see of an entry has no notes, owner id or level');
+
+select is(
+  (select count(*)::int from pg_attribute a
+    where a.attrelid = 'public.shared_entry'::regclass and a.attname = 'musicbrainz_id'),
+  1, 'what others see of an entry includes the MusicBrainz id (#30)');
 
 -- ---- Fixtures: an admin (a), a member (b), a newcomer without an invite (c) ----
 

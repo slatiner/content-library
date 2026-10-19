@@ -140,9 +140,14 @@ changes nothing the app shows.
   worked: the Wikipedia REST summary `originalimage` (films), TVmaze `original`
   image (series posters, free and high-res), Open Library
   `covers.openlibrary.org/b/id/<cover_i>-L.jpg` (books; the `-M` size looks
-  pixelated, and a ~43-byte response means no cover), and iTunes artwork with
-  `100x100bb` changed to `600x600bb` (music). Avoid logos and wordmarks, wide
-  images, and Google `gstatic` thumbnails.
+  pixelated, and a ~43-byte response means no cover), and the Cover Art Archive
+  `coverartarchive.org/release-group/<mbid>/front-500` (music; set
+  `musicbrainzId` to the same MBID). Avoid logos and wordmarks, wide images, and
+  Google `gstatic` thumbnails.
+- Licences (#30): don't use iTunes/Apple artwork (only allowed when promoting the
+  store) or Spotify's. Commons images only if public domain or CC0, since covers
+  are credited only on the privacy page. Wikipedia's own (`/wikipedia/en/`)
+  posters are fine.
 - Confirm the image URL returns 200 with an image type, and check its dimensions
   (`file` on a downloaded copy), before saving it.
 - After adding, tell the owner to reload the page. Saves are per entry now, so an

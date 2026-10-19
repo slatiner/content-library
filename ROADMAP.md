@@ -336,7 +336,16 @@ invites created) and deletes the account right away after typing `delete`
 themselves). Accounts that never redeem an invite are deleted once they're 30
 days old, by `cleanup_unredeemed_accounts()` run monthly by pg_cron.
 
-**Next:** the licences check (#30). Sign
+**Licences (#30): built 2026-10-19, awaiting deploy and verification.** Terms
+reviewed per source (table on #30). iTunes artwork may only promote the iTunes
+Store, so music lookups moved to MusicBrainz + Cover Art Archive (new
+`entries.musicbrainz_id`; `itunes_id` kept for old entries) and films/series lost
+the iTunes cover fallback. Spotify was considered and ruled out: its artwork has
+the same store-branding rule, and Development Mode needs a Premium owner and
+allows 5 users. Credits are on the privacy page only (owner's choice), so Commons
+images are used only when public domain or CC0. Wikipedia/Wikidata requests send
+`Api-User-Agent` per Wikimedia's policy. Six live covers (5 iTunes, 1 CC BY-SA)
+are replaced after the migration is pushed. Sign
 in with Apple (#21) is deferred (below). Per-user assistant
 limits (#25, Phase 5) should land before invites go beyond a few friends, since
 every signed-in user shares the owner's Groq key and quota (#24).

@@ -3,6 +3,11 @@
 // except the canonical ids (#26), which always follow the latest match.
 import { linkKey, normText } from './entries.js';
 
+// Wikimedia asks browser scripts to identify themselves with this header (its
+// User-Agent policy); it's allowed by their CORS rules.
+const WIKI_HEADERS = { 'Api-User-Agent': 'content-library/0.1 (https://github.com/slatiner/content-library)' };
+const wikiFetch = (url) => fetch(url, { headers: WIKI_HEADERS });
+
 function link(form, ids) {
   Object.assign(form, ids);
   form.linkedFor = linkKey(form);
@@ -39,7 +44,7 @@ const MEDIUM_PROPS = {
 
 export async function wikidataSearch(title) {
   const url = `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${encodeURIComponent(title)}&language=en&format=json&origin=*&limit=6&type=item`;
-  const r = await fetch(url);
+  const r = await wikiFetch(url);
   if (!r.ok) throw new Error('Wikidata search HTTP ' + r.status);
   const d = await r.json();
   return (d.search || []).map((c) => ({ id: c.id, label: c.label || title, description: c.description || '' }));
@@ -60,7 +65,7 @@ const MEDIUM_CLASSES = {
 export async function wikidataSearchMedium(title, medium) {
   const filter = 'haswbstatement:' + MEDIUM_CLASSES[medium].map((q) => 'P31=' + q).join('|');
   const url = `https://www.wikidata.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(title + ' ' + filter)}&gsrlimit=8&prop=entityterms&wbetterms=label|description&wbetlanguage=en&format=json&origin=*`;
-  const r = await fetch(url);
+  const r = await wikiFetch(url);
   if (!r.ok) throw new Error('Wikidata search HTTP ' + r.status);
   const pages = Object.values(((await r.json()).query || {}).pages || {});
   return pages.sort((a, b) => (a.index || 0) - (b.index || 0)).map((p) => {
@@ -76,7 +81,7 @@ export function candidateMatchesMedium(c, medium) {
 
 export async function wikidataGetEntity(qid) {
   const url = `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${qid}&props=claims|sitelinks&format=json&origin=*`;
-  const r = await fetch(url);
+  const r = await wikiFetch(url);
   if (!r.ok) throw new Error('Wikidata entity HTTP ' + r.status);
   const d = await r.json();
   return d.entities && d.entities[qid] ? d.entities[qid] : null;
@@ -119,7 +124,7 @@ async function resolveLabels(qids) {
   const unique = [...new Set(qids)].filter(Boolean);
   if (!unique.length) return {};
   const url = `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${unique.join('|')}&props=labels&languages=en&format=json&origin=*`;
-  const r = await fetch(url);
+  const r = await wikiFetch(url);
   if (!r.ok) throw new Error('Wikidata labels HTTP ' + r.status);
   const d = await r.json();
   const out = {};
@@ -130,15 +135,32 @@ async function resolveLabels(qids) {
   return out;
 }
 
+// Covers are credited only on the privacy page, so a Commons image is used only
+// when its licence asks for no attribution (public domain, CC0). CC BY / BY-SA
+// images would need the author named next to them.
+async function commonsNeedsNoCredit(filename) {
+  try {
+    const url = `https://commons.wikimedia.org/w/api.php?action=query&prop=imageinfo&iiprop=extmetadata&iiextmetadatafilter=LicenseShortName&format=json&origin=*&titles=${encodeURIComponent('File:' + filename)}`;
+    const r = await wikiFetch(url);
+    if (!r.ok) return false;
+    const page = Object.values(((await r.json()).query || {}).pages || {})[0];
+    const lic = page && page.imageinfo && page.imageinfo[0].extmetadata.LicenseShortName;
+    return !!lic && /^(public domain|pd\b|cc0|no restrictions)/i.test(lic.value);
+  } catch (e) { return false; }
+}
+
 async function fetchWikipediaLeadImage(pageTitle) {
   try {
     const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(pageTitle.replace(/ /g, '_'))}`;
-    const r = await fetch(url);
+    const r = await wikiFetch(url);
     if (!r.ok) return '';
     const d = await r.json();
-    if (d.originalimage && d.originalimage.source) return d.originalimage.source;
-    if (d.thumbnail && d.thumbnail.source) return d.thumbnail.source;
-    return '';
+    const src = (d.originalimage && d.originalimage.source) || (d.thumbnail && d.thumbnail.source) || '';
+    // Files local to English Wikipedia are non-free posters (fair use). Ones
+    // from Commons are freely licensed and may need a credit, see below.
+    const commons = src.match(/\/wikipedia\/commons\/(?:thumb\/)?[0-9a-f]\/[0-9a-f]{2}\/([^/?]+)/);
+    if (commons && !(await commonsNeedsNoCredit(decodeURIComponent(commons[1])))) return '';
+    return src;
   } catch (e) { return ''; }
 }
 
@@ -180,35 +202,15 @@ async function pickPortraitCover(sources) {
   return fallback;
 }
 
-// iTunes Search API sends no Access-Control-Allow-Origin header, so a plain
-// fetch() is blocked by CORS from any browser origin (not just file://).
-// JSONP (a <script> tag, not subject to CORS) is the API's own intended
-// workaround for client-side use — it supports a `callback` param for this.
-export function jsonp(url) {
-  return new Promise((resolve, reject) => {
-    const cbName = 'jsonp_cb_' + Math.random().toString(36).slice(2);
-    const script = document.createElement('script');
-    const timer = setTimeout(() => { cleanup(); reject(new Error('Request timed out')); }, 10000);
-    function cleanup() { clearTimeout(timer); delete window[cbName]; script.remove(); }
-    window[cbName] = (data) => { cleanup(); resolve(data); };
-    script.onerror = () => { cleanup(); reject(new Error('Request failed')); };
-    script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cbName;
-    document.head.appendChild(script);
-  });
-}
-
+// Books only. Films and series have no fallback: the old one, iTunes artwork,
+// may only be shown to promote the iTunes Store (#30).
 async function fetchCoverFallback(medium, title, author) {
+  if (medium !== 'book') return '';
   try {
-    if (medium === 'book') {
-      const q = encodeURIComponent(title + (author ? ' ' + author : ''));
-      const r = await fetch(`https://openlibrary.org/search.json?q=${q}&limit=1`);
-      const d = await r.json();
-      if (d.docs && d.docs[0] && d.docs[0].cover_i) return `https://covers.openlibrary.org/b/id/${d.docs[0].cover_i}-L.jpg`;
-      return '';
-    }
-    const media = medium === 'film' ? 'movie' : 'tvShow';
-    const d = await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(title)}&media=${media}&limit=1`);
-    if (d.results && d.results[0] && d.results[0].artworkUrl100) return d.results[0].artworkUrl100.replace('100x100bb', '600x600bb');
+    const q = encodeURIComponent(title + (author ? ' ' + author : ''));
+    const r = await fetch(`https://openlibrary.org/search.json?q=${q}&limit=1`);
+    const d = await r.json();
+    if (d.docs && d.docs[0] && d.docs[0].cover_i) return `https://covers.openlibrary.org/b/id/${d.docs[0].cover_i}-L.jpg`;
     return '';
   } catch (e) { return ''; }
 }
@@ -220,7 +222,7 @@ export async function applyWikidataDetails(qid, form) {
   const props = MEDIUM_PROPS[form.medium];
   let openlibraryId = '';
   if (form.medium === 'book') openlibraryId = openLibraryWork(claims) || await openLibrarySearchWork(form.title.trim(), form.author.trim());
-  link(form, { wikidataId: qid, openlibraryId, itunesId: '' });
+  link(form, { wikidataId: qid, openlibraryId, musicbrainzId: '', itunesId: '' });
 
   const peopleQids = firstClaimQids(claims, props.people, 3);
   const castQids = props.cast ? firstClaimQids(claims, props.cast, 6) : [];
@@ -243,7 +245,7 @@ export async function applyWikidataDetails(qid, form) {
     const sources = [
       form.medium === 'series' && (() => fetchTvmazePoster(title)),
       form.medium !== 'book' && enTitle && (() => fetchWikipediaLeadImage(enTitle)),
-      img && (() => `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(img)}?width=600`),
+      img && (async () => (await commonsNeedsNoCredit(img)) ? `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(img)}?width=600` : ''),
       () => fetchCoverFallback(form.medium, title, form.author.trim()),
     ].filter(Boolean);
     const cover = await pickPortraitCover(sources);
@@ -252,32 +254,44 @@ export async function applyWikidataDetails(qid, form) {
   return true;
 }
 
-// Find an album on iTunes. Music entries are albums, and the album's
-// collectionId is its id. Only an album whose name starts with the title (so
-// "OK Computer OKNOTOK" still counts) and, if given, by that artist is accepted.
-// The album search misses some albums (new releases, e.g. "Reality Awaits" in
-// October 2026), so songs are searched next and their album is used.
-// get(url) returns the parsed JSON: jsonp in the browser, fetch in scripts.
-export async function findItunesAlbum(title, artist, get = jsonp) {
-  const term = encodeURIComponent(artist ? `${title} ${artist}` : title);
+// Find an album on MusicBrainz (#30; it replaced iTunes, whose artwork may only
+// promote the iTunes Store). Music entries are albums: the release group's MBID
+// is the id, and the Cover Art Archive serves its front cover. A hit counts when
+// one title contains the other ("Ojos del Condor" = "Los Ojos Del Cóndor", "OK
+// Computer OKNOTOK" = "OK Computer") and, if given, the artist matches.
+// MusicBrainz allows about one request per second per IP.
+// get(url) returns the parsed JSON.
+const getJson = async (url) => {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`MusicBrainz HTTP ${r.status}`);
+  return r.json();
+};
+
+export async function findMusicBrainzAlbum(title, artist, get = getJson) {
+  const quote = (s) => `"${String(s).replace(/["\\]/g, ' ').trim()}"`;
+  const query = `releasegroup:${quote(title)}` + (artist ? ` AND artist:${quote(artist)}` : '');
+  const d = await get(`https://musicbrainz.org/ws/2/release-group?query=${encodeURIComponent(query)}&limit=10&fmt=json`);
   const want = normText(title);
   const by = normText(artist);
-  const fits = (r) => r.collectionId && normText(r.collectionName).startsWith(want)
-    && (!by || normText(r.artistName).includes(by) || by.includes(normText(r.artistName)));
-  const albums = await get(`https://itunes.apple.com/search?term=${term}&media=music&entity=album&limit=10`);
-  const album = ((albums && albums.results) || []).find(fits);
-  if (album) return album;
-  const songs = await get(`https://itunes.apple.com/search?term=${term}&media=music&entity=song&limit=25`);
-  return ((songs && songs.results) || []).find(fits) || null;
+  const fits = (g) => {
+    const t = normText(g.title);
+    const who = normText(((g['artist-credit'] || [])[0] || {}).name);
+    return t && (t.includes(want) || want.includes(t)) && (!by || who.includes(by) || by.includes(who));
+  };
+  const groups = ((d && d['release-groups']) || []).filter(fits);
+  return groups.find((g) => g['primary-type'] === 'Album') || groups[0] || null;
 }
 
-export async function applyItunesMusicDetails(form) {
-  const hit = await findItunesAlbum(form.title.trim(), form.author.trim());
+export const coverArtUrl = (mbid) => `https://coverartarchive.org/release-group/${mbid}/front-500`;
+
+export async function applyMusicBrainzDetails(form) {
+  const hit = await findMusicBrainzAlbum(form.title.trim(), form.author.trim());
   if (!hit) return false;
-  link(form, { wikidataId: '', openlibraryId: '', itunesId: String(hit.collectionId) });
-  if (!form.author.trim() && hit.artistName) form.author = hit.artistName;
-  if (!form.year.trim() && hit.releaseDate) form.year = hit.releaseDate.slice(0, 4);
-  if (!form.coverUrl.trim() && hit.artworkUrl100) form.coverUrl = hit.artworkUrl100.replace('100x100bb', '600x600bb');
+  link(form, { wikidataId: '', openlibraryId: '', musicbrainzId: hit.id, itunesId: '' });
+  const credit = (hit['artist-credit'] || []).map((c) => c.name + (c.joinphrase || '')).join('');
+  if (!form.author.trim() && credit) form.author = credit;
+  if (!form.year.trim() && hit['first-release-date']) form.year = hit['first-release-date'].slice(0, 4);
+  if (!form.coverUrl.trim() && await imageSize(coverArtUrl(hit.id))) form.coverUrl = coverArtUrl(hit.id);
   return true;
 }
 
@@ -289,14 +303,14 @@ export async function lookupTitle(form) {
   if (!title) return { status: 'Type a title first.' };
   if (form.medium === 'music') {
     try {
-      const filled = await applyItunesMusicDetails(form);
+      const filled = await applyMusicBrainzDetails(form);
       return {
         status: filled
-          ? "Filled artist, year, and cover from iTunes. Band members and the listen link aren't auto-filled — add those yourself."
-          : 'No match found on iTunes.',
+          ? "Filled artist, year, and cover from MusicBrainz. Band members and the listen link aren't auto-filled — add those yourself."
+          : 'No match found on MusicBrainz.',
       };
     } catch (e) {
-      return { status: `Couldn't reach iTunes — ${e && e.message ? e.message : e}.` };
+      return { status: `Couldn't reach MusicBrainz — ${e && e.message ? e.message : e}.` };
     }
   }
   try {
@@ -335,17 +349,14 @@ export const DIAG_TARGETS = [
   { id: 'wd_search', name: 'Wikidata search', url: 'https://www.wikidata.org/w/api.php?action=wbsearchentities&search=test&language=en&format=json&origin=*&limit=1&type=item' },
   { id: 'wd_entity', name: 'Wikidata entity detail', url: 'https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q64&props=labels&languages=en&format=json&origin=*' },
   { id: 'wp_poster', name: 'Wikipedia (film/series poster)', url: 'https://en.wikipedia.org/api/rest_v1/page/summary/Berlin' },
-  { id: 'itunes', name: 'iTunes Search (music + cover fallback)', url: 'https://itunes.apple.com/search?term=test&limit=1', via: 'jsonp' },
+  { id: 'musicbrainz', name: 'MusicBrainz (music)', url: 'https://musicbrainz.org/ws/2/release-group?query=test&limit=1&fmt=json' },
+  { id: 'tvmaze', name: 'TVmaze (series poster)', url: 'https://api.tvmaze.com/singlesearch/shows?q=girls' },
   { id: 'openlib', name: 'Open Library (book cover)', url: 'https://openlibrary.org/search.json?q=test&limit=1' },
 ];
 
 export async function checkTarget(t) {
   const start = performance.now();
   try {
-    if (t.via === 'jsonp') {
-      await jsonp(t.url);
-      return `✅ ${t.name}: OK via JSONP (${Math.round(performance.now() - start)}ms)`;
-    }
     const r = await fetch(t.url);
     return `${r.ok ? '✅' : '⚠️'} ${t.name}: HTTP ${r.status} (${Math.round(performance.now() - start)}ms)`;
   } catch (e) {
