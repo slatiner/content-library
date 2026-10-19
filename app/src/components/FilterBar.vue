@@ -1,7 +1,10 @@
 <script setup>
 import { computed } from 'vue';
-import { filters, ask, askLibrary, clearAsk, list } from '../state.js';
+import { filters, ask, askLibrary, clearAsk, list, setList } from '../state.js';
 import { MEDIA, MEDIUM_TAG_LABEL, SORT_ON_WISHLIST } from '../lib/entries.js';
+
+// withLists: the Consumed / Wishlist toggle (#47); a shared view has no wishlist.
+defineProps({ withLists: { type: Boolean, default: false } });
 
 const SORTS = [
   ['dateConsumed_desc', 'Recently finished'],
@@ -38,6 +41,10 @@ function onSearchEnter(e) {
         <label v-for="m in MEDIA" :key="m" class="tag-check" :class="[m, { active: filters.mediums.includes(m) }]" @click.prevent="toggleMedium(m)">
           <input type="checkbox" :checked="filters.mediums.includes(m)">{{ MEDIUM_TAG_LABEL[m] }}
         </label>
+      </div>
+      <div v-if="withLists" class="list-toggle" role="tablist">
+        <button type="button" role="tab" :aria-selected="list === 'consumed'" :class="{ active: list === 'consumed' }" @click="setList('consumed')">Consumed</button>
+        <button type="button" role="tab" :aria-selected="list === 'wishlist'" :class="{ active: list === 'wishlist' }" @click="setList('wishlist')">Wishlist</button>
       </div>
     </div>
     <div v-if="ask.status || ask.chips.length" class="ask-row">

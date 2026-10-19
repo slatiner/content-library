@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
-import { entries, connection, initStorage, connectStorage, reconnectStorage, signOut, redeemInvite, openShared, filters, ask, deleteEntry, onAddRequest, list, setList } from './state.js';
+import { entries, connection, initStorage, connectStorage, reconnectStorage, signOut, redeemInvite, openShared, filters, ask, deleteEntry, onAddRequest, list } from './state.js';
 import { countByMedium, filterAndSort, levelOf, inList, isWish } from './lib/entries.js';
 import FilterBar from './components/FilterBar.vue';
 import SettingsMenu from './components/SettingsMenu.vue';
@@ -132,11 +132,7 @@ onMounted(() => (shareToken ? openShared(shareToken) : initStorage()));
     </div>
 
     <div v-if="showMain">
-      <div class="list-toggle" role="tablist">
-        <button type="button" role="tab" :aria-selected="list === 'consumed'" :class="{ active: list === 'consumed' }" @click="setList('consumed')">Consumed</button>
-        <button type="button" role="tab" :aria-selected="list === 'wishlist'" :class="{ active: list === 'wishlist' }" @click="setList('wishlist')">Wishlist</button>
-      </div>
-      <FilterBar />
+      <FilterBar with-lists />
       <TransitionGroup name="card" tag="div" class="grid">
         <EntryCard v-for="e in visible" :key="e.id" :entry="e" :level="levelFor(e)" @open="dialog.open(e)" @done="dialog.open(e, { done: true })" @delete="deleteEntry(e.id)" />
       </TransitionGroup>

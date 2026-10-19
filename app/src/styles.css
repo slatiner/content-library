@@ -205,7 +205,12 @@ header.top .account-menu{align-self:center;}
   header.top .counts{order:5;flex:1 1 auto;}
   header.top .counts span:first-child{margin-left:0;}
   header.top .add-new-btn{order:6;}
-  .filter-row input[type=text]{flex:1 1 100%;max-width:none;}
+  /* Search and the Consumed / Wishlist toggle share the first line; the ::after breaks the row. */
+  .filter-row input[type=text]{flex:1 1 0;min-width:0;max-width:none;}
+  .filter-row .list-toggle{margin-left:0;}
+  .filter-row .list-toggle button{padding:6px 9px;font-size:11px;}
+  .filter-row:has(.list-toggle)::after{content:'';flex-basis:100%;margin-top:-8px;}
+  .filter-row:not(:has(.list-toggle)) input[type=text]{flex-basis:100%;}
   /* Type tags and sort share one line: compact tags, the select takes the rest. */
   .filter-row .medium-tags{flex:0 1 auto;flex-wrap:nowrap;gap:4px;order:1;}
   .filter-row .medium-tags .tag-check{padding:6px 8px;font-size:11px;}
@@ -214,7 +219,7 @@ header.top .account-menu{align-self:center;}
 }
 
 /* Consumed / Wishlist (#47) */
-.list-toggle{display:inline-flex;gap:4px;margin-bottom:14px;padding:3px;border:1px solid var(--line);border-radius:var(--radius);background:#fff;}
+.list-toggle{display:inline-flex;flex:none;gap:4px;margin-left:auto;padding:3px;border:1px solid var(--line);border-radius:var(--radius);background:#fff;}
 .list-toggle button{padding:6px 14px;border:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;border-radius:var(--radius);text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-soft);}
 .list-toggle button.active{background:var(--ink);color:#fff;}
 .card .done{position:absolute;bottom:8px;right:8px;width:26px;height:26px;border-radius:50%;background:rgba(25,25,25,0.7);color:#fff;border:none;font-size:14px;line-height:26px;text-align:center;cursor:pointer;padding:0;z-index:2;}

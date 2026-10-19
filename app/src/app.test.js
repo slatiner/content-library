@@ -389,6 +389,7 @@ describe('sharing', () => {
     const w = await mountApp(EXAMPLE, 'signedOut', 'supabase');
     expect(adapter.calls[0]).toEqual(['sharedByLink', 'tok123']);
     expect(w.find('.filebar').text()).toContain('Shared by Ada Lovelace');
+    expect(w.find('.list-toggle').exists()).toBe(false);
     expect(w.findAll('.card')).toHaveLength(4);
     expect(w.find('.card .del').exists()).toBe(false);
     expect(w.find('.add-new-btn').exists()).toBe(false);
@@ -666,6 +667,7 @@ describe('wishlist (#47)', () => {
 
   it('the toggle switches lists, with counts, sorts and filters per list', async () => {
     const w = await mountApp(WITH_WISHES);
+    expect(w.find('.filter-row .list-toggle').exists()).toBe(true);
     expect(titles(w)).toEqual(['In Rainbows', 'Paprika', 'Silo', 'Steppenwolf']);
     expect(w.find('.counts').text()).toBe('1 books1 films1 series1 music');
     await w.find('.tag-check.film').trigger('click');
