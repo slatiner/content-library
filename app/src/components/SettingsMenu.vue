@@ -11,7 +11,7 @@ defineProps({
   account: { type: String, default: '' },
   profile: { type: Object, default: null },
 });
-const emit = defineEmits(['change-folder', 'sharing', 'invite', 'diagnose', 'backup', 'sign-out']);
+const emit = defineEmits(['change-folder', 'sharing', 'invite', 'diagnose', 'backup', 'account', 'sign-out']);
 
 const open = ref(false);
 const root = ref(null);
@@ -38,6 +38,7 @@ function menu(event) { open.value = false; emit(event); }
       <button v-if="canInvite" class="btn ghost small full" @click="menu('invite')">Invite someone</button>
       <button class="btn ghost small full" @click="menu('diagnose')">Diagnose connection</button>
       <button class="btn ghost small full" @click="menu('backup')">Export / Import JSON</button>
+      <button v-if="account" class="btn ghost small full" @click="menu('account')">Your data</button>
       <button v-if="account" class="btn ghost small full" @click="menu('sign-out')">Sign out</button>
     </div>
   </div>

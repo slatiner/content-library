@@ -327,7 +327,16 @@ Nobody can browse without a link. Others read only through `shared_entries` /
 owner-only. Friends-level entries wait for friendships (#34), whose table
 already exists empty. Viewing another member's library in the app is #35.
 
-**Next, in order:** privacy basics (#29), then the licences check (#30). Sign
+**Privacy basics (#29): built 2026-10-19, awaiting deploy and verification.**
+A privacy policy page (`app/public/privacy.html`, linked from sign-in and "Your
+data"), with GitHub issues as the contact. "Your data" in the account menu
+downloads one JSON file (account, entries with notes, sharing settings and links,
+invites created) and deletes the account right away after typing `delete`
+(`delete_my_account()`; everything cascades; the last admin can't delete
+themselves). Accounts that never redeem an invite are deleted once they're 30
+days old, by `cleanup_unredeemed_accounts()` run monthly by pg_cron.
+
+**Next:** the licences check (#30). Sign
 in with Apple (#21) is deferred (below). Per-user assistant
 limits (#25, Phase 5) should land before invites go beyond a few friends, since
 every signed-in user shares the owner's Groq key and quota (#24).

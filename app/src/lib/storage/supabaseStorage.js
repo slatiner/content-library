@@ -168,6 +168,40 @@ export function createSupabaseStorage(setStatus, { url, key, client } = {}) {
       return { ownerName: data[0].owner_name, entries: data.map((r) => rowToEntry(r.entry)) };
     },
 
+    // ---- Your data (#29) ----
+
+    // Everything stored for this account, as one object for a JSON download.
+    // Notes included; invites only those this account created.
+    async exportAccount() {
+      const [member, links, invites] = await Promise.all([
+        sb.from('members').select('is_admin, joined_at, default_visibility').eq('user_id', user.id).maybeSingle(),
+        sb.from('share_links').select('token, entry_id, created_at').order('created_at'),
+        sb.from('invites').select('code, created_at, expires_at, used_at').eq('created_by', user.id).order('created_at'),
+      ]);
+      const failed = [member, links, invites].find((r) => r.error);
+      if (failed) fail('Could not export your data', failed.error);
+      const m = user.user_metadata || {};
+      return {
+        exportedAt: new Date().toISOString(),
+        account: { email: user.email, name: m.full_name || m.name || '', avatarUrl: m.avatar_url || m.picture || '', createdAt: user.created_at },
+        membership: member.data && { isAdmin: member.data.is_admin, joinedAt: member.data.joined_at, defaultVisibility: member.data.default_visibility },
+        entries: member.data ? await loadAll() : [],
+        shareLinks: links.data.map((r) => ({ token: r.token, entryId: r.entry_id, createdAt: r.created_at })),
+        invitesCreated: invites.data.map((r) => ({ code: r.code, createdAt: r.created_at, expiresAt: r.expires_at, usedAt: r.used_at })),
+      };
+    },
+
+    // Deletes the account and all its data right away, then signs out. Throws the
+    // database's message (e.g. the last admin) on failure.
+    async deleteAccount() {
+      const { error } = await sb.rpc('delete_my_account');
+      if (error) throw new Error(error.message);
+      await sb.auth.signOut({ scope: 'local' });
+      user = null;
+      isAdmin = false;
+      setStatus('signedOut', 'Your account and its data have been deleted.');
+    },
+
     // No data folder online.
     async readSecrets() { return null; },
 

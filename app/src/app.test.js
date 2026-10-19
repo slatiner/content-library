@@ -49,6 +49,16 @@ function fakeAdapter(initial, connState = 'ok', kind = 'file') {
         if (token !== 'tok123') return null;
         return { ownerName: 'Ada Lovelace', entries: structuredClone(initial).map((e) => ({ ...e, insights: '' })) };
       },
+      async exportAccount() {
+        calls.push(['exportAccount']);
+        return { exportedAt: '2026-10-19T10:00:00.000Z', account: { email: account }, entries: structuredClone(initial), shareLinks: [], invitesCreated: [] };
+      },
+      // Fails for an admin, like the last-admin rule in the database.
+      async deleteAccount() {
+        calls.push(['deleteAccount']);
+        if (state.connection.profile?.isAdmin) throw new Error("You're the only admin, so this account can't be deleted.");
+        state.setConnection('signedOut', 'Your account and its data have been deleted.');
+      },
       async createInvite() { calls.push(['createInvite']); return { code: 'ABCD-1234-EF56', expiresAt: '2026-10-30T00:00:00Z' }; },
       async listInvites() {
         return [
@@ -201,7 +211,7 @@ describe('signing in (Supabase storage)', () => {
     const menu = w.find('.account-menu .popover');
     expect(menu.classes()).toContain('open');
     expect(menu.find('.menu-who').text()).toContain('me@example.com');
-    expect(menu.findAll('button').map((b) => b.text())).toEqual(['Sharing', 'Diagnose connection', 'Export / Import JSON', 'Sign out']);
+    expect(menu.findAll('button').map((b) => b.text())).toEqual(['Sharing', 'Diagnose connection', 'Export / Import JSON', 'Your data', 'Sign out']);
     await menu.findAll('button').find((b) => b.text() === 'Sign out').trigger('click');
     await flushPromises();
     expect(adapter.calls.at(-1)).toEqual(['signOut']);
@@ -254,6 +264,69 @@ describe('invites', () => {
     expect(adapter.calls.at(-1)).toEqual(['createInvite']);
     expect(w.find('.invite-code').text()).toBe('ABCD-1234-EF56');
     expect(w.find('.invite-new input').element.value).toMatch(/\?invite=ABCD-1234-EF56$/);
+  });
+});
+
+describe('your data (#29)', () => {
+  const openYourData = async (w) => {
+    await w.find('.avatar-btn').trigger('click');
+    await w.findAll('.account-menu .popover button').find((b) => b.text() === 'Your data').trigger('click');
+  };
+
+  it('the sign-in screen links the privacy policy', async () => {
+    const w = await mountApp(EXAMPLE, 'signedOut', 'supabase');
+    expect(w.find('.setup-foot a').attributes('href')).toBe('privacy.html');
+  });
+
+  it('downloads everything as one JSON file', async () => {
+    const blobs = [];
+    URL.createObjectURL = vi.fn((b) => { blobs.push(b); return 'blob:x'; });
+    URL.revokeObjectURL = vi.fn();
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    const w = await mountApp(EXAMPLE, 'ok', 'supabase');
+    await openYourData(w);
+    await w.findAll('button').find((b) => b.text() === 'Download my data').trigger('click');
+    await flushPromises();
+    expect(adapter.calls.at(-1)).toEqual(['exportAccount']);
+    expect(click.mock.contexts[0].download).toBe('my-media-data-2026-10-19.json');
+    expect(JSON.parse(await blobs[0].text()).entries).toHaveLength(EXAMPLE.length);
+    expect(w.text()).toContain(`Downloaded ${EXAMPLE.length} entries.`);
+    click.mockRestore();
+  });
+
+  it('deletes the account only after typing delete, then shows the sign-in screen', async () => {
+    const w = await mountApp(EXAMPLE, 'ok', 'supabase');
+    await openYourData(w);
+    await w.findAll('button').find((b) => b.text() === 'Delete my account…').trigger('click');
+    const go = () => w.findAll('button').find((b) => b.text() === 'Delete everything');
+    await w.find('.account-delete input').setValue('yes');
+    expect(go().attributes('disabled')).toBeDefined();
+    await w.find('.account-delete input').setValue('Delete');
+    await w.find('.account-delete form').trigger('submit');
+    await flushPromises();
+    expect(adapter.calls.at(-1)).toEqual(['deleteAccount']);
+    expect(w.find('.card').exists()).toBe(false);
+    expect(w.text()).toContain('Your account and its data have been deleted.');
+    expect(w.text()).toContain('Sign in with Google');
+  });
+
+  it('shows why a deletion was refused', async () => {
+    const w = await mountApp(EXAMPLE, 'ok', 'supabase');
+    state.setConnection('ok', 'Connected', 'me@example.com', { name: 'Ada Lovelace', avatarUrl: '', isAdmin: true });
+    await flushPromises();
+    await openYourData(w);
+    await w.findAll('button').find((b) => b.text() === 'Delete my account…').trigger('click');
+    await w.find('.account-delete input').setValue('delete');
+    await w.find('.account-delete form').trigger('submit');
+    await flushPromises();
+    expect(w.text()).toContain("You're the only admin");
+    expect(w.findAll('.card')).toHaveLength(EXAMPLE.length);
+  });
+
+  it('a new account waiting for an invite can still delete itself', async () => {
+    const w = await mountApp(EXAMPLE, 'needsInvite', 'supabase');
+    await w.find('.redeem .link-btn').trigger('click');
+    expect(w.find('.account-delete').exists()).toBe(true);
   });
 });
 

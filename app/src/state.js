@@ -41,6 +41,14 @@ export const listShareLinks = () => storage.listShareLinks();
 export const revokeShareLink = (token) => storage.revokeShareLink(token);
 export const shareUrl = (token) => `${window.location.origin}${window.location.pathname}?share=${token}`;
 
+// Your data (#29).
+export const exportAccount = () => storage.exportAccount();
+export async function deleteAccount() {
+  await storage.deleteAccount();
+  entries.value = [];
+  clearAsk();
+}
+
 // Viewing someone's share link (?share=TOKEN): a read-only library, no sign-in.
 export const shared = reactive({ owner: '' });
 export async function openShared(token) {

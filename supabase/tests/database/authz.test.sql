@@ -1,7 +1,8 @@
 -- Authorization tests (#31): one user cannot read or change another's data, a
 -- new account can't do anything until it redeems an invite (#28), and signed-out
 -- visitors reach only the keep-alive row and share links. Visibility (#20):
--- others read entries only through shared_entries / shared_by_link, never notes. Creates throwaway users,
+-- others read entries only through shared_entries / shared_by_link, never notes.
+-- Account deletion and the monthly cleanup of unredeemed accounts (#29). Creates throwaway users,
 -- so it runs against the local database only:
 --   supabase start, then: supabase test db supabase/tests/database
 -- Rolls back at the end.
@@ -9,7 +10,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(59);
+select plan(68);
 
 -- ---- Every table, including future ones ----
 
@@ -208,6 +209,35 @@ set local role anon;
 select is_empty($$ select 1 from public.shared_by_link(current_setting('t.lib')) $$, 'signed out: a revoked link shows nothing');
 select throws_ok('insert into public.keepalive (id) values (2)', '42501', null, 'signed out: keepalive is read-only');
 reset role;
+
+-- ---- Account deletion and cleanup (#29) ----
+
+-- d signed in 40 days ago and never redeemed; e is a member just as old.
+insert into auth.users (id, email, created_at) values
+  ('00000000-0000-0000-0000-00000000000d', 'stale@test', now() - interval '40 days'),
+  ('00000000-0000-0000-0000-00000000000e', 'oldmember@test', now() - interval '40 days');
+insert into public.members (user_id) values ('00000000-0000-0000-0000-00000000000e');
+
+set local role authenticated;
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+select throws_ok('select public.delete_my_account()', 'P0001', null, 'the only admin cannot delete their account');
+select throws_ok('select public.cleanup_unredeemed_accounts()', '42501', null, 'signed-in users cannot run the cleanup');
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000b');
+select lives_ok('select public.delete_my_account()', 'a member can delete their account');
+reset role;
+select is((select count(*)::int from auth.users where id = '00000000-0000-0000-0000-00000000000b'), 0,
+  'deleting an account removes the login');
+select is((select count(*)::int from public.entries where user_id = '00000000-0000-0000-0000-00000000000b')
+  + (select count(*)::int from public.members where user_id = '00000000-0000-0000-0000-00000000000b'), 0,
+  'deleting an account removes its entries and membership');
+select is((select count(*)::int from public.entries where user_id = '00000000-0000-0000-0000-00000000000a'), 4,
+  'deleting an account leaves other libraries alone');
+select is(public.cleanup_unredeemed_accounts(), 1, 'the cleanup removes one stale account');
+select set_eq($$ select email::text from auth.users where id::text like '00000000-0000-0000-0000-00000000000%' $$,
+  array['admin@test', 'newcomer@test', 'oldmember@test'],
+  'the cleanup keeps members and accounts under 30 days old');
+select is((select schedule from cron.job where jobname = 'cleanup-unredeemed-accounts'), '0 4 1 * *',
+  'the cleanup runs monthly');
 
 select * from finish();
 rollback;

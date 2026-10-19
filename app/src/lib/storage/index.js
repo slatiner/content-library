@@ -21,6 +21,8 @@
 //   listShareLinks()        (supabase only) [{ token, entryId, createdAt }]
 //   revokeShareLink(token)  (supabase only)
 //   sharedByLink(token)     (supabase only, works signed out) { ownerName, entries } or null
+//   exportAccount()         (supabase only) everything stored for the account, one object (#29)
+//   deleteAccount()         (supabase only) delete the account and its data, then sign out
 //   saveEntry(entry, all)   create or update one entry (all = the full list after the change)
 //   deleteEntry(id, all)    delete one entry (all = the full list after the change)
 //   replaceAll(all)         replace the whole library (Export/Import "Replace all")

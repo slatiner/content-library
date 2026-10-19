@@ -10,6 +10,7 @@ import BackupDialog from './components/BackupDialog.vue';
 import DiagnosticsDialog from './components/DiagnosticsDialog.vue';
 import InviteDialog from './components/InviteDialog.vue';
 import SharingDialog from './components/SharingDialog.vue';
+import AccountDialog from './components/AccountDialog.vue';
 
 const counts = computed(() => countByMedium(entries.value));
 const visible = computed(() => filterAndSort(entries.value, filters, ask.criteria));
@@ -31,6 +32,7 @@ const backupOpen = ref(false);
 const diagOpen = ref(false);
 const inviteOpen = ref(false);
 const sharingOpen = ref(false);
+const accountOpen = ref(false);
 
 // An invite link (?invite=CODE) is kept across the Google sign-in round trip,
 // which returns to the page without the query.
@@ -77,7 +79,7 @@ onMounted(() => (shareToken ? openShared(shareToken) : initStorage()));
       </div>
       <SettingsMenu v-if="showMain" :can-change-folder="isFile" :can-share="isOnline" :can-invite="!!connection.profile?.isAdmin"
         :account="connection.state === 'ok' ? connection.account : ''" :profile="connection.profile"
-        @change-folder="connectStorage" @sharing="sharingOpen = true" @invite="inviteOpen = true" @diagnose="diagOpen = true" @backup="backupOpen = true" @sign-out="signOut" />
+        @change-folder="connectStorage" @sharing="sharingOpen = true" @invite="inviteOpen = true" @diagnose="diagOpen = true" @backup="backupOpen = true" @account="accountOpen = true" @sign-out="signOut" />
     </header>
 
     <div v-if="connection.state !== 'ok'" class="filebar">
@@ -104,6 +106,7 @@ onMounted(() => (shareToken ? openShared(shareToken) : initStorage()));
       <p v-if="inviteCode">You've been invited. Sign in with Google to accept, and your code will be filled in.</p>
       <p v-else>Your library is stored in your account. Sign in with Google to see it. New here? You'll need an invite code.</p>
       <button class="btn" @click="connectStorage">Sign in with Google</button>
+      <p class="setup-foot"><a href="privacy.html" target="_blank" rel="noopener">Privacy policy</a></p>
     </div>
 
     <form v-if="showRedeem" class="setup redeem" @submit.prevent="redeem">
@@ -114,6 +117,7 @@ onMounted(() => (shareToken ? openShared(shareToken) : initStorage()));
       </div>
       <p v-if="redeemError" class="redeem-error">{{ redeemError }}</p>
       <button class="btn ghost small" type="button" @click="signOut">Sign out</button>
+      <p class="setup-foot"><a href="privacy.html" target="_blank" rel="noopener">Privacy policy</a> · <button class="link-btn" type="button" @click="accountOpen = true">Delete this account</button></p>
     </form>
 
     <div v-if="showShared && entries.length" class="shared-view">
@@ -142,4 +146,5 @@ onMounted(() => (shareToken ? openShared(shareToken) : initStorage()));
   <DiagnosticsDialog v-model:open="diagOpen" />
   <InviteDialog v-model:open="inviteOpen" />
   <SharingDialog v-model:open="sharingOpen" />
+  <AccountDialog v-model:open="accountOpen" />
 </template>
