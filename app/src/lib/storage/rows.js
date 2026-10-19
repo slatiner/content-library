@@ -36,6 +36,7 @@ export function entryToRow(e, userId) {
     itunes_id: orNull(e.itunesId),
     // '' follows the library's default level (#20).
     visibility: e.visibility || null,
+    status: e.status === 'wishlist' ? 'wishlist' : 'consumed',
     date_added: new Date(Number(e.dateAdded) || Date.now()).toISOString(),
   };
   if (userId) row.user_id = userId;
@@ -62,6 +63,7 @@ export function rowToEntry(r) {
     musicbrainzId: r.musicbrainz_id || '',
     itunesId: r.itunes_id || '',
     visibility: r.visibility || '',
+    status: r.status || 'consumed',
     dateAdded: Date.parse(r.date_added) || Date.now(),
   };
 }

@@ -18,6 +18,12 @@ describe('row mapping', () => {
     expect(row.date_added).toBe(new Date(EXAMPLE[0].dateAdded).toISOString());
   });
 
+  it('status: a wish stays a wish, anything else is consumed (#47)', () => {
+    expect(entryToRow({ ...EXAMPLE[0], status: 'wishlist' }, 'u1').status).toBe('wishlist');
+    expect(entryToRow({ ...EXAMPLE[0], status: undefined }, 'u1').status).toBe('consumed');
+    expect(rowToEntry({ ...entryToRow(EXAMPLE[0], 'u1'), status: undefined }).status).toBe('consumed');
+  });
+
   it('reads a year out of free text', () => {
     expect(parseYear('2019')).toBe(2019);
     expect(parseYear('2019–2022')).toBe(2019);

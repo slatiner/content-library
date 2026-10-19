@@ -18,6 +18,7 @@
     "musicbrainzId": "",
     "itunesId": "",
     "visibility": "",
+    "status": "consumed",
     "dateAdded": 1700000000000
   },
   {
@@ -39,6 +40,7 @@
     "musicbrainzId": "",
     "itunesId": "",
     "visibility": "private",
+    "status": "consumed",
     "dateAdded": 1700000010000
   },
   {
@@ -60,6 +62,7 @@
     "musicbrainzId": "",
     "itunesId": "",
     "visibility": "",
+    "status": "consumed",
     "dateAdded": 1700000020000
   },
   {
@@ -81,6 +84,7 @@
     "musicbrainzId": "",
     "itunesId": "",
     "visibility": "",
+    "status": "consumed",
     "dateAdded": 1700000030000
   }
 ]

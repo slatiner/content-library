@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
-import { entries, connection, initStorage, connectStorage, reconnectStorage, signOut, redeemInvite, openShared, filters, ask, deleteEntry, onAddRequest } from './state.js';
-import { countByMedium, filterAndSort, levelOf } from './lib/entries.js';
+import { entries, connection, initStorage, connectStorage, reconnectStorage, signOut, redeemInvite, openShared, filters, ask, deleteEntry, onAddRequest, list, setList } from './state.js';
+import { countByMedium, filterAndSort, levelOf, inList, isWish } from './lib/entries.js';
 import FilterBar from './components/FilterBar.vue';
 import SettingsMenu from './components/SettingsMenu.vue';
 import EntryCard from './components/EntryCard.vue';
@@ -12,8 +12,10 @@ import InviteDialog from './components/InviteDialog.vue';
 import SharingDialog from './components/SharingDialog.vue';
 import AccountDialog from './components/AccountDialog.vue';
 
-const counts = computed(() => countByMedium(entries.value));
-const visible = computed(() => filterAndSort(entries.value, filters, ask.criteria));
+// Consumed or Wishlist (#47): the counts and grid show the current list only.
+const listed = computed(() => entries.value.filter(inList(list.value)));
+const counts = computed(() => countByMedium(listed.value));
+const visible = computed(() => filterAndSort(listed.value, filters, ask.criteria));
 
 // 'unsupported' still shows the library, so Export / Import can be used by hand.
 const showMain = computed(() => connection.state === 'ok' || connection.state === 'unsupported');
@@ -23,7 +25,8 @@ const showRedeem = computed(() => connection.state === 'needsInvite');
 const showShared = computed(() => connection.state === 'shared');
 const isOnline = computed(() => connection.kind === 'supabase');
 // Badges only online, where levels mean something.
-const levelFor = (e) => (isOnline.value ? levelOf(e, connection.profile?.defaultVisibility) : '');
+// Wishes are always private, so they carry no badge.
+const levelFor = (e) => (isOnline.value && !isWish(e) ? levelOf(e, connection.profile?.defaultVisibility) : '');
 const isFile = computed(() => connection.kind === 'file');
 const dot = computed(() => (connection.state === 'warn' || connection.state === 'unsupported') ? 'warn' : '');
 
@@ -129,14 +132,22 @@ onMounted(() => (shareToken ? openShared(shareToken) : initStorage()));
     </div>
 
     <div v-if="showMain">
+      <div class="list-toggle" role="tablist">
+        <button type="button" role="tab" :aria-selected="list === 'consumed'" :class="{ active: list === 'consumed' }" @click="setList('consumed')">Consumed</button>
+        <button type="button" role="tab" :aria-selected="list === 'wishlist'" :class="{ active: list === 'wishlist' }" @click="setList('wishlist')">Wishlist</button>
+      </div>
       <FilterBar />
       <TransitionGroup name="card" tag="div" class="grid">
-        <EntryCard v-for="e in visible" :key="e.id" :entry="e" :level="levelFor(e)" @open="dialog.open(e)" @delete="deleteEntry(e.id)" />
+        <EntryCard v-for="e in visible" :key="e.id" :entry="e" :level="levelFor(e)" @open="dialog.open(e)" @done="dialog.open(e, { done: true })" @delete="deleteEntry(e.id)" />
       </TransitionGroup>
       <div v-if="!visible.length" class="empty">
-        {{ entries.length
-          ? 'No matches. Press Enter in the search box to ask in plain language, for example "films I rated 4 or higher this year".'
-          : 'Nothing here yet. Add your first entry.' }}
+        {{ listed.length
+          ? (list === 'wishlist'
+            ? 'No matches. Press Enter in the search box to ask in plain language, for example "films from the 90s".'
+            : 'No matches. Press Enter in the search box to ask in plain language, for example "films I rated 4 or higher this year".')
+          : (list === 'wishlist'
+            ? 'Nothing on your wishlist yet. Add something you want to watch, read or listen to. Only you can see it.'
+            : 'Nothing here yet. Add your first entry.') }}
       </div>
     </div>
   </div>

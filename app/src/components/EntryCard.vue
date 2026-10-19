@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { DONE_VERB, personLine } from '../lib/entries.js';
+import { DONE_VERB, personLine, isWish } from '../lib/entries.js';
 import Stars from './Stars.vue';
 import MediumIcon from './MediumIcon.vue';
 
@@ -11,7 +11,9 @@ const props = defineProps({
   level: { type: String, default: '' },
   readonly: { type: Boolean, default: false },
 });
-defineEmits(['open', 'delete']);
+defineEmits(['open', 'delete', 'done']);
+
+const wish = computed(() => isWish(props.entry));
 
 const people = computed(() => personLine(props.entry));
 const hasHover = computed(() => props.entry.dateConsumed || props.entry.insights || people.value || props.entry.streamUrl);
@@ -29,12 +31,13 @@ const hasHover = computed(() => props.entry.dateConsumed || props.entry.insights
         <div v-if="entry.insights" class="hi-note">{{ entry.insights }}</div>
         <a v-if="entry.streamUrl" class="hi-listen" :href="entry.streamUrl" target="_blank" rel="noopener noreferrer" @click.stop>Listen ↗</a>
       </div>
+      <button v-if="wish && !readonly" class="done" title="Done: move to Consumed and rate it" @click.stop="$emit('done')">✓</button>
       <span class="shield" :class="entry.medium"><MediumIcon :medium="entry.medium" /></span>
       <span v-if="level === 'private' || level === 'friends'" class="level-badge" :title="level === 'private' ? 'Only you can see this' : 'Your friends can see this'">{{ level === 'private' ? 'Only me' : 'Friends' }}</span>
     </div>
     <div class="info">
       <h3>{{ entry.title }}<span v-if="entry.year" class="yr"> ({{ entry.year }})</span></h3>
-      <Stars :n="entry.rating" />
+      <Stars v-if="!wish" :n="entry.rating" />
     </div>
   </div>
 </template>

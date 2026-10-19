@@ -7,6 +7,12 @@ export const MEDIA = ['book', 'film', 'series', 'music'];
 export const LEVELS = ['private', 'friends', 'public'];
 export const LEVEL_LABEL = { private: 'Only me', friends: 'Friends', public: 'Public (members, and anyone with a link)' };
 export const levelOf = (entry, libraryDefault) => entry.visibility || libraryDefault || 'private';
+// Wishlist (#47): an entry is consumed (the library) or a wish. Older entries
+// have no status and count as consumed. Wishes are always private, with no
+// rating or date consumed.
+export const isWish = (e) => e.status === 'wishlist';
+export const inList = (list) => (e) => (list === 'wishlist') === isWish(e);
+export const SORT_ON_WISHLIST = ['dateAdded_desc', 'year_desc', 'title_asc'];
 export const MEDIUM_PLURAL = { book: 'books', film: 'films', series: 'series', music: 'music' };
 export const MEDIUM_TAG_LABEL = { book: 'Books', film: 'Films', series: 'Series', music: 'Music' };
 // What "consumed" means for each medium, in the UI copy.
@@ -29,6 +35,7 @@ export function emptyForm() {
     medium: 'book', title: '', year: '', author: '', director: '', cast: '',
     platform: '', streamUrl: '', dateConsumed: '', rating: 0, coverUrl: '', insights: '',
     visibility: '', // '' follows the library default (#20)
+    status: 'consumed', // or 'wishlist' (#47)
     // Canonical external ids (#26), kept but not shown. linkedFor is the
     // linkKey() they were found for; saving under another title or medium drops them.
     // itunesId is from before MusicBrainz (#30); lookups no longer set it.
@@ -48,6 +55,11 @@ export function normText(s) {
 // "Paprika" but "Paprika 2" doesn't.
 export function linkKey({ title, medium }) {
   return `${medium}|${normText(title)}`;
+}
+
+// What a wish keeps when saved: no rating, date or visibility of its own.
+export function asWish(e) {
+  return { ...e, status: 'wishlist', rating: 0, dateConsumed: '', visibility: '' };
 }
 
 export function personLine(e) {

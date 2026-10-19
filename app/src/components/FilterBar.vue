@@ -1,6 +1,17 @@
 <script setup>
-import { filters, ask, askLibrary, clearAsk } from '../state.js';
-import { MEDIA, MEDIUM_TAG_LABEL } from '../lib/entries.js';
+import { computed } from 'vue';
+import { filters, ask, askLibrary, clearAsk, list } from '../state.js';
+import { MEDIA, MEDIUM_TAG_LABEL, SORT_ON_WISHLIST } from '../lib/entries.js';
+
+const SORTS = [
+  ['dateConsumed_desc', 'Recently finished'],
+  ['dateAdded_desc', 'Recently added'],
+  ['rating_desc', 'Highest rated'],
+  ['year_desc', 'Year, newest'],
+  ['title_asc', 'Title, A–Z'],
+];
+// Wishes have no rating or date finished.
+const sorts = computed(() => (list.value === 'wishlist' ? SORTS.filter(([v]) => SORT_ON_WISHLIST.includes(v)) : SORTS));
 
 // With every type on, clicking one shows only that type; otherwise clicks toggle.
 function toggleMedium(m) {
@@ -21,11 +32,7 @@ function onSearchEnter(e) {
     <div class="filter-row">
       <input v-model="filters.search" type="text" placeholder="Search, ask, or log something…" @keydown.enter="onSearchEnter">
       <select v-model="filters.sortBy">
-        <option value="dateConsumed_desc">Recently finished</option>
-        <option value="dateAdded_desc">Recently added</option>
-        <option value="rating_desc">Highest rated</option>
-        <option value="year_desc">Year, newest</option>
-        <option value="title_asc">Title, A–Z</option>
+        <option v-for="[v, label] in sorts" :key="v" :value="v">{{ label }}</option>
       </select>
       <div class="medium-tags">
         <label v-for="m in MEDIA" :key="m" class="tag-check" :class="[m, { active: filters.mediums.includes(m) }]" @click.prevent="toggleMedium(m)">

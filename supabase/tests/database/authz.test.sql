@@ -10,7 +10,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(75);
+select plan(81);
 
 -- ---- Every table, including future ones ----
 
@@ -70,6 +70,10 @@ insert into public.entries (user_id, id, medium, title, visibility) values
   ('00000000-0000-0000-0000-00000000000b', 'b_1',       'film', 'B one',     null),
   -- A newcomer's row can only exist through the service key or an old membership.
   ('00000000-0000-0000-0000-00000000000c', 'c_1',       'film', 'C one',     'private');
+-- A wish (#47): a's default is public, but wishes are never shared. The set_eq
+-- checks below would list it otherwise.
+insert into public.entries (user_id, id, medium, title, status) values
+  ('00000000-0000-0000-0000-00000000000a', 'a_wish', 'film', 'A wish', 'wishlist');
 
 create function pg_temp.as_user(uid text) returns void language sql as $$
   select set_config('request.jwt.claims', json_build_object('sub', uid, 'role', 'authenticated')::text, true);
@@ -139,6 +143,7 @@ update public.members set default_visibility = 'public';
 
 select set_config('t.lib', public.get_share_link(), true);
 select set_config('t.one', public.get_share_link('a_private'), true);
+select set_config('t.wish', public.get_share_link('a_wish'), true);
 select is(public.get_share_link(), current_setting('t.lib'), 'asking again returns the same library link');
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000b');
 select is_empty('select 1 from public.share_links', 'a member cannot see another''s share links');
@@ -205,6 +210,8 @@ select set_eq($$ select (entry).id from public.shared_by_link(current_setting('t
   array['a_private'], 'signed out: an entry link shows that entry, whatever its level');
 select is_empty($$ select 1 from public.shared_by_link('00000000000000000000000000000000') $$,
   'signed out: an unknown token shows nothing');
+select is_empty($$ select 1 from public.shared_by_link(current_setting('t.wish')) $$,
+  'signed out: a link to a wish shows nothing');
 reset role;
 set local role authenticated;
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
@@ -213,6 +220,23 @@ reset role;
 set local role anon;
 select is_empty($$ select 1 from public.shared_by_link(current_setting('t.lib')) $$, 'signed out: a revoked link shows nothing');
 select throws_ok('insert into public.keepalive (id) values (2)', '42501', null, 'signed out: keepalive is read-only');
+reset role;
+
+-- ---- Wishlist (#47) ----
+
+set local role authenticated;
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+select throws_ok($$ update public.entries set rating = 4 where id = 'a_wish' $$, '23514', null,
+  'a wish cannot have a rating');
+select throws_ok($$ update public.entries set visibility = 'public' where id = 'a_wish' $$, '23514', null,
+  'a wish cannot be shared');
+select throws_ok($$ update public.entries set status = 'maybe' where id = 'a_wish' $$, '23514', null,
+  'status is consumed or wishlist');
+select lives_ok($$ update public.entries set status = 'consumed', rating = 4, date_consumed = '2026-10-19' where id = 'a_wish' $$,
+  'a wish moves to consumed in place, with a rating and date');
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000b');
+select ok('a_wish' in (select id from public.shared_entries('00000000-0000-0000-0000-00000000000a')),
+  '... and then follows the library default like any entry');
 reset role;
 
 -- ---- Assistant daily limit (#25) ----
@@ -256,7 +280,7 @@ select is((select count(*)::int from auth.users where id = '00000000-0000-0000-0
 select is((select count(*)::int from public.entries where user_id = '00000000-0000-0000-0000-00000000000b')
   + (select count(*)::int from public.members where user_id = '00000000-0000-0000-0000-00000000000b'), 0,
   'deleting an account removes its entries and membership');
-select is((select count(*)::int from public.entries where user_id = '00000000-0000-0000-0000-00000000000a'), 4,
+select is((select count(*)::int from public.entries where user_id = '00000000-0000-0000-0000-00000000000a'), 5,
   'deleting an account leaves other libraries alone');
 select is(public.cleanup_unredeemed_accounts(), 1, 'the cleanup removes one stale account');
 select set_eq($$ select email::text from auth.users where id::text like '00000000-0000-0000-0000-00000000000%' $$,

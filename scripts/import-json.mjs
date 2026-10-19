@@ -35,6 +35,8 @@ function toRow(e, userId) {
   if (parseYear(e.year) === undefined) problems.push(`unparseable year "${e.year}"`);
   const date = String(e.dateConsumed ?? '').trim();
   if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) problems.push(`bad dateConsumed "${date}"`);
+  if (e.status && !['consumed', 'wishlist'].includes(e.status)) problems.push(`unknown status "${e.status}"`);
+  if (e.status === 'wishlist' && (rating || date || e.visibility)) problems.push('a wish has no rating, dateConsumed or visibility');
   return problems.length ? { problems } : { row: entryToRow(e, userId) };
 }
 

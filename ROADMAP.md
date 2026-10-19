@@ -35,7 +35,7 @@ Run `gh issue list --label phase-1-music` (etc.) to see live status for a phase.
 | 3.5 | Port to Vue + Vite | ✅ Done | [Phase 3.5](../../milestone/7) |
 | 4 | Auth & multi-user | ✅ Done | [Phase 4](../../milestone/4) |
 | 5 | Reconnect assistant to backend | 🔶 In progress | [Phase 5](../../milestone/5) |
-| 5.5 | Wishlist | 🔲 Not started | [Phase 5.5](../../milestone/8) |
+| 5.5 | Wishlist | 🔶 Awaiting verification | [Phase 5.5](../../milestone/8) |
 | 6 | Sharing & recommendations | 🔲 Not started | [Phase 6](../../milestone/6) |
 
 ## Decisions
@@ -410,6 +410,15 @@ wishlist) rather than a second table, so a wish moves to consumed in place,
 keeping its id, cover and external ids. The open decisions (moving a wish to
 consumed, which fields a wish has, sharing, assistant phrasing, counts and sort)
 are listed on #47.
+
+Decided and built 2026-10-19: a `status` column (`consumed` | `wishlist`).
+**Wishes are always private.** The database refuses a rating, a date consumed
+or a visibility on a wish, and the shared readers (`shared_entries`,
+`shared_by_link`) leave wishes out, even when a share link names one. A ✓ on a
+wish card opens the form dated today so you can rate it, and Save moves the
+wish to consumed in place. Each list keeps its own filters and sort (wishes
+default to recently added), and the header counts show the current list only.
+The assistant adds to the wishlist on phrases like "want to watch X".
 
 Placed before Phase 6 so that a friend's recommendation (#36) can land in the
 wishlist. It depends only on the visibility model (#20), so it can be pulled

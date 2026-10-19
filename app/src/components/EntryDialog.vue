@@ -1,7 +1,7 @@
 <script setup>
 import { computed, nextTick, reactive, ref } from 'vue';
-import { entries, connection, saveEntry, ensureGroqKey, forgetGroqKey, setGroqKey, shareLink, shareUrl } from '../state.js';
-import { MEDIA, DONE_VERB, ID_FIELDS, LEVELS, LEVEL_LABEL, emptyForm, linkKey, personLine, uid } from '../lib/entries.js';
+import { entries, connection, saveEntry, ensureGroqKey, forgetGroqKey, setGroqKey, shareLink, shareUrl, list } from '../state.js';
+import { MEDIA, DONE_VERB, ID_FIELDS, LEVELS, LEVEL_LABEL, emptyForm, linkKey, personLine, uid, asWish, isWish, todayLocalIso } from '../lib/entries.js';
 import { lookupTitle, applyWikidataDetails } from '../lib/lookup.js';
 import { llmJson, ADD_TASK, fillFormFromExtraction } from '../lib/llm.js';
 import Stars from './Stars.vue';
@@ -19,6 +19,14 @@ const suggest = ref(null);     // { choices, uncertain } | null
 const lookupBusy = ref(false);
 
 const m = computed(() => form.medium);
+// Wishlist (#47): no rating, date or visibility.
+const wish = computed(() => isWish(form));
+const doneMode = ref(false);
+const heading = computed(() => {
+  if (doneMode.value) return 'Done? Rate it';
+  if (editingId.value) return 'Edit entry';
+  return wish.value ? 'Add to wishlist' : 'Add entry';
+});
 // Sharing (#20) exists online only.
 const online = computed(() => connection.kind === 'supabase');
 const defaultLabel = computed(() => `Library default (${LEVEL_LABEL[connection.profile?.defaultVisibility || 'private']})`);
@@ -29,8 +37,10 @@ const labels = computed(() => ({
   cast: m.value === 'music' ? 'Band members' : 'Cast',
 }));
 
-function open(entry) {
+// opts.done: a wish moving to Consumed. It stays a wish until Save.
+function open(entry, opts = {}) {
   editingId.value = entry ? entry.id : null;
+  doneMode.value = !!(entry && opts.done);
   suggest.value = null;
   Object.assign(form, emptyForm());
   if (entry) {
@@ -40,8 +50,15 @@ function open(entry) {
     }
     form.rating = Number(entry.rating) || 0;
     if (ID_FIELDS.some((k) => form[k])) form.linkedFor = linkKey(form);
+  } else {
+    form.status = list.value;
   }
   formStatus.value = '';
+  if (doneMode.value) {
+    form.status = 'consumed';
+    form.dateConsumed = todayLocalIso();
+    formStatus.value = 'Rate it and Save to move it to Consumed.';
+  }
   if (entry) {
     showView('manual', false);
   } else {
@@ -72,7 +89,7 @@ function collectEntry() {
   // Ids found for another title or medium would point at the wrong work.
   const linked = form.linkedFor === linkKey(form);
   const ids = Object.fromEntries(ID_FIELDS.map((k) => [k, linked ? t(form[k]) : '']));
-  return {
+  const entry = {
     id: editingId.value || uid(),
     medium: form.medium,
     title: t(form.title),
@@ -88,8 +105,10 @@ function collectEntry() {
     insights: t(form.insights),
     visibility: form.visibility,
     ...ids,
+    status: form.status,
     dateAdded: existing ? existing.dateAdded || Date.now() : Date.now(),
   };
+  return isWish(entry) ? asWish(entry) : entry;
 }
 
 // A link that shows this one entry to anyone who has it, whatever its level.
@@ -263,7 +282,7 @@ function saveKey() {
 <template>
   <div class="overlay" :class="{ open: isOpen }" @click.self="close">
     <div class="form-panel">
-      <h2>{{ editingId ? 'Edit entry' : 'Add entry' }}</h2>
+      <h2>{{ heading }}</h2>
 
       <div v-show="withTabs" class="view-tabs" style="display:flex;">
         <button type="button" :class="{ active: view === 'ai' }" @click="onTab('ai')">Describe it</button>
@@ -271,7 +290,8 @@ function saveKey() {
       </div>
 
       <div v-show="view === 'ai'">
-        <p class="form-sub">Just say what you watched, read or listened to. For example: "Perfect Blue, solid 4, watched two weeks ago, note: anime night at home".</p>
+        <p v-if="wish" class="form-sub">Say what you want to watch, read or listen to. For example: "Perfect Blue, Sam recommended it".</p>
+        <p v-else class="form-sub">Just say what you watched, read or listened to. For example: "Perfect Blue, solid 4, watched two weeks ago, note: anime night at home".</p>
 
         <div v-if="keyBox" class="suggest-box">
           <div class="suggest-head">Groq API key needed</div>
@@ -282,7 +302,7 @@ function saveKey() {
           </div>
         </div>
 
-        <textarea id="aiInput" ref="aiInputEl" v-model="aiText" placeholder="What did you just finish?" @keydown="onAiKeydown" @input="onAiInput"></textarea>
+        <textarea id="aiInput" ref="aiInputEl" v-model="aiText" :placeholder="wish ? 'What do you want to get to?' : 'What did you just finish?'" @keydown="onAiKeydown" @input="onAiInput"></textarea>
         <div class="status">{{ aiStatus }}</div>
 
         <div v-if="aiStage === 'choices' && aiChoices" class="suggest-box">
@@ -303,8 +323,11 @@ function saveKey() {
               <span class="pv-chip" :class="preview.medium">{{ preview.medium }}</span>
               <div class="pv-title">{{ preview.title }}<span v-if="preview.year" class="yr"> ({{ preview.year }})</span></div>
               <div v-if="personLine(preview)" class="pv-meta">{{ personLine(preview) }}</div>
-              <Stars :n="preview.rating" style="margin-top:4px;" />
-              <div class="pv-meta">{{ preview.dateConsumed ? `${DONE_VERB[preview.medium] || 'Finished'} ${preview.dateConsumed}` : 'No date' }}</div>
+              <div v-if="wish" class="pv-meta">On your wishlist</div>
+              <template v-else>
+                <Stars :n="preview.rating" style="margin-top:4px;" />
+                <div class="pv-meta">{{ preview.dateConsumed ? `${DONE_VERB[preview.medium] || 'Finished'} ${preview.dateConsumed}` : 'No date' }}</div>
+              </template>
               <div v-if="preview.insights" class="pv-note">{{ preview.insights }}</div>
             </div>
           </div>
@@ -312,7 +335,7 @@ function saveKey() {
             <span class="pv-hint">Press Enter to add</span>
             <button type="button" class="btn ghost" @click="close">Cancel</button>
             <button type="button" class="btn ghost" @click="showView('manual', true)">Edit details</button>
-            <button type="button" class="btn" :disabled="addBusy" @click="aiAdd">Add to library</button>
+            <button type="button" class="btn" :disabled="addBusy" @click="aiAdd">{{ wish ? 'Add to wishlist' : 'Add to library' }}</button>
           </div>
         </div>
 
@@ -352,7 +375,9 @@ function saveKey() {
         <div v-if="m === 'film' || m === 'series'" class="field"><label>Streaming service / watched on</label><input v-model="form.platform" type="text" placeholder="e.g. Netflix, cinema, Mubi"></div>
         <div v-if="m === 'music'" class="field"><label>Listen link</label><input v-model="form.streamUrl" type="text" placeholder="Spotify, YouTube, SoundCloud, Mixcloud…"></div>
 
-        <div class="row-two">
+        <label v-if="!doneMode" class="wish-check"><input type="checkbox" :checked="wish" @change="form.status = $event.target.checked ? 'wishlist' : 'consumed'"> On my wishlist</label>
+
+        <div v-if="!wish" class="row-two">
           <div class="field"><label>Date {{ DONE_VERB[m].toLowerCase() }}</label><input v-model="form.dateConsumed" type="date"></div>
           <div class="field">
             <label>Rating</label>
@@ -361,9 +386,10 @@ function saveKey() {
         </div>
 
         <div class="field"><label>Cover URL</label><input v-model="form.coverUrl" type="text" placeholder="Auto-filled by Look up, or paste your own"></div>
-        <div class="field"><label>Insights</label><textarea v-model="form.insights" placeholder="Notes, reactions, quotes, whatever's worth keeping."></textarea></div>
+        <div class="field"><label>Insights</label><textarea v-model="form.insights" :placeholder="wish ? 'Why you want it, who recommended it.' : 'Notes, reactions, quotes, whatever\'s worth keeping.'"></textarea></div>
 
-        <div v-if="online" class="field visibility-field">
+        <p v-if="online && wish" class="form-sub">Only you can see your wishlist.</p>
+        <div v-else-if="online" class="field visibility-field">
           <label>Who can see this <span class="label-note">(notes stay private)</span></label>
           <select v-model="form.visibility">
             <option value="">{{ defaultLabel }}</option>

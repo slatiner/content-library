@@ -17,13 +17,14 @@ const EXTRACT_SCHEMA = {
     note: { type: ['string', 'null'] },
     platform: { type: ['string', 'null'] },
     url: { type: ['string', 'null'] },
+    status: { type: ['string', 'null'], enum: ['consumed', 'wishlist', null] },
   },
-  required: ['intent', 'medium', 'title', 'year', 'creator', 'rating', 'dateConsumed', 'note', 'platform', 'url'],
+  required: ['intent', 'medium', 'title', 'year', 'creator', 'rating', 'dateConsumed', 'note', 'platform', 'url', 'status'],
   additionalProperties: false,
 };
 
 function buildExtractPrompt() {
-  return `You turn a casual message into one entry for a personal media library (things the user watched, read or listened to). Today's date is ${todayLocalIso()}. Reply with JSON only.
+  return `You turn a casual message into one entry for a personal media library (things the user watched, read or listened to, plus a wishlist of things they want to). Today's date is ${todayLocalIso()}. Reply with JSON only.
 
 Rules:
 - intent: "add" if the user is logging an item, otherwise "other" (then set medium "film" and title "").
@@ -35,7 +36,8 @@ Rules:
 - dateConsumed: YYYY-MM-DD, only when the user says when they finished it. Resolve relative phrases from today's date: "now", "just now", "today", "just saw it" -> today; "yesterday"; "last week" -> 7 days ago; "N weeks ago" -> N*7 days ago; "N months ago" -> same day-of-month N months earlier; "a year ago" -> same date one year earlier; "mid <month>" -> the 15th of the most recent such month that is not in the future; a bare month name -> the 15th of that month the same way. If no timing is mentioned, null.
 - note: the user's own comment about the item, in their words, without the rating or date parts. Otherwise null.
 - platform: where they watched it (Netflix, cinema...) if stated, otherwise null.
-- url: a link the user pasted, otherwise null.`;
+- url: a link the user pasted, otherwise null.
+- status: "wishlist" if the user wants to, plans to or was told to watch, read or listen to it ("want to watch Dune", "add Dune to my wishlist", "X recommended Dune"); then rating and dateConsumed are null. "consumed" if they say they finished it or rate it. null if it's unclear.`;
 }
 
 const FIND_SCHEMA = {
@@ -62,7 +64,7 @@ function buildFindPrompt() {
 The library holds books, films, series (TV shows) and music (albums, singles, DJ sets). Each item has a title, release year, author/artist/director, cast, the user's 1-5 star rating, the date the user consumed it, and the user's notes.
 
 Rules:
-- intent: "find" if the user wants to see or narrow down items in the library (a bare keyword or name counts). "add" if the user is logging something they watched, read or listened to, e.g. "just watched Dune, 4 stars", "add Perfect Blue", "finished Steppenwolf last week, loved it" (then set the other fields to null and mediums to []). Otherwise "other".
+- intent: "find" if the user wants to see or narrow down items in the library (a bare keyword or name counts). "add" if the user is logging something they watched, read or listened to, e.g. "just watched Dune, 4 stars", "add Perfect Blue", "finished Steppenwolf last week, loved it", or adding to their wishlist, e.g. "want to watch Dune", "add Perfect Blue to my wishlist" (then set the other fields to null and mediums to []). Otherwise "other".
 - mediums: the kinds to include, from "book", "film", "series", "music". An empty array means all kinds. "movies" -> film, "shows" -> series, "albums", "songs", "records", "sets" -> music, "read" suggests book, "listened" suggests music. Only restrict kinds when the user names or clearly implies them. Never guess a kind from a person's name: a bare name or keyword gets an empty array.
 - text: names or keywords to look for in titles, people or notes (e.g. "Murakami", "Beatles"). Never include generic words such as "films", "rated", "this year". null if there are none.
 - minRating / maxRating: inclusive, 1-5. "above 4" -> min 5; "4 or more", "at least 4", "4+" -> min 4; "below 3" -> max 2; "at most 3", "up to 3" -> max 3; "favorites" -> min 5; "good ones" -> min 4; "worst" or "bad ones" -> max 2. null if not about ratings. "highest rated" or "top rated" by themselves are an ordering (sort), not a rating filter.
@@ -169,6 +171,8 @@ export function fillFormFromExtraction(form, r) {
   form.coverUrl = '';
   form.insights = (r.note || '').trim();
   form.rating = Math.max(0, Math.min(5, Math.round(Number(r.rating) || 0)));
+  // null keeps the list the form was opened on.
+  if (r.status === 'consumed' || r.status === 'wishlist') form.status = r.status;
 }
 
 export function normalizeFind(r) {

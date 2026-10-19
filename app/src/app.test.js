@@ -6,6 +6,8 @@ import { mount, flushPromises } from '@vue/test-utils';
 import { readFileSync } from 'node:fs';
 
 // Read from disk: the dev server config blocks media-archive-data*.json imports.
+import { todayLocalIso } from './lib/entries.js';
+
 const EXAMPLE = JSON.parse(readFileSync('media-archive-data.example.json', 'utf8'));
 
 let state, App, adapter;
@@ -148,7 +150,7 @@ describe('library view', () => {
     expect(hover('Steppenwolf')).toMatch(/^Read /);
     expect(hover('Paprika')).toMatch(/^Watched /);
     expect(hover('In Rainbows')).toMatch(/^Listened /);
-    expect(w.text()).not.toMatch(/consumed/i);
+    expect(w.find('.grid').text()).not.toMatch(/consumed/i);
     await w.findAll('.card').find((c) => c.text().includes('Steppenwolf')).trigger('click');
     expect(w.findAll('.field label').map((l) => l.text())).toContain('Date read');
   });
@@ -652,6 +654,133 @@ describe('adding from the search box', () => {
     await flushPromises();
     expect(adapter.calls.at(-1)[1]).toMatchObject({ medium: 'film', title: 'Dune', rating: 4 });
     expect(w.findAll('.card')).toHaveLength(5);
+  });
+});
+
+describe('wishlist (#47)', () => {
+  const WISH = { ...structuredClone(EXAMPLE[0]), id: 'e_1_wish', title: 'Perfect Blue', year: '1997', rating: 0, dateConsumed: '', insights: 'Sam recommended it', visibility: '', status: 'wishlist', dateAdded: 1800000000000 };
+  const WISH2 = { ...WISH, id: 'e_2_wish', title: 'Akira', year: '1988', dateAdded: 1700000000001 };
+  const WITH_WISHES = [...EXAMPLE, WISH, WISH2];
+  const toList = async (w, label) => { await w.findAll('.list-toggle button').find((b) => b.text() === label).trigger('click'); };
+  const saveBtn = (w) => w.findAll('.form-actions button').find((b) => b.text() === 'Save');
+
+  it('the toggle switches lists, with counts, sorts and filters per list', async () => {
+    const w = await mountApp(WITH_WISHES);
+    expect(titles(w)).toEqual(['In Rainbows', 'Paprika', 'Silo', 'Steppenwolf']);
+    expect(w.find('.counts').text()).toBe('1 books1 films1 series1 music');
+    await w.find('.tag-check.film').trigger('click');
+    await toList(w, 'Wishlist');
+    // Newest wish first; the consumed list's type filter stays behind.
+    expect(titles(w)).toEqual(['Perfect Blue', 'Akira']);
+    expect(w.find('.counts').text()).toBe('0 books2 films0 series0 music');
+    expect(w.find('.card .stars').exists()).toBe(false);
+    expect(w.findAll('.card .done')).toHaveLength(2);
+    expect(w.findAll('.filter-bar option').map((o) => o.element.value)).toEqual(['dateAdded_desc', 'year_desc', 'title_asc']);
+    await w.find('.filter-bar select').setValue('title_asc');
+    expect(titles(w)).toEqual(['Akira', 'Perfect Blue']);
+    await toList(w, 'Consumed');
+    expect(titles(w)).toEqual(['Paprika']);
+    expect(w.find('.filter-bar select').element.value).toBe('dateConsumed_desc');
+    await toList(w, 'Wishlist');
+    expect(titles(w)).toEqual(['Akira', 'Perfect Blue']);
+  });
+
+  it('adding on the wishlist saves a private wish with no rating or date', async () => {
+    const w = await mountApp(EXAMPLE, 'ok', 'supabase');
+    await toList(w, 'Wishlist');
+    expect(w.find('.empty').text()).toContain('Nothing on your wishlist yet');
+    await w.find('.add-new-btn').trigger('click');
+    expect(w.find('.form-panel h2').text()).toBe('Add to wishlist');
+    await w.findAll('.view-tabs button')[1].trigger('click');
+    expect(w.find('.wish-check input').element.checked).toBe(true);
+    expect(w.find('.star-pick').exists()).toBe(false);
+    expect(w.find('.visibility-field').exists()).toBe(false);
+    expect(w.find('.form-panel').text()).toContain('Only you can see your wishlist.');
+    await w.find('.title-row input').setValue('Dune');
+    await saveBtn(w).trigger('click');
+    await flushPromises();
+    expect(adapter.calls.at(-1)[1]).toMatchObject({ title: 'Dune', status: 'wishlist', rating: 0, dateConsumed: '', visibility: '' });
+    expect(titles(w)).toEqual(['Dune']);
+    await toList(w, 'Consumed');
+    expect(w.findAll('.card')).toHaveLength(4);
+  });
+
+  it('Done moves a wish to Consumed in place, dated today, with a rating', async () => {
+    const w = await mountApp(WITH_WISHES);
+    await toList(w, 'Wishlist');
+    await w.findAll('.card')[0].find('.done').trigger('click');
+    expect(w.find('.form-panel h2').text()).toBe('Done? Rate it');
+    expect(w.find('input[type=date]').element.value).toBe(todayLocalIso());
+    expect(w.find('.wish-check').exists()).toBe(false);
+    await w.findAll('.star-pick span')[4].trigger('click');
+    await saveBtn(w).trigger('click');
+    await flushPromises();
+    expect(adapter.calls.at(-1)[1]).toMatchObject({ id: 'e_1_wish', status: 'consumed', rating: 5, dateConsumed: todayLocalIso(), insights: 'Sam recommended it', coverUrl: WISH.coverUrl, dateAdded: WISH.dateAdded });
+    expect(titles(w)).toEqual(['Akira']);
+    await toList(w, 'Consumed');
+    expect(titles(w)[0]).toBe('Perfect Blue');
+  });
+
+  it('Cancel on Done leaves it a wish', async () => {
+    const w = await mountApp(WITH_WISHES);
+    await toList(w, 'Wishlist');
+    await w.findAll('.card')[0].find('.done').trigger('click');
+    await w.findAll('.form-actions button').find((b) => b.text() === 'Cancel').trigger('click');
+    expect(adapter.calls).toHaveLength(0);
+    expect(titles(w)).toEqual(['Perfect Blue', 'Akira']);
+  });
+
+  it('ticking On my wishlist turns an entry into a wish and drops its rating, date and level', async () => {
+    const w = await mountApp(EXAMPLE, 'ok', 'supabase');
+    await w.findAll('.card').find((c) => c.text().includes('Steppenwolf')).trigger('click');
+    await w.find('.wish-check input').setValue(true);
+    await saveBtn(w).trigger('click');
+    await flushPromises();
+    expect(adapter.calls.at(-1)[1]).toMatchObject({ title: 'Steppenwolf', status: 'wishlist', rating: 0, dateConsumed: '', visibility: '' });
+    expect(w.findAll('.card')).toHaveLength(3);
+  });
+
+  it('"want to watch Dune" from the search box lands on the wishlist', async () => {
+    groqAnswer = {
+      library_filter: { intent: 'add', mediums: [], text: null, minRating: null, maxRating: null, consumedFrom: null, consumedTo: null, releasedFrom: null, releasedTo: null, sort: null },
+      library_entry: { intent: 'add', medium: 'film', title: 'Dune', year: null, creator: null, rating: null, dateConsumed: null, note: null, platform: null, url: null, status: 'wishlist' },
+    };
+    const w = await mountApp();
+    const search = w.find('.filter-row input[type=text]');
+    await search.setValue('want to watch dune');
+    await search.trigger('keydown', { key: 'Enter' });
+    await flushPromises();
+    expect(w.find('.ai-preview').text()).toContain('On your wishlist');
+    expect(w.findAll('.pv-actions button').map((b) => b.text())).toContain('Add to wishlist');
+    await w.find('#aiInput').trigger('keydown', { key: 'Enter' });
+    await flushPromises();
+    expect(adapter.calls.at(-1)[1]).toMatchObject({ title: 'Dune', status: 'wishlist', rating: 0 });
+    expect(w.findAll('.card')).toHaveLength(4);
+  });
+
+  it('Describe it on the wishlist adds a wish when the message does not say', async () => {
+    groqAnswer = { intent: 'add', medium: 'film', title: 'Dune', year: null, creator: null, rating: null, dateConsumed: null, note: null, platform: null, url: null, status: null };
+    const w = await mountApp();
+    await toList(w, 'Wishlist');
+    await w.find('.add-new-btn').trigger('click');
+    await w.find('#aiInput').setValue('dune');
+    await w.find('#aiInput').trigger('keydown', { key: 'Enter' });
+    await flushPromises();
+    await w.find('#aiInput').trigger('keydown', { key: 'Enter' });
+    await flushPromises();
+    expect(adapter.calls.at(-1)[1]).toMatchObject({ title: 'Dune', status: 'wishlist' });
+  });
+
+  it('asking on the wishlist ignores ratings and dates finished', async () => {
+    groqAnswer = { intent: 'find', mediums: ['film'], text: null, minRating: 4, maxRating: null, consumedFrom: '2026-01-01', consumedTo: '2026-12-31', releasedFrom: null, releasedTo: null, sort: 'rating_desc' };
+    const w = await mountApp(WITH_WISHES);
+    await toList(w, 'Wishlist');
+    const search = w.find('.filter-row input[type=text]');
+    await search.setValue('good films this year');
+    await search.trigger('keydown', { key: 'Enter' });
+    await flushPromises();
+    expect(titles(w)).toEqual(['Perfect Blue', 'Akira']);
+    expect(w.find('.ask-chips').text()).toBe('films');
   });
 });
 

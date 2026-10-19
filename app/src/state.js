@@ -1,6 +1,6 @@
 // App state shared by the components (Vue's built-in reactivity; no Pinia).
 import { reactive, ref } from 'vue';
-import { MEDIA } from './lib/entries.js';
+import { MEDIA, SORT_ON_WISHLIST } from './lib/entries.js';
 import { createFileStorage, createSupabaseStorage } from './lib/storage/index.js';
 import { STORAGE, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './config.js';
 import { llmJson, FIND_TASK, normalizeFind, askChipsFor } from './lib/llm.js';
@@ -127,6 +127,21 @@ export const filters = reactive({
   mediums: [...MEDIA],
 });
 
+// ---- Consumed / Wishlist (#47). Each list keeps its own filters and sort. ----
+export const list = ref('consumed');
+const savedFilters = {
+  wishlist: { search: '', dateFrom: '', dateTo: '', sortBy: 'dateAdded_desc', mediums: [...MEDIA] },
+};
+export function setList(l) {
+  if (l === list.value) return;
+  // A plain-language search belongs to the list it was asked on.
+  if (ask.criteria !== null || ask.status) clearAsk();
+  savedFilters[list.value] = { ...filters, mediums: [...filters.mediums] };
+  const next = savedFilters[l];
+  Object.assign(filters, { ...next, mediums: [...next.mediums] });
+  list.value = l;
+}
+
 // ---- Ask the library: plain-language search ----
 // Press Enter in the search box to turn a question into filters. Type, medium, date range, sort and text
 // reuse the existing controls; rating and release-year have no controls of their own, so they live in criteria.
@@ -140,6 +155,10 @@ export function onAddRequest(fn) { addHandler = fn; }
 function setAsk(status, chips) { ask.status = status || ''; ask.chips = chips || []; }
 
 function applyFind(f, question) {
+  // Wishes have no rating or date consumed.
+  if (list.value === 'wishlist') {
+    f = { ...f, minRating: null, maxRating: null, consumedFrom: '', consumedTo: '', sort: SORT_ON_WISHLIST.includes(f.sort) ? f.sort : null };
+  }
   filters.mediums = f.mediums.length ? [...f.mediums] : [...MEDIA];
   filters.dateFrom = f.consumedFrom || '';
   filters.dateTo = f.consumedTo || '';
