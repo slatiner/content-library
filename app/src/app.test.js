@@ -595,6 +595,23 @@ describe('assistant online', () => {
     expect(w.text()).toContain('Your sign-in has expired');
     expect(w.text()).not.toContain('API key');
   });
+
+  it('the daily assistant limit says so, in Describe it and in search', async () => {
+    const limit = { error: { code: 'daily_limit', message: 'All 50 assistant requests for today are used. They reset at midnight UTC.' } };
+    fetch.mockImplementation((url, init) => (url.endsWith('/functions/v1/groq')
+      ? Promise.resolve(new Response(JSON.stringify(limit), { status: 429 }))
+      : fakeFetch(url, init)));
+    const w = await mountApp(EXAMPLE, 'ok', 'supabase');
+    await w.find('.add-new-btn').trigger('click');
+    const input = w.find('#aiInput');
+    await input.setValue('Perfect Blue');
+    await input.trigger('keydown', { key: 'Enter' });
+    await flushPromises();
+    expect(w.text()).toContain('All 50 assistant requests for today are used');
+    expect(w.text()).not.toContain('Groq rate limit');
+    await state.askLibrary('films I rated 4');
+    expect(state.ask.status).toContain('All 50 assistant requests for today are used');
+  });
 });
 
 describe('ask the library', () => {

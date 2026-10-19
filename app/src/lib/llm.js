@@ -119,6 +119,15 @@ export async function llmJson(key, text, task) {
     if (body && body.error && body.error.code === 'json_validate_failed') r = await groqRequest(key, text, 0.3, task);
   }
   if (!r.ok) {
+    if (typeof key === 'object' && r.status === 429) {
+      // The proxy's per-user daily limit (#25), as opposed to Groq's own limit.
+      const body = await r.clone().json().catch(() => null);
+      if (body && body.error && body.error.code === 'daily_limit') {
+        const err = new Error(body.error.message);
+        err.code = 'DAILY_LIMIT';
+        throw err;
+      }
+    }
     if (typeof key === 'object' && r.status === 401) {
       const err = new Error('Your sign-in has expired. Reload the page and sign in again.');
       err.code = 'AUTH';

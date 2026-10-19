@@ -10,7 +10,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(69);
+select plan(75);
 
 -- ---- Every table, including future ones ----
 
@@ -215,6 +215,27 @@ select is_empty($$ select 1 from public.shared_by_link(current_setting('t.lib'))
 select throws_ok('insert into public.keepalive (id) values (2)', '42501', null, 'signed out: keepalive is read-only');
 reset role;
 
+-- ---- Assistant daily limit (#25) ----
+
+insert into auth.users (id, email) values ('00000000-0000-0000-0000-00000000000f', 'noinvite@test');
+set local role authenticated;
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000b');
+select is(public.claim_assistant_request(), 49, 'a member''s first assistant request of the day leaves 49');
+reset role;
+-- b used 49 yesterday and 49 today.
+update public.assistant_usage set count = 49 where user_id = '00000000-0000-0000-0000-00000000000b';
+insert into public.assistant_usage values ('00000000-0000-0000-0000-00000000000b', (now() at time zone 'utc')::date - 1, 49);
+set local role authenticated;
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000b');
+select is(public.claim_assistant_request(), 0, 'the 50th request is allowed');
+select throws_ok('select public.claim_assistant_request()', 'P0001', 'daily_limit', 'the 51st request is refused');
+select throws_ok('select 1 from public.assistant_usage', '42501', null, 'usage counts are not readable directly');
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000f');
+select throws_ok('select public.claim_assistant_request()', '42501', null, 'a newcomer without an invite cannot use the assistant');
+reset role;
+select is((select array_agg(count) from public.assistant_usage where user_id = '00000000-0000-0000-0000-00000000000b'),
+  array[50], 'only today''s count is kept');
+
 -- ---- Account deletion and cleanup (#29) ----
 
 -- d signed in 40 days ago and never redeemed; e is a member just as old.
@@ -239,7 +260,7 @@ select is((select count(*)::int from public.entries where user_id = '00000000-00
   'deleting an account leaves other libraries alone');
 select is(public.cleanup_unredeemed_accounts(), 1, 'the cleanup removes one stale account');
 select set_eq($$ select email::text from auth.users where id::text like '00000000-0000-0000-0000-00000000000%' $$,
-  array['admin@test', 'newcomer@test', 'oldmember@test'],
+  array['admin@test', 'newcomer@test', 'noinvite@test', 'oldmember@test'],
   'the cleanup keeps members and accounts under 30 days old');
 select is((select schedule from cron.job where jobname = 'cleanup-unredeemed-accounts'), '0 4 1 * *',
   'the cleanup runs monthly');

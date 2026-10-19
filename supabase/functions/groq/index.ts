@@ -3,6 +3,8 @@
 // call it; the function checks the caller's session with Supabase Auth itself
 // (deployed with --no-verify-jwt, which also lets the CORS preflight through).
 // Only members may use it (#28): an account that hasn't redeemed an invite gets 403.
+// Each member has 50 requests per UTC day (#25); past that the reply is 429 with
+// code 'daily_limit'.
 // Requests are passed to Groq as they are, limited to the app's model and token
 // cap so the shared quota can't be spent on anything else.
 
@@ -38,14 +40,6 @@ Deno.serve(async (req) => {
     headers: { authorization: auth, apikey },
   });
   if (!who.ok) return reply(401, { error: { code: 'not_signed_in', message: 'Sign in to use the assistant.' } });
-  const member = await fetch(`${Deno.env.get('SUPABASE_URL')}/rest/v1/rpc/is_member`, {
-    method: 'POST',
-    headers: { authorization: auth, apikey, 'Content-Type': 'application/json' },
-    body: '{}',
-  });
-  if (!member.ok || (await member.json()) !== true) {
-    return reply(403, { error: { code: 'not_member', message: 'Redeem an invite code to use the assistant.' } });
-  }
 
   let body: Record<string, unknown>;
   try {
@@ -55,6 +49,18 @@ Deno.serve(async (req) => {
   }
   if (!MODELS.has(String(body.model))) return reply(400, { error: { message: 'Model not allowed' } });
   body.max_completion_tokens = Math.min(Number(body.max_completion_tokens) || MAX_TOKENS, MAX_TOKENS);
+
+  // Membership and the daily limit, checked by the database as the caller.
+  const claim = await fetch(`${Deno.env.get('SUPABASE_URL')}/rest/v1/rpc/claim_assistant_request`, {
+    method: 'POST',
+    headers: { authorization: auth, apikey, 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (!claim.ok) {
+    const err = await claim.json().catch(() => ({}));
+    if (err.message === 'daily_limit') return reply(429, { error: { code: 'daily_limit', message: err.details } });
+    return reply(403, { error: { code: 'not_member', message: 'Redeem an invite code to use the assistant.' } });
+  }
 
   const key = Deno.env.get('GROQ_API_KEY');
   if (!key) return reply(500, { error: { code: 'no_server_key', message: 'GROQ_API_KEY is not set' } });

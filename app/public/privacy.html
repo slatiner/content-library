@@ -41,7 +41,8 @@
     you've made, and (for admins) the invite codes you've created.</li>
   </ul>
   <p>The browser also keeps your sign-in session, and a pending invite code while
-  you sign in, in its local storage. Nothing else is stored about you.</p>
+  you sign in, in its local storage. The database also counts your assistant
+requests for the current day. Nothing else is stored about you.</p>
 
   <h2>Where it's stored</h2>
   <p>In a <a href="https://supabase.com/privacy">Supabase</a> database in London
@@ -65,7 +66,9 @@
   <ul>
     <li><b>The assistant:</b> text you type into "Describe it" or into a
     plain-language search is sent to <a href="https://groq.com/privacy-policy/">Groq</a>
-    to be understood. Only what you type is sent, not your library or notes.</li>
+    to be understood. Only what you type is sent, not your library or notes. Groq
+    processes it in the US, doesn't use it for training, and keeps no copy (zero data
+    retention is switched on). Each member can make 50 assistant requests a day.</li>
     <li><b>Lookups and covers:</b> when you look up a title, its name is sent to
     Wikipedia/Wikidata, Open Library, TVmaze or MusicBrainz. Cover images load from those
     sites, so they see your IP address, like any image on the web.</li>

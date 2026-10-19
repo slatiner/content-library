@@ -33,8 +33,8 @@ Run `gh issue list --label phase-1-music` (etc.) to see live status for a phase.
 | 2 | Natural-language add/find assistant | ✅ Done | [Phase 2](../../milestone/2) |
 | 3 | Backend foundation (DB) | ✅ Done | [Phase 3](../../milestone/3) |
 | 3.5 | Port to Vue + Vite | ✅ Done | [Phase 3.5](../../milestone/7) |
-| 4 | Auth & multi-user | 🔶 In progress | [Phase 4](../../milestone/4) |
-| 5 | Reconnect assistant to backend | 🔲 Not started | [Phase 5](../../milestone/5) |
+| 4 | Auth & multi-user | ✅ Done | [Phase 4](../../milestone/4) |
+| 5 | Reconnect assistant to backend | 🔶 In progress | [Phase 5](../../milestone/5) |
 | 5.5 | Wishlist | 🔲 Not started | [Phase 5.5](../../milestone/8) |
 | 6 | Sharing & recommendations | 🔲 Not started | [Phase 6](../../milestone/6) |
 
@@ -327,7 +327,7 @@ Nobody can browse without a link. Others read only through `shared_entries` /
 owner-only. Friends-level entries wait for friendships (#34), whose table
 already exists empty. Viewing another member's library in the app is #35.
 
-**Privacy basics (#29): built 2026-10-19, awaiting deploy and verification.**
+**Privacy basics (#29): done (verified 2026-10-19).**
 A privacy policy page (`app/public/privacy.html`, linked from sign-in and "Your
 data"), with GitHub issues as the contact. "Your data" in the account menu
 downloads one JSON file (account, entries with notes, sharing settings and links,
@@ -336,7 +336,7 @@ invites created) and deletes the account right away after typing `delete`
 themselves). Accounts that never redeem an invite are deleted once they're 30
 days old, by `cleanup_unredeemed_accounts()` run monthly by pg_cron.
 
-**Licences (#30): built 2026-10-19, awaiting deploy and verification.** Terms
+**Licences (#30): done (verified 2026-10-19).** Terms
 reviewed per source (table on #30). iTunes artwork may only promote the iTunes
 Store, so music lookups moved to MusicBrainz + Cover Art Archive (new
 `entries.musicbrainz_id`; `itunes_id` kept for old entries) and films/series lost
@@ -384,6 +384,22 @@ server-side: a client-side key is fine solo, but becomes a shared, abusable
 quota once multiple users exist. Decide here whether users share one key with
 per-user limits or bring their own, and review Groq's terms for EEA/UK/CH users
 before opening the assistant to anyone else.
+
+**Shared key with a per-user limit (#32, decided 2026-10-19).** The app is for
+the owner and a few close friends for now, so members keep sharing the owner's
+Groq free plan (1,000 requests/day, 30/minute for the whole organisation, for
+gpt-oss-20b) and each member gets **50 requests per UTC day** (#25:
+`claim_assistant_request()` in the database, called by the proxy before each
+Groq call; past the limit the proxy answers 429 `daily_limit`). Bring-your-own-key
+was ruled out for now: friction for every friend and keys to store safely. Revisit
+for scale; Groq's next tier is pay-as-you-go and needs a card, and an optional
+own-key setting is the free way past the cap.
+
+**Groq terms (#33, reviewed 2026-10-19): no blocker for EEA/UK/CH.** The Services
+Agreement allows apps for end users (no reselling the account); no training on
+inputs/outputs; the DPA covers every customer with SCCs, the UK addendum and the
+Swiss adaptation; processing is in the US. The owner turned on Zero Data
+Retention, and the privacy policy says so. Details on #33.
 
 ## Phase 5.5 — Wishlist
 
