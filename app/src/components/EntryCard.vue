@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { DONE_VERB, personLine, isWish } from '../lib/entries.js';
 import Stars from './Stars.vue';
 import MediumIcon from './MediumIcon.vue';
@@ -11,7 +11,14 @@ const props = defineProps({
   level: { type: String, default: '' },
   readonly: { type: Boolean, default: false },
 });
-defineEmits(['open', 'delete', 'done']);
+const emit = defineEmits(['open', 'delete', 'done']);
+
+// A shared view can't open entries, so a tap shows the details the hover shows.
+const peek = ref(false);
+function onClick() {
+  if (props.readonly) peek.value = !peek.value;
+  else emit('open');
+}
 
 const wish = computed(() => isWish(props.entry));
 
@@ -20,7 +27,7 @@ const hasHover = computed(() => props.entry.dateConsumed || props.entry.insights
 </script>
 
 <template>
-  <div class="card" @click="$emit('open')">
+  <div class="card" :class="{ peek }" @click="onClick">
     <button v-if="!readonly" class="del" title="Delete" @click.stop="$emit('delete')">×</button>
     <div class="cover">
       <img v-if="entry.coverUrl" :src="entry.coverUrl" alt="" loading="lazy">
@@ -36,7 +43,8 @@ const hasHover = computed(() => props.entry.dateConsumed || props.entry.insights
       <span v-if="level === 'private' || level === 'friends'" class="level-badge" :title="level === 'private' ? 'Only you can see this' : 'Your friends can see this'">{{ level === 'private' ? 'Only me' : 'Friends' }}</span>
     </div>
     <div class="info">
-      <h3>{{ entry.title }}<span v-if="entry.year" class="yr"> ({{ entry.year }})</span></h3>
+      <!-- The title is the card's keyboard handle; its click bubbles to the card. -->
+      <h3><button type="button" class="card-open" :aria-expanded="readonly && hasHover ? peek : undefined">{{ entry.title }}<span v-if="entry.year" class="yr"> ({{ entry.year }})</span></button></h3>
       <Stars v-if="!wish" :n="entry.rating" />
     </div>
   </div>

@@ -3,6 +3,7 @@
 // after 14 days; the link fills the code in for the person signing up.
 import { ref, watch } from 'vue';
 import { createInvite, listInvites } from '../state.js';
+import Modal from './Modal.vue';
 
 const open = defineModel('open', { type: Boolean, default: false });
 const invites = ref([]);
@@ -46,27 +47,25 @@ async function copy() {
 </script>
 
 <template>
-  <div class="overlay" :class="{ open }" @click.self="open = false">
-    <div class="form-panel">
-      <h2>Invite someone</h2>
-      <p class="form-sub">Each code works once and expires after 14 days. They sign in with Google, then enter the code (the link fills it in).</p>
-      <button class="btn small" :disabled="busy" @click="create">Create invite code</button>
-      <div v-if="latest" class="field invite-new" style="margin-top:16px;">
-        <label>New code</label>
-        <div class="mono invite-code">{{ latest.code }}</div>
-        <input class="mono" :value="linkFor(latest.code)" readonly @focus="$event.target.select()">
-        <button class="btn small ghost" style="margin-top:8px;" @click="copy">Copy link</button>
-      </div>
-      <div class="status">{{ status }}</div>
-      <div v-if="invites.length" class="field" style="margin-top:16px;border-top:1px solid var(--line);padding-top:16px;">
-        <label>Recent codes</label>
-        <ul class="invite-list mono">
-          <li v-for="inv in invites" :key="inv.code"><b>{{ inv.code }}</b> · {{ stateOf(inv) }}</li>
-        </ul>
-      </div>
-      <div class="form-actions">
-        <button class="btn ghost" @click="open = false">Close</button>
-      </div>
+  <Modal v-model:open="open">
+    <h2>Invite someone</h2>
+    <p class="form-sub">Each code works once and expires after 14 days. They sign in with Google, then enter the code (the link fills it in).</p>
+    <button class="btn small" :disabled="busy" @click="create">Create invite code</button>
+    <div v-if="latest" class="field invite-new" style="margin-top:16px;">
+      <label>New code</label>
+      <div class="mono invite-code">{{ latest.code }}</div>
+      <input class="mono" :value="linkFor(latest.code)" readonly @focus="$event.target.select()">
+      <button class="btn small ghost" style="margin-top:8px;" @click="copy">Copy link</button>
     </div>
-  </div>
+    <div class="status">{{ status }}</div>
+    <div v-if="invites.length" class="field" style="margin-top:16px;border-top:1px solid var(--line);padding-top:16px;">
+      <label>Recent codes</label>
+      <ul class="invite-list mono">
+        <li v-for="inv in invites" :key="inv.code"><b>{{ inv.code }}</b> · {{ stateOf(inv) }}</li>
+      </ul>
+    </div>
+    <div class="form-actions">
+      <button class="btn ghost" @click="open = false">Close</button>
+    </div>
+  </Modal>
 </template>

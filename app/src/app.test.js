@@ -177,6 +177,61 @@ describe('library view', () => {
   });
 });
 
+describe('keyboard, touch and screen readers', () => {
+  const card = (w, t) => w.findAll('.card').find((c) => c.text().includes(t));
+
+  it('each card has a title button that opens the entry as a named dialog; Escape closes it', async () => {
+    const w = await mountApp();
+    const btn = card(w, 'Steppenwolf').find('button.card-open');
+    expect(btn.text()).toContain('Steppenwolf');
+    await btn.trigger('click');
+    const dlg = w.find('.overlay.open [role=dialog]');
+    expect(dlg.attributes('aria-modal')).toBe('true');
+    await flushPromises();
+    expect(dlg.find('h2').attributes('id')).toBe(dlg.attributes('aria-labelledby'));
+    await dlg.trigger('keydown', { key: 'Escape' });
+    expect(w.find('.overlay.open').exists()).toBe(false);
+  });
+
+  it('type tags are focusable checkboxes named with their count', async () => {
+    const w = await mountApp();
+    const input = w.find('.tag-check.film input');
+    expect(input.classes()).toContain('visually-hidden');
+    expect(input.attributes('aria-label')).toBe('Films, 1');
+    // Space on a focused checkbox arrives as a click on the input.
+    await input.trigger('click');
+    expect(titles(w)).toEqual(['Paprika']);
+  });
+
+  it('stars read as text, and the rating picker is buttons', async () => {
+    const w = await mountApp();
+    expect(card(w, 'Paprika').find('.stars').attributes('aria-label')).toMatch(/^(Rated \d of 5|Not rated)$/);
+    await card(w, 'Paprika').trigger('click');
+    const stars = w.findAll('.star-pick button');
+    expect(stars.map((b) => b.attributes('aria-label'))).toEqual(['1 of 5', '2 of 5', '3 of 5', '4 of 5', '5 of 5']);
+    await stars[1].trigger('click');
+    expect(w.findAll('.star-pick button.on')).toHaveLength(2);
+    expect(stars[1].attributes('aria-pressed')).toBe('true');
+  });
+
+  it('Delete in the dialog removes the entry and closes it (phones have no hover ×)', async () => {
+    const w = await mountApp();
+    await card(w, 'Steppenwolf').trigger('click');
+    await w.findAll('.form-actions button').find((b) => b.text() === 'Delete').trigger('click');
+    expect(confirm).toHaveBeenCalled();
+    expect(w.findAll('.card')).toHaveLength(3);
+    expect(w.find('.overlay.open').exists()).toBe(false);
+  });
+
+  it('Escape closes the account menu', async () => {
+    const w = await mountApp();
+    await w.find('.account-menu .icon-btn').trigger('click');
+    expect(w.find('.account-menu .popover').classes()).toContain('open');
+    await w.find('.account-menu').trigger('keydown', { key: 'Escape' });
+    expect(w.find('.account-menu .popover').classes()).not.toContain('open');
+  });
+});
+
 describe('sticky header on scroll', () => {
   const scrollTo = async (y) => {
     window.scrollY = y;
@@ -443,6 +498,11 @@ describe('sharing', () => {
     expect(w.find('.add-new-btn').exists()).toBe(false);
     expect(w.text()).not.toContain('Sign in with Google');
     expect(w.find('.hi-note').exists()).toBe(false);
+    // No dialog in a shared view: a tap shows what hover shows.
+    const c = w.findAll('.card').find((x) => x.find('.hover-info').exists());
+    await c.trigger('click');
+    expect(c.classes()).toContain('peek');
+    expect(w.find('.overlay.open').exists()).toBe(false);
     window.history.replaceState(null, '', '/');
   });
 
@@ -463,7 +523,7 @@ describe('add and edit', () => {
     await w.findAll('.medium-toggle button').find((b) => b.text() === 'Film').trigger('click');
     const manual = w.findAll('.form-panel')[0];
     await manual.find('.title-row input').setValue('Perfect Blue');
-    await manual.findAll('.star-pick span')[3].trigger('click');
+    await manual.findAll('.star-pick button')[3].trigger('click');
     await manual.findAll('.form-actions button').find((b) => b.text() === 'Save').trigger('click');
     await flushPromises();
     expect(w.findAll('.card')).toHaveLength(5);
@@ -762,7 +822,7 @@ describe('wishlist (#47)', () => {
     expect(w.find('.form-panel h2').text()).toBe('Done? Rate it');
     expect(w.find('input[type=date]').element.value).toBe(todayLocalIso());
     expect(w.find('.wish-check').exists()).toBe(false);
-    await w.findAll('.star-pick span')[4].trigger('click');
+    await w.findAll('.star-pick button')[4].trigger('click');
     await saveBtn(w).trigger('click');
     await flushPromises();
     expect(adapter.calls.at(-1)[1]).toMatchObject({ id: 'e_1_wish', status: 'consumed', rating: 5, dateConsumed: todayLocalIso(), insights: 'Sam recommended it', coverUrl: WISH.coverUrl, dateAdded: WISH.dateAdded });

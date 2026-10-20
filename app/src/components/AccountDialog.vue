@@ -3,6 +3,7 @@
 // policy, or delete the account. Deletion is immediate and can't be undone.
 import { ref, watch } from 'vue';
 import { exportAccount, deleteAccount } from '../state.js';
+import Modal from './Modal.vue';
 
 const open = defineModel('open', { type: Boolean, default: false });
 const status = ref('');
@@ -46,28 +47,26 @@ async function remove() {
 </script>
 
 <template>
-  <div class="overlay" :class="{ open }" @click.self="open = false">
-    <div class="form-panel">
-      <h2>Your data</h2>
-      <p class="form-sub">What's stored and who can see it is in the <a href="privacy.html" target="_blank" rel="noopener">privacy policy</a>.</p>
-      <div class="field">
-        <label>Download</label>
-        <p class="form-sub">One JSON file with your account details, every entry including notes, your sharing settings and links, and invites you created.</p>
-        <button class="btn small" :disabled="busy" @click="download">Download my data</button>
-      </div>
-      <div class="field account-delete" style="margin-top:16px;border-top:1px solid var(--line);padding-top:16px;">
-        <label>Delete account</label>
-        <p class="form-sub">Removes your account, your library and your share links right away. This can't be undone, so download your data first.</p>
-        <button v-if="!confirming" class="btn small ghost" :disabled="busy" @click="confirming = true">Delete my account…</button>
-        <form v-else @submit.prevent="remove">
-          <input v-model="confirmText" class="mono" placeholder="Type delete to confirm" aria-label="Type delete to confirm" autocomplete="off">
-          <button class="btn small danger" type="submit" style="margin-top:8px;" :disabled="busy || confirmText.trim().toLowerCase() !== 'delete'">Delete everything</button>
-        </form>
-      </div>
-      <div class="status">{{ status }}</div>
-      <div class="form-actions">
-        <button class="btn ghost" @click="open = false">Close</button>
-      </div>
+  <Modal v-model:open="open">
+    <h2>Your data</h2>
+    <p class="form-sub">What's stored and who can see it is in the <a href="privacy.html" target="_blank" rel="noopener">privacy policy</a>.</p>
+    <div class="field">
+      <label>Download</label>
+      <p class="form-sub">One JSON file with your account details, every entry including notes, your sharing settings and links, and invites you created.</p>
+      <button class="btn small" :disabled="busy" @click="download">Download my data</button>
     </div>
-  </div>
+    <div class="field account-delete" style="margin-top:16px;border-top:1px solid var(--line);padding-top:16px;">
+      <label>Delete account</label>
+      <p class="form-sub">Removes your account, your library and your share links right away. This can't be undone, so download your data first.</p>
+      <button v-if="!confirming" class="btn small ghost" :disabled="busy" @click="confirming = true">Delete my account…</button>
+      <form v-else @submit.prevent="remove">
+        <input v-model="confirmText" class="mono" placeholder="Type delete to confirm" aria-label="Type delete to confirm" autocomplete="off">
+        <button class="btn small danger" type="submit" style="margin-top:8px;" :disabled="busy || confirmText.trim().toLowerCase() !== 'delete'">Delete everything</button>
+      </form>
+    </div>
+    <div class="status">{{ status }}</div>
+    <div class="form-actions">
+      <button class="btn ghost" @click="open = false">Close</button>
+    </div>
+  </Modal>
 </template>

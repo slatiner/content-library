@@ -41,7 +41,7 @@ function onSearchEnter(e) {
       </select>
       <div class="medium-tags">
         <label v-for="m in MEDIA" :key="m" class="tag-check" :class="[m, { active: filters.mediums.includes(m) }]" @click.prevent="toggleMedium(m)">
-          <input type="checkbox" :checked="filters.mediums.includes(m)">
+          <input type="checkbox" class="visually-hidden" :checked="filters.mediums.includes(m)" :aria-label="`${MEDIUM_TAG_LABEL[m]}, ${counts[m] ?? 0}`">
           <MediumIcon :medium="m" class="tag-icon" /><span class="tag-label">{{ MEDIUM_TAG_LABEL[m] }}</span>
           <span class="tag-count mono">{{ counts[m] ?? 0 }}</span>
         </label>

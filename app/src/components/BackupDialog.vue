@@ -1,6 +1,7 @@
 <script setup>
 import { ref, watch } from 'vue';
 import { entries, mergeEntries, replaceEntries } from '../state.js';
+import Modal from './Modal.vue';
 
 const open = defineModel('open', { type: Boolean, default: false });
 const exportText = ref('');
@@ -46,27 +47,25 @@ async function replace() {
 </script>
 
 <template>
-  <div class="overlay" :class="{ open }" @click.self="open = false">
-    <div class="form-panel">
-      <h2>Export / Import JSON</h2>
-      <p class="form-sub">Your library is saved automatically. Use this as a manual backup, or to move data between machines, browsers or accounts.</p>
-      <div class="field">
-        <label>Current data — copy this</label>
-        <textarea ref="exportEl" :value="exportText" class="mono" readonly style="min-height:110px;font-size:11px;"></textarea>
-      </div>
-      <button class="btn small" @click="copy">Copy to clipboard</button>
-      <div class="field" style="margin-top:20px;border-top:1px solid var(--line);padding-top:16px;">
-        <label>Restore from a backup — paste JSON here</label>
-        <textarea v-model="importText" class="mono" placeholder="Paste a previously copied backup here" style="min-height:90px;font-size:11px;"></textarea>
-      </div>
-      <div style="display:flex;gap:8px;">
-        <button class="btn small ghost" @click="merge">Merge (add missing only)</button>
-        <button class="btn small danger" @click="replace">Replace all</button>
-      </div>
-      <div class="status">{{ status }}</div>
-      <div class="form-actions">
-        <button class="btn ghost" @click="open = false">Close</button>
-      </div>
+  <Modal v-model:open="open">
+    <h2>Export / Import JSON</h2>
+    <p class="form-sub">Your library is saved automatically. Use this as a manual backup, or to move data between machines, browsers or accounts.</p>
+    <div class="field">
+      <label>Current data — copy this</label>
+      <textarea ref="exportEl" :value="exportText" class="mono" readonly style="min-height:110px;font-size:11px;"></textarea>
     </div>
-  </div>
+    <button class="btn small" @click="copy">Copy to clipboard</button>
+    <div class="field" style="margin-top:20px;border-top:1px solid var(--line);padding-top:16px;">
+      <label>Restore from a backup — paste JSON here</label>
+      <textarea v-model="importText" class="mono" placeholder="Paste a previously copied backup here" style="min-height:90px;font-size:11px;"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn small ghost" @click="merge">Merge (add missing only)</button>
+      <button class="btn small danger" @click="replace">Replace all</button>
+    </div>
+    <div class="status">{{ status }}</div>
+    <div class="form-actions">
+      <button class="btn ghost" @click="open = false">Close</button>
+    </div>
+  </Modal>
 </template>

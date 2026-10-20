@@ -1,10 +1,11 @@
 <script setup>
 import { computed, nextTick, reactive, ref } from 'vue';
-import { entries, connection, saveEntry, ensureGroqKey, forgetGroqKey, setGroqKey, shareLink, shareUrl, list } from '../state.js';
+import { entries, connection, saveEntry, deleteEntry, ensureGroqKey, forgetGroqKey, setGroqKey, shareLink, shareUrl, list } from '../state.js';
 import { MEDIA, DONE_VERB, ID_FIELDS, LEVELS, LEVEL_LABEL, emptyForm, linkKey, personLine, uid, asWish, isWish, todayLocalIso } from '../lib/entries.js';
 import { lookupTitle, applyWikidataDetails } from '../lib/lookup.js';
 import { llmJson, ADD_TASK, fillFormFromExtraction } from '../lib/llm.js';
 import Stars from './Stars.vue';
+import Modal from './Modal.vue';
 
 const isOpen = ref(false);
 const editingId = ref(null);
@@ -69,6 +70,13 @@ function open(entry, opts = {}) {
   if (!entry) nextTick(() => aiInputEl.value && aiInputEl.value.focus());
 }
 function close() { isOpen.value = false; }
+// Also on the card, but that × needs hover, which phones don't have.
+function remove() {
+  const id = editingId.value;
+  deleteEntry(id);
+  if (!entries.value.some((e) => e.id === id)) close();
+}
+const isHttp = (u) => /^https?:\/\//i.test((u || '').trim());
 // Open on "Describe it" with text already typed, and send it.
 function describe(text) {
   open(null);
@@ -280,130 +288,131 @@ function saveKey() {
 </script>
 
 <template>
-  <div class="overlay" :class="{ open: isOpen }" @click.self="close">
-    <div class="form-panel">
-      <h2>{{ heading }}</h2>
+  <Modal v-model:open="isOpen">
+    <h2>{{ heading }}</h2>
 
-      <div v-show="withTabs" class="view-tabs" style="display:flex;">
-        <button type="button" :class="{ active: view === 'ai' }" @click="onTab('ai')">Describe it</button>
-        <button type="button" :class="{ active: view === 'manual' }" @click="onTab('manual')">Manual</button>
-      </div>
+    <div v-show="withTabs" class="view-tabs" style="display:flex;">
+      <button type="button" :class="{ active: view === 'ai' }" @click="onTab('ai')">Describe it</button>
+      <button type="button" :class="{ active: view === 'manual' }" @click="onTab('manual')">Manual</button>
+    </div>
 
-      <div v-show="view === 'ai'">
-        <p v-if="wish" class="form-sub">Say what you want to watch, read or listen to. For example: "Perfect Blue, Sam recommended it".</p>
-        <p v-else class="form-sub">Just say what you watched, read or listened to. For example: "Perfect Blue, solid 4, watched two weeks ago, note: anime night at home".</p>
+    <div v-show="view === 'ai'">
+      <p v-if="wish" class="form-sub">Say what you want to watch, read or listen to. For example: "Perfect Blue, Sam recommended it".</p>
+      <p v-else class="form-sub">Just say what you watched, read or listened to. For example: "Perfect Blue, solid 4, watched two weeks ago, note: anime night at home".</p>
 
-        <div v-if="keyBox" class="suggest-box">
-          <div class="suggest-head">Groq API key needed</div>
-          <p class="form-sub" style="margin-bottom:8px;">Paste it here; it's stored only in this browser. (In file mode it can also come from <code>secrets.json</code> in your data folder.)</p>
-          <div class="title-row">
-            <div class="field"><input v-model="keyInput" type="password" placeholder="gsk_…" autocomplete="off"></div>
-            <button type="button" class="btn small" @click="saveKey">Save key</button>
-          </div>
-        </div>
-
-        <textarea id="aiInput" ref="aiInputEl" v-model="aiText" :placeholder="wish ? 'What do you want to get to?' : 'What did you just finish?'" @keydown="onAiKeydown" @input="onAiInput"></textarea>
-        <div class="status">{{ aiStatus }}</div>
-
-        <div v-if="aiStage === 'choices' && aiChoices" class="suggest-box">
-          <div class="suggest-head">{{ aiChoices.uncertain
-            ? "Couldn't tell which of these is the right kind of item. Which one did you mean?"
-            : 'More than one match. Which one did you mean?' }}</div>
-          <button v-for="c in aiChoices.choices" :key="c.id" type="button" class="suggest-item" @click="pickAiChoice(c)">
-            <div class="s-title">{{ c.label }}</div>
-            <div class="s-desc">{{ c.description || 'No description available' }}</div>
-          </button>
-          <button type="button" class="suggest-skip" @click="aiChoiceNone">None of these, use what I typed</button>
-        </div>
-
-        <div v-if="preview" class="ai-preview">
-          <div class="pv-row">
-            <div class="pv-cover"><img v-if="preview.coverUrl" :src="preview.coverUrl" alt=""><div v-else class="pv-ph" :class="preview.medium"></div></div>
-            <div class="pv-body">
-              <span class="pv-chip" :class="preview.medium">{{ preview.medium }}</span>
-              <div class="pv-title">{{ preview.title }}<span v-if="preview.year" class="yr"> ({{ preview.year }})</span></div>
-              <div v-if="personLine(preview)" class="pv-meta">{{ personLine(preview) }}</div>
-              <div v-if="wish" class="pv-meta">On your wishlist</div>
-              <template v-else>
-                <Stars :n="preview.rating" style="margin-top:4px;" />
-                <div class="pv-meta">{{ preview.dateConsumed ? `${DONE_VERB[preview.medium] || 'Finished'} ${preview.dateConsumed}` : 'No date' }}</div>
-              </template>
-              <div v-if="preview.insights" class="pv-note">{{ preview.insights }}</div>
-            </div>
-          </div>
-          <div class="pv-actions">
-            <span class="pv-hint">Press Enter to add</span>
-            <button type="button" class="btn ghost" @click="close">Cancel</button>
-            <button type="button" class="btn ghost" @click="showView('manual', true)">Edit details</button>
-            <button type="button" class="btn" :disabled="addBusy" @click="aiAdd">{{ wish ? 'Add to wishlist' : 'Add to library' }}</button>
-          </div>
-        </div>
-
-        <div v-if="aiStage === 'input'" class="form-actions">
-          <button type="button" class="btn ghost" @click="close">Cancel</button>
-          <button type="button" class="btn" :disabled="sendBusy" @click="aiSubmit">Send</button>
-        </div>
-      </div>
-
-      <div v-show="view === 'manual'">
-        <p class="form-sub">Type a title, then hit "Look up" to pull director/cast/year/poster automatically.</p>
-        <div class="medium-toggle">
-          <button v-for="x in MEDIA" :key="x" :data-m="x" :class="{ active: form.medium === x }" @click="form.medium = x">{{ x[0].toUpperCase() + x.slice(1) }}</button>
-        </div>
-
+      <div v-if="keyBox" class="suggest-box">
+        <div class="suggest-head">Groq API key needed</div>
+        <p class="form-sub" style="margin-bottom:8px;">Paste it here; it's stored only in this browser. (In file mode it can also come from <code>secrets.json</code> in your data folder.)</p>
         <div class="title-row">
-          <div class="field"><label>Title</label><input v-model="form.title" type="text"></div>
-          <button type="button" class="btn small" :disabled="lookupBusy" @click="manualLookup">Look up</button>
+          <div class="field"><input v-model="keyInput" type="password" placeholder="gsk_…" autocomplete="off"></div>
+          <button type="button" class="btn small" @click="saveKey">Save key</button>
         </div>
+      </div>
 
-        <div v-if="suggest" class="suggest-box">
-          <div class="suggest-head">Multiple matches — which one is it?</div>
-          <button v-for="c in suggest.choices" :key="c.id" class="suggest-item" @click="pickSuggestion(c)">
-            <div class="s-title">{{ c.label }}</div>
-            <div class="s-desc">{{ c.description || 'No description available' }}</div>
-          </button>
-          <button class="suggest-skip" @click="skipSuggestions">None of these</button>
-        </div>
+      <textarea id="aiInput" ref="aiInputEl" v-model="aiText" :placeholder="wish ? 'What do you want to get to?' : 'What did you just finish?'" @keydown="onAiKeydown" @input="onAiInput"></textarea>
+      <div class="status">{{ aiStatus }}</div>
 
-        <div class="row-two">
-          <div class="field"><label>{{ labels.year }}</label><input v-model="form.year" type="text" placeholder="e.g. 2019"></div>
-          <div v-if="m === 'book' || m === 'music'" class="field"><label>{{ labels.author }}</label><input v-model="form.author" type="text"></div>
-        </div>
+      <div v-if="aiStage === 'choices' && aiChoices" class="suggest-box">
+        <div class="suggest-head">{{ aiChoices.uncertain
+          ? "Couldn't tell which of these is the right kind of item. Which one did you mean?"
+          : 'More than one match. Which one did you mean?' }}</div>
+        <button v-for="c in aiChoices.choices" :key="c.id" type="button" class="suggest-item" @click="pickAiChoice(c)">
+          <div class="s-title">{{ c.label }}</div>
+          <div class="s-desc">{{ c.description || 'No description available' }}</div>
+        </button>
+        <button type="button" class="suggest-skip" @click="aiChoiceNone">None of these, use what I typed</button>
+      </div>
 
-        <div v-if="m === 'film' || m === 'series'" class="field"><label>{{ labels.director }}</label><input v-model="form.director" type="text"></div>
-        <div v-if="m !== 'book'" class="field"><label>{{ labels.cast }}</label><input v-model="form.cast" type="text" placeholder="comma-separated"></div>
-        <div v-if="m === 'film' || m === 'series'" class="field"><label>Streaming service / watched on</label><input v-model="form.platform" type="text" placeholder="e.g. Netflix, cinema, Mubi"></div>
-        <div v-if="m === 'music'" class="field"><label>Listen link</label><input v-model="form.streamUrl" type="text" placeholder="Spotify, YouTube, SoundCloud, Mixcloud…"></div>
-
-        <label v-if="!doneMode" class="wish-check"><input type="checkbox" :checked="wish" @change="form.status = $event.target.checked ? 'wishlist' : 'consumed'"> On my wishlist</label>
-
-        <div v-if="!wish" class="row-two">
-          <div class="field"><label>Date {{ DONE_VERB[m].toLowerCase() }}</label><input v-model="form.dateConsumed" type="date"></div>
-          <div class="field">
-            <label>Rating</label>
-            <div class="star-pick"><span v-for="i in 5" :key="i" :class="{ on: i <= form.rating }" @click="form.rating = i">★</span></div>
+      <div v-if="preview" class="ai-preview">
+        <div class="pv-row">
+          <div class="pv-cover"><img v-if="preview.coverUrl" :src="preview.coverUrl" alt=""><div v-else class="pv-ph" :class="preview.medium"></div></div>
+          <div class="pv-body">
+            <span class="pv-chip" :class="preview.medium">{{ preview.medium }}</span>
+            <div class="pv-title">{{ preview.title }}<span v-if="preview.year" class="yr"> ({{ preview.year }})</span></div>
+            <div v-if="personLine(preview)" class="pv-meta">{{ personLine(preview) }}</div>
+            <div v-if="wish" class="pv-meta">On your wishlist</div>
+            <template v-else>
+              <Stars :n="preview.rating" style="margin-top:4px;" />
+              <div class="pv-meta">{{ preview.dateConsumed ? `${DONE_VERB[preview.medium] || 'Finished'} ${preview.dateConsumed}` : 'No date' }}</div>
+            </template>
+            <div v-if="preview.insights" class="pv-note">{{ preview.insights }}</div>
           </div>
         </div>
-
-        <div class="field"><label>Cover URL</label><input v-model="form.coverUrl" type="text" placeholder="Auto-filled by Look up, or paste your own"></div>
-        <div class="field"><label>Insights</label><textarea v-model="form.insights" :placeholder="wish ? 'Why you want it, who recommended it.' : 'Notes, reactions, quotes, whatever\'s worth keeping.'"></textarea></div>
-
-        <p v-if="online && wish" class="form-sub">Only you can see your wishlist.</p>
-        <div v-else-if="online" class="field visibility-field">
-          <label>Who can see this <span class="label-note">(notes stay private)</span></label>
-          <select v-model="form.visibility">
-            <option value="">{{ defaultLabel }}</option>
-            <option v-for="l in LEVELS" :key="l" :value="l">{{ LEVEL_LABEL[l] }}</option>
-          </select>
-          <button v-if="editingId" class="btn ghost small" style="margin-top:8px;" @click="copyShareLink">Copy share link</button>
+        <div class="pv-actions">
+          <span class="pv-hint">Press Enter to add</span>
+          <button type="button" class="btn ghost" @click="close">Cancel</button>
+          <button type="button" class="btn ghost" @click="showView('manual', true)">Edit details</button>
+          <button type="button" class="btn" :disabled="addBusy" @click="aiAdd">{{ wish ? 'Add to wishlist' : 'Add to library' }}</button>
         </div>
+      </div>
 
-        <div class="status">{{ formStatus }}</div>
-        <div class="form-actions">
-          <button class="btn ghost" @click="close">Cancel</button>
-          <button class="btn" :disabled="saving" @click="save">Save</button>
-        </div>
+      <div v-if="aiStage === 'input'" class="form-actions">
+        <button type="button" class="btn ghost" @click="close">Cancel</button>
+        <button type="button" class="btn" :disabled="sendBusy" @click="aiSubmit">Send</button>
       </div>
     </div>
-  </div>
+
+    <div v-show="view === 'manual'">
+      <p class="form-sub">Type a title, then hit "Look up" to pull director/cast/year/poster automatically.</p>
+      <div class="medium-toggle">
+        <button v-for="x in MEDIA" :key="x" :data-m="x" :class="{ active: form.medium === x }" @click="form.medium = x">{{ x[0].toUpperCase() + x.slice(1) }}</button>
+      </div>
+
+      <div class="title-row">
+        <div class="field"><label>Title</label><input v-model="form.title" type="text"></div>
+        <button type="button" class="btn small" :disabled="lookupBusy" @click="manualLookup">Look up</button>
+      </div>
+
+      <div v-if="suggest" class="suggest-box">
+        <div class="suggest-head">Multiple matches — which one is it?</div>
+        <button v-for="c in suggest.choices" :key="c.id" class="suggest-item" @click="pickSuggestion(c)">
+          <div class="s-title">{{ c.label }}</div>
+          <div class="s-desc">{{ c.description || 'No description available' }}</div>
+        </button>
+        <button class="suggest-skip" @click="skipSuggestions">None of these</button>
+      </div>
+
+      <div class="row-two">
+        <div class="field"><label>{{ labels.year }}</label><input v-model="form.year" type="text" placeholder="e.g. 2019"></div>
+        <div v-if="m === 'book' || m === 'music'" class="field"><label>{{ labels.author }}</label><input v-model="form.author" type="text"></div>
+      </div>
+
+      <div v-if="m === 'film' || m === 'series'" class="field"><label>{{ labels.director }}</label><input v-model="form.director" type="text"></div>
+      <div v-if="m !== 'book'" class="field"><label>{{ labels.cast }}</label><input v-model="form.cast" type="text" placeholder="comma-separated"></div>
+      <div v-if="m === 'film' || m === 'series'" class="field"><label>Streaming service / watched on</label><input v-model="form.platform" type="text" placeholder="e.g. Netflix, cinema, Mubi"></div>
+      <div v-if="m === 'music'" class="field"><label>Listen link</label><input v-model="form.streamUrl" type="text" placeholder="Spotify, YouTube, SoundCloud, Mixcloud…"><a v-if="isHttp(form.streamUrl)" class="field-link" :href="form.streamUrl.trim()" target="_blank" rel="noopener noreferrer">Open link ↗</a></div>
+
+      <label v-if="!doneMode" class="wish-check"><input type="checkbox" :checked="wish" @change="form.status = $event.target.checked ? 'wishlist' : 'consumed'"> On my wishlist</label>
+
+      <div v-if="!wish" class="row-two">
+        <div class="field"><label>Date {{ DONE_VERB[m].toLowerCase() }}</label><input v-model="form.dateConsumed" type="date"></div>
+        <div class="field">
+          <label id="entry-rating">Rating</label>
+          <div class="star-pick" role="group" aria-labelledby="entry-rating">
+            <button v-for="i in 5" :key="i" type="button" :class="{ on: i <= form.rating }" :aria-label="`${i} of 5`" :aria-pressed="form.rating === i" @click="form.rating = i">{{ i <= form.rating ? '★' : '☆' }}</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="field"><label>Cover URL</label><input v-model="form.coverUrl" type="text" placeholder="Auto-filled by Look up, or paste your own"></div>
+      <div class="field"><label>Insights</label><textarea v-model="form.insights" :placeholder="wish ? 'Why you want it, who recommended it.' : 'Notes, reactions, quotes, whatever\'s worth keeping.'"></textarea></div>
+
+      <p v-if="online && wish" class="form-sub">Only you can see your wishlist.</p>
+      <div v-else-if="online" class="field visibility-field">
+        <label>Who can see this <span class="label-note">(notes stay private)</span></label>
+        <select v-model="form.visibility">
+          <option value="">{{ defaultLabel }}</option>
+          <option v-for="l in LEVELS" :key="l" :value="l">{{ LEVEL_LABEL[l] }}</option>
+        </select>
+        <button v-if="editingId" class="btn ghost small" style="margin-top:8px;" @click="copyShareLink">Copy share link</button>
+      </div>
+
+      <div class="status">{{ formStatus }}</div>
+      <div class="form-actions">
+        <button v-if="editingId && !doneMode" type="button" class="btn ghost danger push-left" @click="remove">Delete</button>
+        <button class="btn ghost" @click="close">Cancel</button>
+        <button class="btn" :disabled="saving" @click="save">Save</button>
+      </div>
+    </div>
+  </Modal>
 </template>
