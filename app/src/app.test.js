@@ -108,11 +108,15 @@ beforeEach(() => {
   groqAnswer = null;
 });
 
+const tagCounts = (w) => w.findAll('.tag-check .tag-count').map((c) => c.text());
+
 describe('library view', () => {
   it('shows every entry and the counts', async () => {
     const w = await mountApp();
     expect(w.findAll('.card')).toHaveLength(4);
-    expect(w.find('.counts').text()).toBe('1 books1 films1 series1 music');
+    expect(w.find('header .counts').exists()).toBe(false);
+    expect(tagCounts(w)).toEqual(['1', '1', '1', '1']);
+    expect(w.findAll('.tag-check .tag-icon')).toHaveLength(4);
     // Default sort: recently consumed first.
     expect(titles(w)).toEqual(['In Rainbows', 'Paprika', 'Silo', 'Steppenwolf']);
   });
@@ -677,12 +681,12 @@ describe('wishlist (#47)', () => {
     const w = await mountApp(WITH_WISHES);
     expect(w.find('.filter-row .list-toggle').exists()).toBe(true);
     expect(titles(w)).toEqual(['In Rainbows', 'Paprika', 'Silo', 'Steppenwolf']);
-    expect(w.find('.counts').text()).toBe('1 books1 films1 series1 music');
+    expect(tagCounts(w)).toEqual(['1', '1', '1', '1']);
     await w.find('.tag-check.film').trigger('click');
     await toList(w, 'Wishlist');
     // Newest wish first; the consumed list's type filter stays behind.
     expect(titles(w)).toEqual(['Perfect Blue', 'Akira']);
-    expect(w.find('.counts').text()).toBe('0 books2 films0 series0 music');
+    expect(tagCounts(w)).toEqual(['0', '2', '0', '0']);
     expect(w.find('.card .stars').exists()).toBe(false);
     expect(w.findAll('.card .done')).toHaveLength(2);
     expect(w.findAll('.filter-bar option').map((o) => o.element.value)).toEqual(['dateAdded_desc', 'year_desc', 'title_asc']);

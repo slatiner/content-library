@@ -23,9 +23,6 @@ header.top h1.logo{line-height:0;align-self:center;}
 header.top h1.logo svg{height:36px;width:auto;display:block;}
 header.top h1.logo text{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-size:30px;font-weight:500;}
 header.top .header-right{display:flex;align-items:center;gap:16px;}
-header.top .counts{font-size:12px;color:var(--ink-soft);}
-header.top .counts span{margin-left:10px;}
-header.top .counts b{color:var(--ink);}
 .add-new-btn{padding:8px 16px;border:none;border-radius:var(--radius-lg);background:var(--ink);color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;}
 .add-new-btn:hover{opacity:0.85;}
 
@@ -59,6 +56,9 @@ select{padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius)
 .icon-btn:hover{color:var(--ink);background:rgba(0,0,0,0.05);}
 .tag-check{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);font-size:12px;font-weight:500;cursor:pointer;user-select:none;color:var(--ink-soft);transition:background .12s,border-color .12s,color .12s;}
 .tag-check input{display:none;}
+/* Each type's count sits after its name; on mobile the icon replaces the name. */
+.tag-check .tag-icon{display:none;width:14px;height:14px;flex:none;}
+.tag-check .tag-count{font-size:11px;opacity:0.75;}
 .tag-check.book.active{background:var(--book);border-color:var(--book);color:#fff;}
 .tag-check.film.active{background:var(--film);border-color:var(--film);color:#fff;}
 .tag-check.series.active{background:var(--series);border-color:var(--series);color:#fff;}
@@ -90,6 +90,7 @@ select{padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius)
 .card .cover .ph.series{background:var(--series);}
 .card .cover .ph.music{background:var(--music);}
 .shield{position:absolute;top:0;right:12px;padding:7px 9px 12px;line-height:1;clip-path:polygon(0 0,100% 0,100% 76%,50% 100%,0 76%);display:flex;align-items:flex-start;justify-content:center;z-index:2;}
+.shield{color:#fff;}
 .shield svg{width:15px;height:15px;display:block;}
 .shield.book{background:var(--book);}
 .shield.film{background:var(--film);}
@@ -210,9 +211,7 @@ header.top .account-menu{align-self:center;}
   header.top h1{order:1;margin-right:auto;}
   header.top .account-menu{order:2;}
   header.top::after{content:'';order:4;flex-basis:100%;}
-  header.top .counts{order:5;flex:1 1 auto;}
-  header.top .counts span:first-child{margin-left:0;}
-  header.top .add-new-btn{order:6;}
+  header.top .add-new-btn{order:6;margin-left:auto;}
   /* Search and the Consumed / Wishlist toggle share the first line; the ::after breaks the row. */
   .filter-row input[type=text]{flex:1 1 0;min-width:0;max-width:none;}
   .filter-row .list-toggle{margin-left:0;}
@@ -221,7 +220,9 @@ header.top .account-menu{align-self:center;}
   .filter-row:not(:has(.list-toggle)) input[type=text]{flex-basis:100%;}
   /* Type tags and sort share one line: compact tags, the select takes the rest. */
   .filter-row .medium-tags{flex:0 1 auto;flex-wrap:nowrap;gap:4px;order:1;}
-  .filter-row .medium-tags .tag-check{padding:6px 8px;font-size:11px;}
+  .filter-row .medium-tags .tag-check{padding:6px 8px;font-size:11px;gap:4px;}
+  .tag-check .tag-icon{display:block;}
+  .tag-check .tag-label{display:none;}
   .filter-row select{flex:1 1 0;min-width:0;order:2;}
   .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
 }

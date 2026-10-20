@@ -2,9 +2,11 @@
 import { computed } from 'vue';
 import { filters, ask, askLibrary, clearAsk, list, setList } from '../state.js';
 import { MEDIA, MEDIUM_TAG_LABEL, SORT_ON_WISHLIST } from '../lib/entries.js';
+import MediumIcon from './MediumIcon.vue';
 
 // withLists: the Consumed / Wishlist toggle (#47); a shared view has no wishlist.
-defineProps({ withLists: { type: Boolean, default: false } });
+// counts: entries per medium in the current list, shown on each type's tag.
+defineProps({ withLists: { type: Boolean, default: false }, counts: { type: Object, default: () => ({}) } });
 
 const SORTS = [
   ['dateConsumed_desc', 'Recently finished'],
@@ -39,7 +41,9 @@ function onSearchEnter(e) {
       </select>
       <div class="medium-tags">
         <label v-for="m in MEDIA" :key="m" class="tag-check" :class="[m, { active: filters.mediums.includes(m) }]" @click.prevent="toggleMedium(m)">
-          <input type="checkbox" :checked="filters.mediums.includes(m)">{{ MEDIUM_TAG_LABEL[m] }}
+          <input type="checkbox" :checked="filters.mediums.includes(m)">
+          <MediumIcon :medium="m" class="tag-icon" /><span class="tag-label">{{ MEDIUM_TAG_LABEL[m] }}</span>
+          <span class="tag-count mono">{{ counts[m] ?? 0 }}</span>
         </label>
       </div>
       <div v-if="withLists" class="list-toggle" role="tablist">

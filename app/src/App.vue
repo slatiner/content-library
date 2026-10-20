@@ -12,7 +12,7 @@ import InviteDialog from './components/InviteDialog.vue';
 import SharingDialog from './components/SharingDialog.vue';
 import AccountDialog from './components/AccountDialog.vue';
 
-// Consumed or Wishlist (#47): the counts and grid show the current list only.
+// Consumed or Wishlist (#47): the filter counts and grid show the current list only.
 const listed = computed(() => entries.value.filter(inList(list.value)));
 const counts = computed(() => countByMedium(listed.value));
 const visible = computed(() => filterAndSort(listed.value, filters, ask.criteria));
@@ -90,9 +90,6 @@ onMounted(() => (shareToken ? openShared(shareToken) : initStorage()));
         </svg>
       </h1>
       <div class="header-right">
-        <div class="counts mono">
-          <span><b>{{ counts.book }}</b> books</span><span><b>{{ counts.film }}</b> films</span><span><b>{{ counts.series }}</b> series</span><span><b>{{ counts.music }}</b> music</span>
-        </div>
         <button v-if="showMain" class="add-new-btn" @click="dialog.open(null)">+ Add new</button>
       </div>
       <SettingsMenu v-if="showMain" :can-change-folder="isFile" :can-share="isOnline" :can-invite="!!connection.profile?.isAdmin"
@@ -148,7 +145,7 @@ onMounted(() => (shareToken ? openShared(shareToken) : initStorage()));
     </form>
 
     <div v-if="showShared && entries.length" class="shared-view">
-      <FilterBar />
+      <FilterBar :counts="counts" />
       <TransitionGroup name="card" tag="div" class="grid">
         <EntryCard v-for="e in visible" :key="e.id" :entry="e" readonly />
       </TransitionGroup>
@@ -156,7 +153,7 @@ onMounted(() => (shareToken ? openShared(shareToken) : initStorage()));
     </div>
 
     <div v-if="showMain">
-      <FilterBar with-lists />
+      <FilterBar with-lists :counts="counts" />
       <TransitionGroup name="card" tag="div" class="grid">
         <EntryCard v-for="e in visible" :key="e.id" :entry="e" :level="levelFor(e)" @open="dialog.open(e)" @done="dialog.open(e, { done: true })" @delete="deleteEntry(e.id)" />
       </TransitionGroup>
