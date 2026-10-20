@@ -196,8 +196,8 @@ select{padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius)
 .form-panel:focus{outline:none;}
 .form-actions .push-left{margin-right:auto;}
 
-/* Add / edit form: the entry on top, then Your take, then folded Details. */
-.entry-head{display:flex;gap:14px;align-items:center;margin-bottom:16px;}
+/* Add / edit form: type, title and Look up on top, then the entry, Your take, and folded Details. */
+.entry-head{display:flex;gap:14px;align-items:center;margin:16px 0;}
 .eh-cover{width:72px;aspect-ratio:2/3;flex:none;padding:0;border:0;border-radius:var(--radius);overflow:hidden;background:var(--line);cursor:pointer;}
 .eh-cover img,.eh-cover .pv-ph{width:100%;height:100%;object-fit:cover;display:block;}
 .eh-cover:focus-visible{outline:2px solid var(--ink);outline-offset:2px;}

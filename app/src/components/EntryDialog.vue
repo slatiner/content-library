@@ -19,7 +19,7 @@ const saving = ref(false);
 const suggest = ref(null);     // { choices, uncertain } | null
 const lookupBusy = ref(false);
 // A new manual entry starts with only type, title and Look up; the rest shows
-// once Look up has found or failed (or "fill in by hand"). Details (title, year,
+// once Look up has found or failed (or "fill in by hand"). Details (year,
 // people, cover…) fold away when Look up filled them, and open when it didn't.
 const found = ref(true);
 const detailsOpen = ref(false);
@@ -391,6 +391,25 @@ function saveKey() {
     </div>
 
     <div v-show="view === 'manual'">
+      <div class="medium-toggle">
+        <button v-for="x in MEDIA" :key="x" type="button" :data-m="x" :class="{ active: form.medium === x }" :aria-pressed="form.medium === x" @click="form.medium = x">{{ x[0].toUpperCase() + x.slice(1) }}</button>
+      </div>
+
+      <div class="title-row">
+        <div class="field"><label for="entry-title">Title</label><input id="entry-title" v-model="form.title" type="text" @keydown.enter="onTitleEnter"></div>
+        <button type="button" class="btn small" :disabled="lookupBusy" @click="manualLookup">Look up</button>
+      </div>
+
+      <div v-if="suggest" class="suggest-box">
+        <div class="suggest-head">Multiple matches — which one is it?</div>
+        <button v-for="c in suggest.choices" :key="c.id" type="button" class="suggest-item" @click="pickSuggestion(c)">
+          <div class="s-title">{{ c.label }}</div>
+          <div class="s-desc">{{ c.description || 'No description available' }}</div>
+        </button>
+        <button type="button" class="suggest-skip" @click="skipSuggestions">None of these</button>
+      </div>
+      <p v-if="!found && !suggest" class="form-sub by-hand"><button type="button" class="link-btn" @click="byHand">Or fill it in by hand</button></p>
+
       <!-- The entry itself; the cover opens Details at the cover field. -->
       <div v-show="found" class="entry-head">
         <button type="button" class="eh-cover" title="Change cover" aria-label="Change cover" @click="editCover">
@@ -439,29 +458,10 @@ function saveKey() {
         </div>
       </section>
 
-      <section class="form-section details">
+      <section v-show="found" class="form-section details">
         <button v-if="found" type="button" class="section-toggle" :aria-expanded="detailsOpen" aria-controls="entry-details" @click="detailsOpen = !detailsOpen">Details</button>
-        <div v-show="!found || detailsOpen" id="entry-details">
-          <div class="medium-toggle">
-            <button v-for="x in MEDIA" :key="x" type="button" :data-m="x" :class="{ active: form.medium === x }" :aria-pressed="form.medium === x" @click="form.medium = x">{{ x[0].toUpperCase() + x.slice(1) }}</button>
-          </div>
-
-          <div class="title-row">
-            <div class="field"><label for="entry-title">Title</label><input id="entry-title" v-model="form.title" type="text" @keydown.enter="onTitleEnter"></div>
-            <button type="button" class="btn small" :disabled="lookupBusy" @click="manualLookup">Look up</button>
-          </div>
-
-          <div v-if="suggest" class="suggest-box">
-            <div class="suggest-head">Multiple matches — which one is it?</div>
-            <button v-for="c in suggest.choices" :key="c.id" type="button" class="suggest-item" @click="pickSuggestion(c)">
-              <div class="s-title">{{ c.label }}</div>
-              <div class="s-desc">{{ c.description || 'No description available' }}</div>
-            </button>
-            <button type="button" class="suggest-skip" @click="skipSuggestions">None of these</button>
-          </div>
-          <p v-if="!found && !suggest" class="form-sub by-hand"><button type="button" class="link-btn" @click="byHand">Or fill it in by hand</button></p>
-
-          <div v-show="found">
+        <div v-show="found && detailsOpen" id="entry-details">
+          <div>
             <div class="row-two">
               <div class="field"><label>{{ labels.year }}</label><input v-model="form.year" type="text" placeholder="e.g. 2019"></div>
               <div v-if="m === 'book' || m === 'music'" class="field"><label>{{ labels.author }}</label><input v-model="form.author" type="text"></div>
