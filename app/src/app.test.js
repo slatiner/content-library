@@ -1,7 +1,7 @@
 // Component tests: mount the real app with a fake storage adapter and a fake
 // network, then click through it. Real folder permissions and file writes can't
 // be simulated here.
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { readFileSync } from 'node:fs';
 
@@ -174,6 +174,33 @@ describe('library view', () => {
     await btn.trigger('click');
     await flushPromises();
     expect(w.findAll('.card')).toHaveLength(4);
+  });
+});
+
+describe('sticky header on scroll', () => {
+  const scrollTo = async (y) => {
+    window.scrollY = y;
+    window.dispatchEvent(new Event('scroll'));
+    await flushPromises();
+  };
+  afterEach(() => { window.scrollY = 0; });
+
+  it('compacts the header, tucks the filters going down and brings them back going up', async () => {
+    const w = await mountApp();
+    const header = () => w.find('header.top').classes();
+    const bar = () => w.find('.filter-bar').classes();
+    expect(header()).not.toContain('compact');
+    await scrollTo(30);
+    expect(header()).not.toContain('compact');
+    await scrollTo(300);
+    expect(header()).toContain('compact');
+    expect(bar()).toContain('tucked');
+    await scrollTo(250);
+    expect(bar()).not.toContain('tucked');
+    expect(header()).toContain('compact');
+    await scrollTo(0);
+    expect(header()).not.toContain('compact');
+    w.unmount();
   });
 });
 

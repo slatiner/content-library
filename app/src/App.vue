@@ -11,6 +11,7 @@ import DiagnosticsDialog from './components/DiagnosticsDialog.vue';
 import InviteDialog from './components/InviteDialog.vue';
 import SharingDialog from './components/SharingDialog.vue';
 import AccountDialog from './components/AccountDialog.vue';
+import { useScrollChrome } from './lib/scrollChrome.js';
 
 // Consumed or Wishlist (#47): the filter counts and grid show the current list only.
 const listed = computed(() => entries.value.filter(inList(list.value)));
@@ -36,6 +37,8 @@ const diagOpen = ref(false);
 const inviteOpen = ref(false);
 const sharingOpen = ref(false);
 const accountOpen = ref(false);
+const headerEl = ref(null);
+const { compact, tucked } = useScrollChrome(headerEl);
 
 // An invite link (?invite=CODE) is kept across the Google sign-in round trip,
 // which returns to the page without the query.
@@ -72,7 +75,7 @@ onMounted(() => (shareToken ? openShared(shareToken) : initStorage()));
 
 <template>
   <div class="wrap">
-    <header class="top">
+    <header ref="headerEl" class="top" :class="{ compact }">
       <h1 class="logo">
         <svg viewBox="0 0 276 64" role="img" aria-label="media.json">
           <rect x="8" y="16" width="11" height="40" rx="3" fill="#3f5484"/>
@@ -145,7 +148,7 @@ onMounted(() => (shareToken ? openShared(shareToken) : initStorage()));
     </form>
 
     <div v-if="showShared && entries.length" class="shared-view">
-      <FilterBar :counts="counts" />
+      <FilterBar :counts="counts" :class="{ tucked }" />
       <TransitionGroup name="card" tag="div" class="grid">
         <EntryCard v-for="e in visible" :key="e.id" :entry="e" readonly />
       </TransitionGroup>
@@ -153,7 +156,7 @@ onMounted(() => (shareToken ? openShared(shareToken) : initStorage()));
     </div>
 
     <div v-if="showMain">
-      <FilterBar with-lists :counts="counts" />
+      <FilterBar with-lists :counts="counts" :class="{ tucked }" />
       <TransitionGroup name="card" tag="div" class="grid">
         <EntryCard v-for="e in visible" :key="e.id" :entry="e" :level="levelFor(e)" @open="dialog.open(e)" @done="dialog.open(e, { done: true })" @delete="deleteEntry(e.id)" />
       </TransitionGroup>

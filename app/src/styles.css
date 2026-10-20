@@ -15,9 +15,19 @@
 *{box-sizing:border-box;}
 body{margin:0;background:var(--paper);color:var(--ink);font-family:'IBM Plex Sans',sans-serif;-webkit-font-smoothing:antialiased;}
 .mono{font-family:'IBM Plex Mono',monospace;}
-.wrap{width:90%;margin:0 auto;padding:28px 0 80px;}
+.wrap{width:90%;margin:0 auto;padding:14px 0 80px;}
 
-header.top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;border-bottom:2px solid var(--ink);padding-bottom:12px;flex-wrap:wrap;gap:8px;}
+header.top{display:flex;align-items:baseline;justify-content:space-between;border-bottom:2px solid var(--ink);padding:14px 0 12px;flex-wrap:wrap;gap:8px;}
+/* Sticky header and filter bar (scrollChrome.js). The shadow and clip paint the
+   paper colour edge to edge, so cards don't show beside the 90% column. The
+   header shrinks quickly; the filter bar slides away more slowly. */
+header.top,.filter-bar{background:var(--paper);box-shadow:0 0 0 100vmax var(--paper);clip-path:inset(0 -100vmax);}
+header.top{position:sticky;top:0;z-index:8;transition:padding .15s ease;}
+header.top h1.logo svg{transition:height .15s ease;}
+header.top.compact{padding:6px 0 5px;}
+header.top.compact h1.logo svg{height:26px;}
+.filter-bar{position:sticky;top:var(--header-h,0px);z-index:7;transition:transform .3s ease,opacity .3s ease,visibility 0s linear 0s;}
+.filter-bar.tucked{transform:translateY(-100%);opacity:0;visibility:hidden;pointer-events:none;transition:transform .3s ease,opacity .3s ease,visibility 0s linear .3s;}
 header.top h1{font-size:19px;font-weight:600;letter-spacing:0.02em;margin:0;}
 header.top h1.logo{line-height:0;align-self:center;}
 header.top h1.logo svg{height:36px;width:auto;display:block;}
@@ -45,7 +55,7 @@ header.top .header-right{display:flex;align-items:center;gap:16px;}
 
 select{padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);font-family:inherit;font-size:13px;color:var(--ink);}
 
-.filter-bar{margin-bottom:20px;}
+.filter-bar{padding:10px 0;margin-bottom:10px;}
 .filter-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
 .filter-row:last-child{margin-bottom:0;}
 .filter-row input[type=text]{flex:1;min-width:180px;max-width:400px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);font-family:inherit;font-size:13px;color:var(--ink);}
@@ -208,6 +218,7 @@ header.top .account-menu{align-self:center;}
   header.top{align-items:center;flex-wrap:nowrap;}
   header.top h1{margin-right:auto;min-width:0;}
   header.top h1.logo svg{height:30px;}
+  header.top.compact h1.logo svg{height:24px;}
   header.top .add-new-btn{padding:7px 12px;font-size:12px;white-space:nowrap;}
   /* Search and the Consumed / Wishlist toggle share the first line; the ::after breaks the row. */
   .filter-row input[type=text]{flex:1 1 0;min-width:0;max-width:none;}
