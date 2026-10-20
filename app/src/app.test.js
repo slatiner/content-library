@@ -183,7 +183,16 @@ describe('sticky header on scroll', () => {
     window.dispatchEvent(new Event('scroll'));
     await flushPromises();
   };
-  afterEach(() => { window.scrollY = 0; });
+  afterEach(() => { window.scrollY = 0; vi.unstubAllGlobals(); });
+
+  it('tracks the header by its border box, so the filter bar sticks flush under it', async () => {
+    const observed = [];
+    vi.stubGlobal('ResizeObserver', class { constructor(cb) { this.cb = cb; } observe(el, opts) { observed.push(opts); this.cb(); } disconnect() {} });
+    const w = await mountApp();
+    expect(observed).toEqual([{ box: 'border-box' }]);
+    expect(document.documentElement.style.getPropertyValue('--header-h')).toMatch(/px$/);
+    w.unmount();
+  });
 
   it('compacts the header, tucks the filters going down and brings them back going up', async () => {
     const w = await mountApp();

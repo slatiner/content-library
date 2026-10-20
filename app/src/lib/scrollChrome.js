@@ -33,10 +33,12 @@ export function useScrollChrome(headerEl) {
   onMounted(() => {
     window.addEventListener('scroll', onScroll, { passive: true });
     if (headerEl.value && typeof ResizeObserver !== 'undefined') {
+      // border-box: the compact header's padding keeps shrinking after its content
+      // (held up by the button) has stopped, which content-box would miss.
       observer = new ResizeObserver(() => {
-        document.documentElement.style.setProperty('--header-h', `${headerEl.value.offsetHeight}px`);
+        document.documentElement.style.setProperty('--header-h', `${headerEl.value.getBoundingClientRect().height}px`);
       });
-      observer.observe(headerEl.value);
+      observer.observe(headerEl.value, { box: 'border-box' });
     }
   });
   onBeforeUnmount(() => {
