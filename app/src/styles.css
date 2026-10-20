@@ -18,10 +18,12 @@ body{margin:0;background:var(--paper);color:var(--ink);font-family:'IBM Plex San
 .wrap{width:90%;margin:0 auto;padding:14px 0 80px;}
 
 header.top{display:flex;align-items:baseline;justify-content:space-between;border-bottom:2px solid var(--ink);padding:14px 0 12px;flex-wrap:wrap;gap:8px;}
-/* Sticky header and filter bar (scrollChrome.js). The shadow and clip paint the
-   paper colour edge to edge, so cards don't show beside the 90% column. The
-   header shrinks quickly; the filter bar slides away more slowly. */
-header.top,.filter-bar{background:var(--paper);box-shadow:0 0 0 100vmax var(--paper);clip-path:inset(0 -100vmax);}
+/* Sticky header and filter bar (scrollChrome.js). The ::before paints the paper
+   colour edge to edge, so cards don't show beside the 90% column; no clip-path,
+   which would cut off the settings popover. The header shrinks quickly; the
+   filter bar slides away more slowly. */
+html{overflow-x:clip;}
+header.top::before,.filter-bar::before{content:'';position:absolute;top:0;bottom:0;left:50%;width:100vw;margin-left:-50vw;background:var(--paper);z-index:-1;}
 header.top{position:sticky;top:0;z-index:8;transition:padding .15s ease;}
 header.top h1.logo svg{transition:height .15s ease;}
 header.top.compact{padding:6px 0 5px;}
