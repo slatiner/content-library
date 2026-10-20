@@ -204,7 +204,7 @@ select{padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius)
 .eh-body{min-width:0;}
 .eh-body .pv-title{font-size:16px;}
 .form-section{margin-bottom:6px;}
-.form-section.details{border-top:1px solid var(--line);padding-top:4px;}
+.form-section.take,.form-section.details{border-top:1px solid var(--line);padding-top:4px;}
 .section-toggle{display:flex;align-items:center;gap:6px;width:100%;padding:10px 0;border:0;background:none;font:inherit;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;text-align:left;}
 .section-toggle::before{content:'';width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(-45deg);transition:transform .15s ease;}
 .section-toggle[aria-expanded=true]::before{transform:rotate(45deg);}

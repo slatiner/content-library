@@ -23,6 +23,7 @@ const lookupBusy = ref(false);
 // people, cover…) fold away when Look up filled them, and open when it didn't.
 const found = ref(true);
 const detailsOpen = ref(false);
+const takeOpen = ref(true);
 const coverInputEl = ref(null);
 function revealForm(openDetails) { found.value = true; detailsOpen.value = openDetails; }
 function editCover() {
@@ -56,6 +57,7 @@ function open(entry, opts = {}) {
   suggest.value = null;
   found.value = !!entry;
   detailsOpen.value = false;
+  takeOpen.value = true;
   Object.assign(form, emptyForm());
   if (entry) {
     for (const k of Object.keys(form)) {
@@ -422,39 +424,42 @@ function saveKey() {
         </div>
       </div>
 
-      <section v-show="found" class="form-section" aria-label="Your take">
-        <div v-if="!doneMode" class="status-toggle" role="group" aria-label="List">
-          <button type="button" :class="{ active: !wish }" :aria-pressed="!wish" @click="form.status = 'consumed'">Finished</button>
-          <button type="button" :class="{ active: wish }" :aria-pressed="wish" @click="form.status = 'wishlist'">Wishlist</button>
-        </div>
+      <section v-show="found" class="form-section take">
+        <button type="button" class="section-toggle" :aria-expanded="takeOpen" aria-controls="entry-take" @click="takeOpen = !takeOpen">Your take</button>
+        <div v-show="takeOpen" id="entry-take">
+          <div v-if="!doneMode" class="status-toggle" role="group" aria-label="List">
+            <button type="button" :class="{ active: !wish }" :aria-pressed="!wish" @click="form.status = 'consumed'">Finished</button>
+            <button type="button" :class="{ active: wish }" :aria-pressed="wish" @click="form.status = 'wishlist'">Wishlist</button>
+          </div>
 
-        <div v-if="!wish" class="row-two">
-          <div class="field">
-            <label for="entry-date">Date {{ DONE_VERB[m].toLowerCase() }}</label>
-            <input id="entry-date" v-model="form.dateConsumed" type="date">
-            <div class="date-quick">
-              <button type="button" class="link-btn" @click="form.dateConsumed = todayLocalIso()">Today</button>
-              <button type="button" class="link-btn" @click="form.dateConsumed = todayLocalIso(1)">Yesterday</button>
+          <div v-if="!wish" class="row-two">
+            <div class="field">
+              <label for="entry-date">Date {{ DONE_VERB[m].toLowerCase() }}</label>
+              <input id="entry-date" v-model="form.dateConsumed" type="date">
+              <div class="date-quick">
+                <button type="button" class="link-btn" @click="form.dateConsumed = todayLocalIso()">Today</button>
+                <button type="button" class="link-btn" @click="form.dateConsumed = todayLocalIso(1)">Yesterday</button>
+              </div>
+            </div>
+            <div class="field">
+              <label id="entry-rating">Rating</label>
+              <div class="star-pick" role="group" aria-labelledby="entry-rating">
+                <button v-for="i in 5" :key="i" type="button" :class="{ on: i <= form.rating }" :aria-label="`${i} of 5`" :aria-pressed="form.rating === i" @click="rate(i)">{{ i <= form.rating ? '★' : '☆' }}</button>
+              </div>
             </div>
           </div>
-          <div class="field">
-            <label id="entry-rating">Rating</label>
-            <div class="star-pick" role="group" aria-labelledby="entry-rating">
-              <button v-for="i in 5" :key="i" type="button" :class="{ on: i <= form.rating }" :aria-label="`${i} of 5`" :aria-pressed="form.rating === i" @click="rate(i)">{{ i <= form.rating ? '★' : '☆' }}</button>
-            </div>
+
+          <div class="field"><label for="entry-notes">Notes</label><textarea id="entry-notes" v-model="form.insights" :placeholder="wish ? 'Why you want it, who recommended it.' : 'Reactions, quotes, whatever\'s worth keeping.'"></textarea></div>
+
+          <p v-if="online && wish" class="form-sub">Only you can see your wishlist.</p>
+          <div v-else-if="online" class="field visibility-field">
+            <label for="entry-visibility">Who can see this</label>
+            <select id="entry-visibility" v-model="form.visibility">
+              <option value="">{{ defaultLabel }}</option>
+              <option v-for="l in LEVELS" :key="l" :value="l">{{ LEVEL_LABEL[l] }}</option>
+            </select>
+            <div class="field-hint">Notes are always private.<button v-if="editingId" type="button" class="link-btn" @click="copyShareLink">Copy share link</button></div>
           </div>
-        </div>
-
-        <div class="field"><label for="entry-notes">Notes</label><textarea id="entry-notes" v-model="form.insights" :placeholder="wish ? 'Why you want it, who recommended it.' : 'Reactions, quotes, whatever\'s worth keeping.'"></textarea></div>
-
-        <p v-if="online && wish" class="form-sub">Only you can see your wishlist.</p>
-        <div v-else-if="online" class="field visibility-field">
-          <label for="entry-visibility">Who can see this</label>
-          <select id="entry-visibility" v-model="form.visibility">
-            <option value="">{{ defaultLabel }}</option>
-            <option v-for="l in LEVELS" :key="l" :value="l">{{ LEVEL_LABEL[l] }}</option>
-          </select>
-          <div class="field-hint">Notes are always private.<button v-if="editingId" type="button" class="link-btn" @click="copyShareLink">Copy share link</button></div>
         </div>
       </section>
 

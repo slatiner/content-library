@@ -685,9 +685,9 @@ describe('add and edit', () => {
       const w = await mountApp();
       const f = await openManual(w);
       expect(f.find('.entry-head').isVisible()).toBe(false);
-      expect(f.find('.form-section[aria-label="Your take"]').isVisible()).toBe(false);
+      expect(f.find('.form-section.take').isVisible()).toBe(false);
       expect(f.find('#entry-cover').isVisible()).toBe(false);
-      expect(f.find('.section-toggle').exists()).toBe(false);
+      expect(f.findAll('.section-toggle').some((b) => b.isVisible())).toBe(false);
       expect(f.find('#entry-title').isVisible()).toBe(true);
       await f.findAll('.medium-toggle button').find((b) => b.text() === 'Film').trigger('click');
       await f.find('#entry-title').setValue('Paprika');
@@ -696,9 +696,10 @@ describe('add and edit', () => {
       expect(f.find('.entry-head').isVisible()).toBe(true);
       expect(f.find('.entry-head').text()).toContain('Paprika');
       // Filled: Details fold away, and open from the toggle.
-      expect(f.find('.section-toggle').attributes('aria-expanded')).toBe('false');
+      const details = f.findAll('.section-toggle').find((b) => b.text() === 'Details');
+      expect(details.attributes('aria-expanded')).toBe('false');
       expect(f.find('#entry-details').isVisible()).toBe(false);
-      await f.find('.section-toggle').trigger('click');
+      await details.trigger('click');
       expect(f.find('#entry-cover').isVisible()).toBe(true);
     });
 
@@ -710,7 +711,7 @@ describe('add and edit', () => {
       await f.findAll('button').find((b) => b.text() === 'Look up').trigger('click');
       await flushPromises();
       expect(f.find('.entry-head').isVisible()).toBe(true);
-      expect(f.find('.section-toggle').attributes('aria-expanded')).toBe('true');
+      expect(f.findAll('.section-toggle').find((b) => b.text() === 'Details').attributes('aria-expanded')).toBe('true');
       expect(f.find('#entry-cover').isVisible()).toBe(true);
       await f.findAll('.form-actions button').find((b) => b.text() === 'Cancel').trigger('click');
       f = await openManual(w);
@@ -726,6 +727,12 @@ describe('add and edit', () => {
       const f = w.findAll('.form-panel')[0];
       expect(f.find('.entry-head').text()).toContain('Steppenwolf');
       expect(f.find('#entry-details').isVisible()).toBe(false);
+      // Your take is open, and folds from its own toggle.
+      const take = f.findAll('.section-toggle').find((b) => b.text() === 'Your take');
+      expect(take.attributes('aria-expanded')).toBe('true');
+      await take.trigger('click');
+      expect(f.find('#entry-take').isVisible()).toBe(false);
+      await take.trigger('click');
       await f.find('.eh-cover').trigger('click');
       expect(f.find('#entry-details').isVisible()).toBe(true);
       const stars = f.findAll('.star-pick button');
