@@ -19,6 +19,9 @@ body{margin:0;background:var(--paper);color:var(--ink);font-family:'IBM Plex San
 
 header.top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;border-bottom:2px solid var(--ink);padding-bottom:12px;flex-wrap:wrap;gap:8px;}
 header.top h1{font-size:19px;font-weight:600;letter-spacing:0.02em;margin:0;}
+header.top h1.logo{line-height:0;align-self:center;}
+header.top h1.logo svg{height:36px;width:auto;display:block;}
+header.top h1.logo text{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-size:30px;font-weight:500;}
 header.top .header-right{display:flex;align-items:center;gap:16px;}
 header.top .counts{font-size:12px;color:var(--ink-soft);}
 header.top .counts span{margin-left:10px;}

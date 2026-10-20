@@ -73,7 +73,22 @@ onMounted(() => (shareToken ? openShared(shareToken) : initStorage()));
 <template>
   <div class="wrap">
     <header class="top">
-      <h1>nik's media.json</h1>
+      <h1 class="logo">
+        <svg viewBox="0 0 276 64" role="img" aria-label="media.json">
+          <rect x="8" y="16" width="11" height="40" rx="3" fill="#3f5484"/>
+          <rect x="21" y="8" width="11" height="48" rx="3" fill="#a8503a"/>
+          <rect x="34" y="20" width="11" height="36" rx="3" fill="#3f6b4f"/>
+          <rect x="47" y="12" width="11" height="44" rx="3" fill="#6b4c8a"/>
+          <g fill="#fff" fill-opacity="0.45">
+            <rect x="11" y="22" width="5" height="2" rx="1"/>
+            <rect x="24" y="14" width="5" height="2" rx="1"/>
+            <rect x="37" y="26" width="5" height="2" rx="1"/>
+            <rect x="50" y="18" width="5" height="2" rx="1"/>
+          </g>
+          <rect x="4" y="58" width="56" height="3" rx="1.5" fill="currentColor"/>
+          <text x="74" y="46" fill="currentColor">media.json</text>
+        </svg>
+      </h1>
       <div class="header-right">
         <div class="counts mono">
           <span><b>{{ counts.book }}</b> books</span><span><b>{{ counts.film }}</b> films</span><span><b>{{ counts.series }}</b> series</span><span><b>{{ counts.music }}</b> music</span>

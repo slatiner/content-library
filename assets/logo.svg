@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="256" height="256" role="img" aria-label="Four spines on a shelf: book, film, series and music">
+  <style>
+    .shelf{fill:#191919}
+    @media (prefers-color-scheme: dark){.shelf{fill:#f7f7f5}}
+  </style>
+  <rect x="8"  y="16" width="11" height="40" rx="3" fill="#3f5484"/>
+  <rect x="21" y="8"  width="11" height="48" rx="3" fill="#a8503a"/>
+  <rect x="34" y="20" width="11" height="36" rx="3" fill="#3f6b4f"/>
+  <rect x="47" y="12" width="11" height="44" rx="3" fill="#6b4c8a"/>
+  <g fill="#ffffff" fill-opacity="0.45">
+    <rect x="11" y="22" width="5" height="2" rx="1"/>
+    <rect x="24" y="14" width="5" height="2" rx="1"/>
+    <rect x="37" y="26" width="5" height="2" rx="1"/>
+    <rect x="50" y="18" width="5" height="2" rx="1"/>
+  </g>
+  <rect class="shelf" x="4" y="58" width="56" height="3" rx="1.5"/>
+</svg>

@@ -193,6 +193,13 @@ describe('signing in (Supabase storage)', () => {
     expect(w.find('.avatar-initials').text()).toBe('AL');
   });
 
+  it('the header shows the logo in place of a text title', async () => {
+    const w = await mountApp();
+    const logo = w.find('header.top h1.logo svg');
+    expect(logo.attributes('aria-label')).toBe('media.json');
+    expect(logo.find('text').text()).toBe('media.json');
+  });
+
   it('file mode: the ⚙ menu has folder actions and no Sign out', async () => {
     const w = await mountApp();
     expect(w.find('.avatar-btn').exists()).toBe(false);
