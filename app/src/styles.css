@@ -141,6 +141,21 @@ select{padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius)
 .overlay.open{display:flex;}
 .form-panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);width:100%;max-width:480px;padding:20px;}
 .form-panel h2{margin:0 0 12px;font-size:17px;font-weight:600;}
+/* Add / edit: a full-height drawer on the right, Cancel / Save pinned to its
+   bottom. Phones keep the full-screen sheet below. */
+@media (min-width: 641px){
+  /* overflow:clip, not hidden: a hidden box can still be scrolled by focus(),
+     and focusing a field while the panel is still off to the right made the
+     overlay jump sideways mid-slide. */
+  .overlay.drawer{display:flex;visibility:hidden;padding:0;justify-content:flex-end;align-items:stretch;overflow:clip;background-color:transparent;transition:background-color .28s ease,visibility 0s linear .28s;}
+  .overlay.drawer.open{visibility:visible;background-color:rgba(25,25,25,0.4);transition:background-color .28s ease;}
+  .overlay.drawer .form-panel{max-width:520px;height:100%;overflow-y:auto;overscroll-behavior:contain;border:0;border-left:1px solid var(--line);border-radius:0;box-shadow:-8px 0 30px rgba(0,0,0,0.12);padding:22px 24px 0;transform:translateX(100%);transition:transform .28s cubic-bezier(.2,.8,.2,1);will-change:transform;}
+  .overlay.drawer.open .form-panel{transform:none;}
+  .overlay.drawer .form-actions{position:sticky;bottom:0;margin:16px -24px 0;padding:12px 24px;background:var(--panel);border-top:1px solid var(--line);}
+}
+@media (prefers-reduced-motion: reduce){
+  .overlay.drawer,.overlay.drawer.open,.overlay.drawer .form-panel{transition:none;}
+}
 .form-sub{font-size:11.5px;color:var(--ink-soft);margin:0 0 16px;line-height:1.4;}
 .field{margin-bottom:12px;}
 .field label{display:block;font-size:12.5px;font-weight:500;color:var(--ink-soft);margin-bottom:4px;}
@@ -245,6 +260,36 @@ select{padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius)
 .label-note{text-transform:none;letter-spacing:0;}
 .shared-view .card{cursor:default;}
 .invite-list{list-style:none;padding:0;margin:0;font-size:11px;line-height:1.9;color:var(--ink-soft);}
+a.btn{display:inline-block;text-decoration:none;}
+.request-list{list-style:none;padding:0;margin:0;font-size:12.5px;}
+.request-list li{padding:10px 0;border-bottom:1px solid var(--line);}
+.request-list li:last-child{border-bottom:0;}
+.req-email{color:var(--ink-soft);}
+.req-message{margin:4px 0 0;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;}
+.req-actions{display:flex;gap:6px;margin-top:8px;}
+
+/* One shared item (?share= for a single entry): cover beside the details. */
+.shared-item{display:flex;gap:28px;align-items:flex-start;max-width:760px;margin:24px auto 0;}
+.si-cover{width:240px;flex:none;aspect-ratio:2/3;border-radius:var(--radius-lg);overflow:hidden;background:var(--line);}
+.si-cover img,.si-cover .pv-ph{width:100%;height:100%;object-fit:cover;display:block;}
+.si-body{min-width:0;flex:1;}
+.si-title{margin:2px 0 6px;font-size:24px;font-weight:600;line-height:1.25;}
+.si-title .yr{font-weight:500;color:var(--ink-soft);}
+.si-people{margin:0 0 14px;font-size:14px;color:var(--ink-soft);}
+.si-facts{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:0 0 14px;font-size:13px;align-items:center;}
+.si-facts dt{color:var(--ink-soft);}
+.si-facts dd{margin:0;}
+.si-listen{display:inline-block;margin-bottom:14px;font-size:13px;font-weight:600;color:var(--ink);}
+.si-action{margin-top:8px;padding-top:16px;border-top:1px solid var(--line);font-size:13px;line-height:1.5;}
+.si-action p{margin:0 0 12px;}
+.si-action .redeem-row{justify-content:flex-start;margin:0 0 10px;}
+.si-ask{margin-top:12px;}
+.si-ask .btn{margin-right:6px;}
+@media (max-width: 640px){
+  .shared-item{flex-direction:column;gap:16px;margin-top:16px;}
+  .si-cover{width:min(60%,220px);align-self:center;}
+  .si-title{font-size:20px;}
+}
 
 /* Card show/hide (replaces the old manual fade) */
 .card-enter-active,.card-leave-active{transition:opacity .12s ease,transform .12s ease;}
@@ -296,3 +341,15 @@ header.top .account-menu{align-self:center;}
 .list-toggle button.active{background:var(--ink);color:#fff;}
 .card .done{position:absolute;bottom:8px;right:8px;width:26px;height:26px;border-radius:50%;background:rgba(25,25,25,0.7);color:#fff;border:none;font-size:14px;line-height:26px;text-align:center;cursor:pointer;padding:0;z-index:2;}
 .card .done:hover{background:var(--ink);}
+/* Copy share link (consumed, online): shown on hover or focus where there's a
+   pointer, always on touch screens. */
+.card .share{position:absolute;bottom:8px;right:8px;width:28px;height:28px;border-radius:50%;background:rgba(25,25,25,0.7);color:#fff;border:none;cursor:pointer;padding:0;z-index:2;display:flex;align-items:center;justify-content:center;}
+.card .share svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.card .share:hover,.card .share.copied{background:var(--ink);}
+.card .share:focus-visible{outline:2px solid #fff;outline-offset:2px;}
+.card .share-note{position:absolute;bottom:12px;right:42px;z-index:2;padding:3px 8px;border-radius:6px;background:var(--ink);color:#fff;font-size:11px;white-space:nowrap;max-width:calc(100% - 52px);overflow:hidden;text-overflow:ellipsis;}
+.card .share-note:empty{display:none;}
+@media (hover:hover){
+  .card .share{opacity:0;transition:opacity .15s ease;}
+  .card:hover .share,.card:focus-within .share,.card .share.copied{opacity:1;}
+}

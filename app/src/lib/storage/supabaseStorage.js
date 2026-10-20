@@ -110,10 +110,56 @@ export function createSupabaseStorage(setStatus, { url, key, client } = {}) {
     // Redeem an invite code; on success loads the (empty) library. Throws the
     // database's message ("already used", "expired"...) on failure.
     async redeemInvite(code) {
-      const { error } = await sb.rpc('redeem_invite', { p_code: code });
-      if (error) throw new Error(error.message);
+      await this.joinWithCode(code);
       const { data } = await sb.auth.getSession();
       return startSession(data.session);
+    },
+
+    // Redeem a code without loading the library (from a shared item).
+    async joinWithCode(code) {
+      const { error } = await sb.rpc('redeem_invite', { p_code: code });
+      if (error) throw new Error(error.message);
+    },
+
+    // Ask the admins for a code (signed in, not yet a member). Throws the
+    // database's message on failure.
+    async requestAccess(message) {
+      const { error } = await sb.rpc('request_access', { p_message: message });
+      if (error) throw new Error(error.message);
+    },
+
+    // Admins only: pending requests, newest first, as { userId, email, name, message, createdAt }.
+    async listAccessRequests() {
+      const { data, error } = await sb.from('access_requests').select('user_id, email, name, message, created_at')
+        .order('created_at', { ascending: false });
+      if (error) fail('Could not load requests', error);
+      return data.map((r) => ({ userId: r.user_id, email: r.email, name: r.name, message: r.message, createdAt: r.created_at }));
+    },
+
+    async dismissAccessRequest(userId) {
+      const { error } = await sb.from('access_requests').delete().eq('user_id', userId);
+      if (error) fail('Could not dismiss the request', error);
+    },
+
+    // Who is looking at a share link, without leaving the shared view:
+    // { state: 'signedOut' } | { state: 'needsInvite', email, requestedAt } | { state: 'member', email }.
+    async viewer() {
+      const { data } = await sb.auth.getSession();
+      if (!data || !data.session) return { state: 'signedOut' };
+      user = data.session.user;
+      const { data: member, error } = await sb.from('members').select('user_id').eq('user_id', user.id).maybeSingle();
+      if (error) fail('Could not check your account', error);
+      if (member) return { state: 'member', email: user.email };
+      const req = await sb.from('access_requests').select('created_at').eq('user_id', user.id).limit(1);
+      if (req.error) fail('Could not check your account', req.error);
+      return { state: 'needsInvite', email: user.email, requestedAt: (req.data[0] && req.data[0].created_at) || '' };
+    },
+
+    // 'consumed', 'wishlist' or '' : whether the viewer already has this title.
+    async ownStatusOf(medium, title) {
+      const { data, error } = await sb.from('entries').select('status').eq('medium', medium).eq('title', title).limit(1);
+      if (error) fail('Could not check your library', error);
+      return (data[0] && data[0].status) || '';
     },
 
     // Admins only: a new single-use code, as { code, expiresAt }.
@@ -173,12 +219,13 @@ export function createSupabaseStorage(setStatus, { url, key, client } = {}) {
     // Everything stored for this account, as one object for a JSON download.
     // Notes included; invites only those this account created.
     async exportAccount() {
-      const [member, links, invites] = await Promise.all([
+      const [member, links, invites, request] = await Promise.all([
         sb.from('members').select('is_admin, joined_at, default_visibility').eq('user_id', user.id).maybeSingle(),
         sb.from('share_links').select('token, entry_id, created_at').order('created_at'),
         sb.from('invites').select('code, created_at, expires_at, used_at').eq('created_by', user.id).order('created_at'),
+        sb.from('access_requests').select('message, created_at').eq('user_id', user.id).limit(1),
       ]);
-      const failed = [member, links, invites].find((r) => r.error);
+      const failed = [member, links, invites, request].find((r) => r.error);
       if (failed) fail('Could not export your data', failed.error);
       const m = user.user_metadata || {};
       return {
@@ -188,6 +235,7 @@ export function createSupabaseStorage(setStatus, { url, key, client } = {}) {
         entries: member.data ? await loadAll() : [],
         shareLinks: links.data.map((r) => ({ token: r.token, entryId: r.entry_id, createdAt: r.created_at })),
         invitesCreated: invites.data.map((r) => ({ code: r.code, createdAt: r.created_at, expiresAt: r.expires_at, usedAt: r.used_at })),
+        accessRequest: request.data[0] ? { message: request.data[0].message, createdAt: request.data[0].created_at } : null,
       };
     },
 

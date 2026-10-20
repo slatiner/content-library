@@ -12,9 +12,17 @@ const EXAMPLE = JSON.parse(readFileSync('media-archive-data.example.json', 'utf8
 
 let state, App, adapter;
 
+// Who looks at a share link follows connState: 'ok' is a member, 'needsInvite'
+// is signed in without a code, anything else is signed out. ownStatus is the
+// viewer's own copy of a shared item ('consumed' | 'wishlist' | '').
+let ownStatus = '';
+let accessRequests = [];
+
 function fakeAdapter(initial, connState = 'ok', kind = 'file') {
   const calls = [];
   const account = kind === 'supabase' ? 'me@example.com' : '';
+  let viewer = connState === 'ok' ? { state: 'member', email: account }
+    : connState === 'needsInvite' ? { state: 'needsInvite', email: account, requestedAt: '' } : { state: 'signedOut' };
   return {
     kind,
     calls,
@@ -46,11 +54,24 @@ function fakeAdapter(initial, connState = 'ok', kind = 'file') {
       async shareLink(entryId) { calls.push(['shareLink', entryId]); return 'tok123'; },
       async listShareLinks() { return [{ token: 'tok123', entryId: null, createdAt: '2026-10-17T00:00:00Z' }]; },
       async revokeShareLink(token) { calls.push(['revoke', token]); },
+      // tok123 is the whole library; item1 is one entry (Paprika).
       async sharedByLink(token) {
         calls.push(['sharedByLink', token]);
-        if (token !== 'tok123') return null;
-        return { ownerName: 'Ada Lovelace', entries: structuredClone(initial).map((e) => ({ ...e, insights: '' })) };
+        const all = structuredClone(initial).map((e) => ({ ...e, insights: '' }));
+        if (token === 'tok123') return { ownerName: 'Ada Lovelace', entries: all };
+        if (token === 'item1') return { ownerName: 'Ada Lovelace', entries: all.filter((e) => e.title === 'Paprika') };
+        return null;
       },
+      async viewer() { return structuredClone(viewer); },
+      async ownStatusOf(medium, title) { calls.push(['ownStatusOf', medium, title]); return ownStatus; },
+      async joinWithCode(code) {
+        calls.push(['join', code]);
+        if (code !== 'GOOD-CODE') throw new Error('That invite code isn\'t valid. Check it and try again.');
+        viewer = { state: 'member', email: account };
+      },
+      async requestAccess(message) { calls.push(['requestAccess', message]); viewer = { ...viewer, requestedAt: '2026-10-20T10:00:00Z' }; },
+      async listAccessRequests() { return structuredClone(accessRequests); },
+      async dismissAccessRequest(userId) { calls.push(['dismiss', userId]); accessRequests = accessRequests.filter((r) => r.userId !== userId); },
       async exportAccount() {
         calls.push(['exportAccount']);
         return { exportedAt: '2026-10-19T10:00:00.000Z', account: { email: account }, entries: structuredClone(initial), shareLinks: [], invitesCreated: [] };
@@ -106,6 +127,8 @@ beforeEach(() => {
   vi.stubGlobal('confirm', vi.fn(() => true));
   vi.stubGlobal('alert', vi.fn());
   groqAnswer = null;
+  ownStatus = '';
+  accessRequests = [];
 });
 
 const tagCounts = (w) => w.findAll('.tag-check .tag-count').map((c) => c.text());
@@ -191,6 +214,16 @@ describe('keyboard, touch and screen readers', () => {
     expect(dlg.find('h2').attributes('id')).toBe(dlg.attributes('aria-labelledby'));
     await dlg.trigger('keydown', { key: 'Escape' });
     expect(w.find('.overlay.open').exists()).toBe(false);
+  });
+
+  it('add and edit open as a side drawer; other dialogs stay centred', async () => {
+    const w = await mountApp();
+    await w.find('.add-new-btn').trigger('click');
+    expect(w.find('.overlay.open').classes()).toContain('drawer');
+    await w.find('.overlay.open [role=dialog]').trigger('keydown', { key: 'Escape' });
+    await card(w, 'Steppenwolf').find('button.card-open').trigger('click');
+    expect(w.find('.overlay.open').classes()).toContain('drawer');
+    expect(w.findAll('.overlay.drawer')).toHaveLength(1);
   });
 
   it('type tags are focusable checkboxes named with their count', async () => {
@@ -380,6 +413,32 @@ describe('invites', () => {
     expect(w.find('.invite-code').text()).toBe('ABCD-1234-EF56');
     expect(w.find('.invite-new input').element.value).toMatch(/\?invite=ABCD-1234-EF56$/);
   });
+
+  it('admins see who asked for a code, can make one to email them, or dismiss', async () => {
+    accessRequests = [
+      { userId: 'u9', email: 'grace@example.com', name: 'Grace Hopper', message: 'Ada shared a film with me', createdAt: '2026-10-20T10:00:00Z' },
+      { userId: 'u8', email: 'alan@example.com', name: '', message: '', createdAt: '2026-10-19T10:00:00Z' },
+    ];
+    const w = await mountApp(EXAMPLE, 'ok', 'supabase');
+    state.setConnection('ok', 'Connected', 'me@example.com', { name: 'Ada Lovelace', avatarUrl: '', isAdmin: true });
+    await flushPromises();
+    await w.find('.avatar-btn').trigger('click');
+    await w.findAll('.account-menu .popover button').find((b) => b.text() === 'Invite someone').trigger('click');
+    await flushPromises();
+    const items = () => w.findAll('.request-list li');
+    expect(items()).toHaveLength(2);
+    expect(items()[0].text()).toContain('Ada shared a film with me');
+    await items()[0].findAll('button').find((b) => b.text() === 'Create code').trigger('click');
+    await flushPromises();
+    expect(w.find('.invite-new label').text()).toBe('New code for Grace Hopper');
+    const mail = w.find('.invite-new a').attributes('href');
+    expect(mail).toMatch(/^mailto:grace%40example\.com\?/);
+    expect(decodeURIComponent(mail)).toContain('?invite=ABCD-1234-EF56');
+    await items()[1].findAll('button').find((b) => b.text() === 'Dismiss').trigger('click');
+    await flushPromises();
+    expect(adapter.calls.at(-1)).toEqual(['dismiss', 'u8']);
+    expect(items()).toHaveLength(1);
+  });
 });
 
 describe('your data (#29)', () => {
@@ -472,8 +531,22 @@ describe('sharing', () => {
     expect(adapter.calls.at(-1)).toEqual(['shareLink', EXAMPLE.find((e) => e.title === 'In Rainbows').id]);
   });
 
+  it('a consumed card copies its share link without opening the entry', async () => {
+    const w = await mountApp(EXAMPLE, 'ok', 'supabase');
+    const writeText = vi.fn().mockResolvedValue();
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    const card = w.findAll('.card').find((c) => c.text().includes('Paprika'));
+    await card.find('button.share').trigger('click');
+    await flushPromises();
+    expect(adapter.calls.at(-1)).toEqual(['shareLink', EXAMPLE.find((e) => e.title === 'Paprika').id]);
+    expect(writeText.mock.calls[0][0]).toMatch(/\?share=tok123$/);
+    expect(card.find('.share-note').text()).toBe('Link copied');
+    expect(w.find('.overlay.open').exists()).toBe(false);
+  });
+
   it('file mode has no sharing controls', async () => {
     const w = await mountApp();
+    expect(w.find('.card .share').exists()).toBe(false);
     expect(w.find('.level-badge').exists()).toBe(false);
     await w.findAll('.card')[0].trigger('click');
     expect(w.find('.visibility-field').exists()).toBe(false);
@@ -514,6 +587,77 @@ describe('sharing', () => {
     expect(c.classes()).toContain('peek');
     expect(w.find('.overlay.open').exists()).toBe(false);
     window.history.replaceState(null, '', '/');
+  });
+
+  describe('one shared item', () => {
+    const PAPRIKA = EXAMPLE.find((e) => e.title === 'Paprika');
+    const openItem = (connState) => { window.history.replaceState(null, '', '/?share=item1'); return mountApp(EXAMPLE, connState, 'supabase'); };
+    afterEach(() => { window.history.replaceState(null, '', '/'); sessionStorage.clear(); });
+
+    it('signed out: shows the details, never the note, and offers sign-in that comes back here', async () => {
+      let w = await openItem('signedOut');
+      const item = w.find('.shared-item');
+      expect(item.find('.si-title').text()).toContain('Paprika');
+      expect(item.text()).toContain("Ada Lovelace's rating");
+      expect(item.text()).not.toContain(PAPRIKA.insights);
+      expect(w.find('.card').exists()).toBe(false);
+      await item.find('.gsi-btn').trigger('click');
+      expect(adapter.calls.at(-1)).toEqual(['connect']);
+      expect(sessionStorage.getItem('pendingShare')).toBe('item1');
+      w.unmount();
+      // Google returns to the bare page, signed in.
+      window.history.replaceState(null, '', '/');
+      w = await mountApp(EXAMPLE, 'ok', 'supabase');
+      expect(adapter.calls[0]).toEqual(['sharedByLink', 'item1']);
+      expect(window.location.search).toBe('?share=item1');
+      expect(sessionStorage.getItem('pendingShare')).toBe(null);
+      expect(w.find('.si-action').text()).toContain('Save to my wishlist');
+    });
+
+    it('a member saves a copy to their wishlist with their own note', async () => {
+      const w = await openItem('ok');
+      expect(adapter.calls).toContainEqual(['ownStatusOf', 'film', 'Paprika']);
+      await w.find('#si-note').setValue('  Ada says watch it on a big screen ');
+      await w.find('.si-action form').trigger('submit');
+      await flushPromises();
+      const [op, wish] = adapter.calls.at(-1);
+      expect(op).toBe('save');
+      expect(wish).toMatchObject({ title: 'Paprika', medium: 'film', status: 'wishlist', rating: 0, dateConsumed: '', visibility: '', insights: 'Ada says watch it on a big screen' });
+      expect(wish.id).not.toBe(PAPRIKA.id);
+      expect(w.find('.si-action').text()).toContain('On your wishlist');
+      expect(w.find('#si-note').exists()).toBe(false);
+    });
+
+    it('a member who already logged it is told so, with no save button', async () => {
+      ownStatus = 'consumed';
+      const w = await openItem('ok');
+      expect(w.find('.si-action').text()).toContain('Already in your library');
+      expect(w.find('.si-action').text()).not.toContain('Save to my wishlist');
+    });
+
+    it('signed in without a code: a bad code shows the error, a good one unlocks saving', async () => {
+      const w = await openItem('needsInvite');
+      await w.find('.si-action input').setValue('NOPE');
+      await w.find('.si-action .redeem-row').trigger('submit');
+      await flushPromises();
+      expect(w.find('.si-action .status').text()).toContain("isn't valid");
+      await w.find('.si-action input').setValue('GOOD-CODE');
+      await w.find('.si-action .redeem-row').trigger('submit');
+      await flushPromises();
+      expect(adapter.calls).toContainEqual(['join', 'GOOD-CODE']);
+      expect(w.find('.si-action').text()).toContain('Save to my wishlist');
+    });
+
+    it('signed in without a code: can ask the admin for one', async () => {
+      const w = await openItem('needsInvite');
+      await w.findAll('.si-action button').find((b) => b.text() === 'No code? Ask for one').trigger('click');
+      await w.find('#si-message').setValue('Ada shared Paprika with me');
+      await w.find('.si-ask').trigger('submit');
+      await flushPromises();
+      expect(adapter.calls).toContainEqual(['requestAccess', 'Ada shared Paprika with me']);
+      expect(w.find('.si-action').text()).toContain('You asked for a code on');
+      expect(w.find('.si-ask').exists()).toBe(false);
+    });
   });
 
   it('a revoked share link says so', async () => {
@@ -902,6 +1046,14 @@ describe('wishlist (#47)', () => {
     expect(w.find('.filter-bar select').element.value).toBe('dateConsumed_desc');
     await toList(w, 'Wishlist');
     expect(titles(w)).toEqual(['Akira', 'Perfect Blue']);
+  });
+
+  it('only consumed cards get a share button', async () => {
+    const w = await mountApp(WITH_WISHES, 'ok', 'supabase');
+    expect(w.findAll('.card .share')).toHaveLength(4);
+    await toList(w, 'Wishlist');
+    expect(w.findAll('.card .done')).toHaveLength(2);
+    expect(w.find('.card .share').exists()).toBe(false);
   });
 
   it('adding on the wishlist saves a private wish with no rating or date', async () => {

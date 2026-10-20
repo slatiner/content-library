@@ -82,7 +82,8 @@ function open(entry, opts = {}) {
     showView('ai', true);
   }
   isOpen.value = true;
-  if (!entry) nextTick(() => aiInputEl.value && aiInputEl.value.focus());
+  // preventScroll: the drawer is still sliding in, so don't scroll it into view.
+  if (!entry) nextTick(() => aiInputEl.value && aiInputEl.value.focus({ preventScroll: true }));
 }
 function close() { isOpen.value = false; }
 
@@ -322,7 +323,7 @@ function saveKey() {
 </script>
 
 <template>
-  <Modal v-model:open="isOpen">
+  <Modal v-model:open="isOpen" drawer>
     <h2>{{ heading }}</h2>
 
     <div v-show="withTabs" class="view-tabs" style="display:flex;">

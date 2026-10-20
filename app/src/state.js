@@ -1,6 +1,6 @@
 // App state shared by the components (Vue's built-in reactivity; no Pinia).
 import { reactive, ref } from 'vue';
-import { MEDIA, SORT_ON_WISHLIST } from './lib/entries.js';
+import { MEDIA, SORT_ON_WISHLIST, asWish, uid } from './lib/entries.js';
 import { createFileStorage, createSupabaseStorage } from './lib/storage/index.js';
 import { STORAGE, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './config.js';
 import { llmJson, FIND_TASK, normalizeFind, askChipsFor } from './lib/llm.js';
@@ -49,8 +49,10 @@ export async function deleteAccount() {
   clearAsk();
 }
 
-// Viewing someone's share link (?share=TOKEN): a read-only library, no sign-in.
-export const shared = reactive({ owner: '' });
+// Viewing someone's share link (?share=TOKEN): read-only, works signed out.
+// One item shows as a page of its own; viewer says who is looking (storage.viewer())
+// and mine whether they already have that title ('consumed' | 'wishlist' | '').
+export const shared = reactive({ owner: '', viewer: null, mine: '' });
 export async function openShared(token) {
   try {
     const r = await storage.sharedByLink(token);
@@ -60,8 +62,41 @@ export async function openShared(token) {
     setConnection('shared', r.ownerName ? `Shared by ${r.ownerName}` : 'Shared with you');
   } catch (e) {
     setConnection('shared', `${e.message}. Check your connection and reload.`);
+    return;
+  }
+  await refreshViewer();
+}
+
+async function refreshViewer() {
+  try {
+    shared.viewer = await storage.viewer();
+    const item = entries.value.length === 1 ? entries.value[0] : null;
+    shared.mine = item && shared.viewer.state === 'member' ? await storage.ownStatusOf(item.medium, item.title) : '';
+  } catch (e) {
+    // The item still shows; only the save options are missing.
+    shared.viewer = { state: 'error', text: e.message };
   }
 }
+
+// A copy of the shared item on the viewer's wishlist, with their own note.
+// Not added to `entries`, which holds the shared view.
+export async function saveSharedToWishlist(item, note) {
+  const wish = asWish({ ...item, id: uid(), dateAdded: Date.now(), insights: (note || '').trim() });
+  await storage.saveEntry(wish, []);
+  shared.mine = 'wishlist';
+}
+
+export async function joinFromShared(code) {
+  await storage.joinWithCode(code);
+  await refreshViewer();
+}
+
+export async function requestAccess(message) {
+  await storage.requestAccess(message);
+  await refreshViewer();
+}
+export const listAccessRequests = () => storage.listAccessRequests();
+export const dismissAccessRequest = (userId) => storage.dismissAccessRequest(userId);
 
 // Create or update. Keeps fields the form doesn't know about (e.g. external ids).
 export async function saveEntry(entry) {

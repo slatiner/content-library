@@ -14,8 +14,15 @@
 //   reconnect()             user action to restore access or retry; entries[] or null
 //   signOut()               (supabase only)
 //   redeemInvite(code)      (supabase only) join with an invite code; entries[] or null
+//   joinWithCode(code)      (supabase only) redeem without loading the library
 //   createInvite()          (supabase only, admins) { code, expiresAt }
 //   listInvites()           (supabase only, admins) recent invites
+//   requestAccess(message)  (supabase only, signed in, not a member) ask for a code
+//   listAccessRequests()    (supabase only, admins) [{ userId, email, name, message, createdAt }]
+//   dismissAccessRequest(u) (supabase only, admins)
+//   viewer()                (supabase only) who is viewing a share link:
+//                           { state: 'signedOut' | 'needsInvite' | 'member', email, requestedAt }
+//   ownStatusOf(medium, t)  (supabase only) 'consumed' | 'wishlist' | '' for the viewer's own copy
 //   setDefaultVisibility(l) (supabase only) the library's default level (#20)
 //   shareLink(entryId)      (supabase only) secret link token; null entryId = library
 //   listShareLinks()        (supabase only) [{ token, entryId, createdAt }]

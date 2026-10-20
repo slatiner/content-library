@@ -181,6 +181,26 @@ describe('Supabase adapter', () => {
     expect(await storage.sharedByLink('gone')).toBe(null);
   });
 
+  it('says who views a share link without changing the connection or loading a library', async () => {
+    expect(await adapterWith().storage.viewer()).toEqual({ state: 'signedOut' });
+    const member = adapterWith({ session });
+    expect(await member.storage.viewer()).toEqual({ state: 'member', email: 'me@example.com' });
+    expect(member.status).toEqual([]);
+    expect(member.client.log.some((q) => q.table === 'entries')).toBe(false);
+    const newcomer = adapterWith({ session, member: null });
+    expect(await newcomer.storage.viewer()).toEqual({ state: 'needsInvite', email: 'me@example.com', requestedAt: '' });
+  });
+
+  it('joining from a share link redeems without loading the library; asking for a code calls request_access', async () => {
+    const { storage, client, status } = adapterWith({ session, member: null });
+    await storage.viewer();
+    await storage.joinWithCode('abcd-1234-ef56');
+    await storage.requestAccess('hi');
+    expect(client.log).toContainEqual({ rpc: 'redeem_invite', args: { p_code: 'abcd-1234-ef56' } });
+    expect(client.log).toContainEqual({ rpc: 'request_access', args: { p_message: 'hi' } });
+    expect(status).toEqual([]);
+  });
+
   it('changing the library default updates own members row and the profile', async () => {
     const { storage, client, status } = adapterWith({ session });
     await storage.init();

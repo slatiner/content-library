@@ -5,6 +5,8 @@
 import { nextTick, ref, watch } from 'vue';
 
 const open = defineModel('open', { type: Boolean, default: false });
+// drawer: slides in from the right, full height, instead of a centred panel.
+defineProps({ drawer: { type: Boolean, default: false } });
 const panel = ref(null);
 const titleId = `dlg-${Math.random().toString(36).slice(2, 9)}`;
 let returnTo = null;
@@ -20,7 +22,7 @@ watch(open, (isOpen) => {
       if (!panel.value) return;
       const h = panel.value.querySelector('h2');
       if (h) h.id = titleId;
-      if (!panel.value.contains(document.activeElement)) panel.value.focus();
+      if (!panel.value.contains(document.activeElement)) panel.value.focus({ preventScroll: true });
     });
   } else if (returnTo && document.contains(returnTo)) {
     returnTo.focus();
@@ -41,7 +43,7 @@ function onKeydown(e) {
 </script>
 
 <template>
-  <div class="overlay" :class="{ open }" @click.self="open = false" @keydown="onKeydown">
+  <div class="overlay" :class="{ open, drawer }" @click.self="open = false" @keydown="onKeydown">
     <div ref="panel" class="form-panel" role="dialog" aria-modal="true" :aria-labelledby="titleId" tabindex="-1">
       <slot />
     </div>

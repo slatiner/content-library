@@ -10,7 +10,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(81);
+select plan(95);
 
 -- ---- Every table, including future ones ----
 
@@ -35,6 +35,11 @@ select is(
     where table_schema = 'public' and grantee = 'authenticated' and table_name in ('members', 'invites')
       and privilege_type <> 'SELECT'),
   null, 'members and invites are written only through the invite functions');
+
+select is(
+  (select array_agg(privilege_type::text order by privilege_type::text) from information_schema.role_table_grants
+    where table_schema = 'public' and grantee = 'authenticated' and table_name = 'access_requests'),
+  array['DELETE', 'SELECT'], 'access requests are written only through request_access');
 
 select is(
   (select array_agg(p.proname::text order by 1) from pg_proc p
@@ -166,6 +171,29 @@ select is_empty($$ select 1 from public.shared_entries('00000000-0000-0000-0000-
   'a newcomer cannot read members'' shared entries');
 select throws_ok('select public.get_share_link()', '42501', null, 'a newcomer cannot create share links');
 
+-- ---- Asking for a code: the newcomer requests, the admin sees it ----
+
+select lives_ok($$ select public.request_access('Ada shared a film with me') $$, 'a newcomer can ask for a code');
+select lives_ok($$ select public.request_access('  Second try  ') $$, 'asking again is allowed');
+select results_eq($$ select email || '|' || message from public.access_requests $$, array['newcomer@test|Second try'],
+  'one request per account: the email comes from sign-in and the new message replaces the old');
+select throws_like($$ select public.request_access(repeat('x', 501)) $$, '%500%', 'a message over 500 characters is refused');
+select throws_ok($$ insert into public.access_requests (user_id, email) values ('00000000-0000-0000-0000-00000000000c', 'x') $$,
+  '42501', null, 'a request cannot be written directly');
+select is_empty($$ delete from public.access_requests returning 1 $$, 'a requester cannot dismiss requests');
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000b');
+select throws_like($$ select public.request_access('x') $$, '%already have access%', 'a member cannot ask for a code');
+select is_empty('select 1 from public.access_requests', 'a non-admin cannot see others'' requests');
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+select results_eq('select user_id::text from public.access_requests', array['00000000-0000-0000-0000-00000000000c'],
+  'the admin sees requests');
+reset role;
+set local role anon;
+select throws_ok($$ select public.request_access('x') $$, '42501', null, 'signed out: cannot ask for a code');
+select throws_ok('select 1 from public.access_requests', '42501', null, 'signed out: requests are refused');
+reset role;
+set local role authenticated;
+
 -- ---- Invites: the admin creates, the newcomer redeems ----
 
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
@@ -182,6 +210,10 @@ select throws_like($$ select public.redeem_invite(current_setting('t.old')) $$, 
 select lives_ok($$ select public.redeem_invite(lower(replace(current_setting('t.code'), '-', ''))) $$,
   'a valid code works in lower case without dashes');
 select ok(public.is_member() and not public.is_admin(), 'redeeming makes a member, not an admin');
+select is_empty('select 1 from public.access_requests', 'redeeming clears the account''s request');
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+select is_empty('select 1 from public.access_requests', '... for the admin too');
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000c');
 select results_eq('select id from public.entries', array['c_1'], 'a new member sees only their own entries');
 
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000b');
