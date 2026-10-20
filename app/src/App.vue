@@ -120,7 +120,7 @@ onMounted(() => (shareToken ? openShared(shareToken) : initStorage()));
       <button class="btn" @click="connectStorage">Connect folder</button>
     </div>
 
-    <div v-if="showSignIn" class="setup">
+    <div v-if="showSignIn" class="setup bare">
       <p v-if="inviteCode">You've been invited. Sign in with Google to accept, and your code will be filled in.</p>
       <p v-else>Your library is stored in your account. Sign in with Google to see it. New here? You'll need an invite code.</p>
       <button class="gsi-btn" @click="connectStorage">
