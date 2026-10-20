@@ -226,6 +226,7 @@ describe('signing in (Supabase storage)', () => {
     expect(adapter.calls.at(-1)).toEqual(['signOut']);
     expect(w.find('.card').exists()).toBe(false);
     expect(w.text()).toContain('Sign in with Google');
+    expect(w.find('.gsi-btn .gsi-logo').exists()).toBe(true);
   });
 });
 

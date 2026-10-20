@@ -40,6 +40,10 @@ header.top .counts b{color:var(--ink);}
 .btn:disabled{opacity:0.5;cursor:default;}
 .btn.ghost{background:transparent;color:var(--ink);}
 .btn.small{padding:5px 10px;font-size:12px;}
+/* Sign in with Google: Google's light-theme button spec (white, #747775 border, #1F1F1F text, 20px G). */
+.gsi-btn{display:inline-flex;align-items:center;gap:10px;height:40px;padding:0 12px;border:1px solid #747775;border-radius:20px;background:#fff;color:#1f1f1f;font-family:Roboto,Arial,sans-serif;font-size:14px;font-weight:500;cursor:pointer;}
+.gsi-btn:hover{background:#f8f9fa;box-shadow:0 1px 2px rgba(60,64,67,.3),0 1px 3px 1px rgba(60,64,67,.15);}
+.gsi-logo{width:20px;height:20px;flex:none;}
 .btn.danger{border-color:var(--warn);color:var(--warn);background:transparent;}
 
 select{padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);font-family:inherit;font-size:13px;color:var(--ink);}
