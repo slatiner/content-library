@@ -26,5 +26,7 @@ export default defineConfig({
     root: '.',
     environment: 'jsdom',
     include: ['app/src/**/*.test.js'],
+    // The first test after a cold transform can pass 5s, mostly when `npm run dev` runs alongside.
+    testTimeout: 15000,
   },
 });

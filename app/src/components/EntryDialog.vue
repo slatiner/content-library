@@ -18,6 +18,17 @@ const saving = ref(false);
 // Manual view: Wikidata matches to choose from.
 const suggest = ref(null);     // { choices, uncertain } | null
 const lookupBusy = ref(false);
+// A new manual entry starts with only type, title and Look up; the rest shows
+// once Look up has found or failed (or "fill in by hand"). Details (title, year,
+// people, cover…) fold away when Look up filled them, and open when it didn't.
+const found = ref(true);
+const detailsOpen = ref(false);
+const coverInputEl = ref(null);
+function revealForm(openDetails) { found.value = true; detailsOpen.value = openDetails; }
+function editCover() {
+  detailsOpen.value = true;
+  nextTick(() => coverInputEl.value && coverInputEl.value.focus());
+}
 
 const m = computed(() => form.medium);
 // Wishlist (#47): no rating, date or visibility.
@@ -43,6 +54,8 @@ function open(entry, opts = {}) {
   editingId.value = entry ? entry.id : null;
   doneMode.value = !!(entry && opts.done);
   suggest.value = null;
+  found.value = !!entry;
+  detailsOpen.value = false;
   Object.assign(form, emptyForm());
   if (entry) {
     for (const k of Object.keys(form)) {
@@ -165,7 +178,13 @@ async function manualLookup() {
       : 'Found more than one match — pick the right one.';
   } else {
     formStatus.value = res.status;
+    revealForm(!/^Filled/.test(res.status || ''));
   }
+}
+function onTitleEnter(e) {
+  if (e.isComposing) return;
+  e.preventDefault();
+  if (!lookupBusy.value) manualLookup();
 }
 async function pickSuggestion(c) {
   formStatus.value = 'Filling details…';
@@ -173,11 +192,15 @@ async function pickSuggestion(c) {
     await applyWikidataDetails(c.id, form);
     suggest.value = null;
     formStatus.value = `Filled from "${c.label}". Review, then Save.`;
+    revealForm(false);
   } catch (e) {
     formStatus.value = `Couldn't load details (${(e && e.message) || e}). Pick again, or fill the fields yourself.`;
   }
 }
-function skipSuggestions() { suggest.value = null; formStatus.value = 'Skipped — fill in manually and Save.'; }
+function skipSuggestions() { suggest.value = null; formStatus.value = 'Skipped — fill in manually and Save.'; revealForm(true); }
+function byHand() { suggest.value = null; formStatus.value = ''; revealForm(true); }
+// Tapping the star that's already set clears the rating.
+function rate(i) { form.rating = form.rating === i ? 0 : i; }
 
 // ---- "Describe it" view: natural-language add via the LLM ----
 // The view is always in one of three stages. Only one primary action is on screen at a time:
@@ -356,7 +379,7 @@ function saveKey() {
         <div class="pv-actions">
           <span class="pv-hint">Press Enter to add</span>
           <button type="button" class="btn ghost" @click="close">Cancel</button>
-          <button type="button" class="btn ghost" @click="showView('manual', true)">Edit details</button>
+          <button type="button" class="btn ghost" @click="revealForm(true); showView('manual', true)">Edit details</button>
           <button type="button" class="btn" :disabled="addBusy" @click="aiAdd">{{ wish ? 'Add to wishlist' : 'Add to library' }}</button>
         </div>
       </div>
@@ -368,59 +391,89 @@ function saveKey() {
     </div>
 
     <div v-show="view === 'manual'">
-      <p class="form-sub">Type a title, then hit "Look up" to pull director/cast/year/poster automatically.</p>
-      <div class="medium-toggle">
-        <button v-for="x in MEDIA" :key="x" :data-m="x" :class="{ active: form.medium === x }" @click="form.medium = x">{{ x[0].toUpperCase() + x.slice(1) }}</button>
-      </div>
-
-      <div class="title-row">
-        <div class="field"><label>Title</label><input v-model="form.title" type="text"></div>
-        <button type="button" class="btn small" :disabled="lookupBusy" @click="manualLookup">Look up</button>
-      </div>
-
-      <div v-if="suggest" class="suggest-box">
-        <div class="suggest-head">Multiple matches — which one is it?</div>
-        <button v-for="c in suggest.choices" :key="c.id" class="suggest-item" @click="pickSuggestion(c)">
-          <div class="s-title">{{ c.label }}</div>
-          <div class="s-desc">{{ c.description || 'No description available' }}</div>
+      <!-- The entry itself; the cover opens Details at the cover field. -->
+      <div v-show="found" class="entry-head">
+        <button type="button" class="eh-cover" title="Change cover" aria-label="Change cover" @click="editCover">
+          <img v-if="form.coverUrl" :src="form.coverUrl" alt=""><span v-else class="pv-ph" :class="m"></span>
         </button>
-        <button class="suggest-skip" @click="skipSuggestions">None of these</button>
-      </div>
-
-      <div class="row-two">
-        <div class="field"><label>{{ labels.year }}</label><input v-model="form.year" type="text" placeholder="e.g. 2019"></div>
-        <div v-if="m === 'book' || m === 'music'" class="field"><label>{{ labels.author }}</label><input v-model="form.author" type="text"></div>
-      </div>
-
-      <div v-if="m === 'film' || m === 'series'" class="field"><label>{{ labels.director }}</label><input v-model="form.director" type="text"></div>
-      <div v-if="m !== 'book'" class="field"><label>{{ labels.cast }}</label><input v-model="form.cast" type="text" placeholder="comma-separated"></div>
-      <div v-if="m === 'film' || m === 'series'" class="field"><label>Streaming service / watched on</label><input v-model="form.platform" type="text" placeholder="e.g. Netflix, cinema, Mubi"></div>
-      <div v-if="m === 'music'" class="field"><label>Listen link</label><input v-model="form.streamUrl" type="text" placeholder="Spotify, YouTube, SoundCloud, Mixcloud…"><a v-if="isHttp(form.streamUrl)" class="field-link" :href="form.streamUrl.trim()" target="_blank" rel="noopener noreferrer">Open link ↗</a></div>
-
-      <label v-if="!doneMode" class="wish-check"><input type="checkbox" :checked="wish" @change="form.status = $event.target.checked ? 'wishlist' : 'consumed'"> On my wishlist</label>
-
-      <div v-if="!wish" class="row-two">
-        <div class="field"><label>Date {{ DONE_VERB[m].toLowerCase() }}</label><input v-model="form.dateConsumed" type="date"></div>
-        <div class="field">
-          <label id="entry-rating">Rating</label>
-          <div class="star-pick" role="group" aria-labelledby="entry-rating">
-            <button v-for="i in 5" :key="i" type="button" :class="{ on: i <= form.rating }" :aria-label="`${i} of 5`" :aria-pressed="form.rating === i" @click="form.rating = i">{{ i <= form.rating ? '★' : '☆' }}</button>
-          </div>
+        <div class="eh-body">
+          <span class="pv-chip" :class="m">{{ m }}</span>
+          <div class="pv-title">{{ form.title.trim() || 'Untitled' }}<span v-if="form.year" class="yr"> ({{ form.year }})</span></div>
+          <div v-if="personLine(form)" class="pv-meta">{{ personLine(form) }}</div>
         </div>
       </div>
 
-      <div class="field"><label>Cover URL</label><input v-model="form.coverUrl" type="text" placeholder="Auto-filled by Look up, or paste your own"></div>
-      <div class="field"><label>Insights</label><textarea v-model="form.insights" :placeholder="wish ? 'Why you want it, who recommended it.' : 'Notes, reactions, quotes, whatever\'s worth keeping.'"></textarea></div>
+      <section v-show="found" class="form-section" aria-label="Your take">
+        <div v-if="!doneMode" class="status-toggle" role="group" aria-label="List">
+          <button type="button" :class="{ active: !wish }" :aria-pressed="!wish" @click="form.status = 'consumed'">Finished</button>
+          <button type="button" :class="{ active: wish }" :aria-pressed="wish" @click="form.status = 'wishlist'">Wishlist</button>
+        </div>
 
-      <p v-if="online && wish" class="form-sub">Only you can see your wishlist.</p>
-      <div v-else-if="online" class="field visibility-field">
-        <label>Who can see this <span class="label-note">(notes stay private)</span></label>
-        <select v-model="form.visibility">
-          <option value="">{{ defaultLabel }}</option>
-          <option v-for="l in LEVELS" :key="l" :value="l">{{ LEVEL_LABEL[l] }}</option>
-        </select>
-        <button v-if="editingId" class="btn ghost small" style="margin-top:8px;" @click="copyShareLink">Copy share link</button>
-      </div>
+        <div v-if="!wish" class="row-two">
+          <div class="field">
+            <label for="entry-date">Date {{ DONE_VERB[m].toLowerCase() }}</label>
+            <input id="entry-date" v-model="form.dateConsumed" type="date">
+            <div class="date-quick">
+              <button type="button" class="link-btn" @click="form.dateConsumed = todayLocalIso()">Today</button>
+              <button type="button" class="link-btn" @click="form.dateConsumed = todayLocalIso(1)">Yesterday</button>
+            </div>
+          </div>
+          <div class="field">
+            <label id="entry-rating">Rating</label>
+            <div class="star-pick" role="group" aria-labelledby="entry-rating">
+              <button v-for="i in 5" :key="i" type="button" :class="{ on: i <= form.rating }" :aria-label="`${i} of 5`" :aria-pressed="form.rating === i" @click="rate(i)">{{ i <= form.rating ? '★' : '☆' }}</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="field"><label for="entry-notes">Notes</label><textarea id="entry-notes" v-model="form.insights" :placeholder="wish ? 'Why you want it, who recommended it.' : 'Reactions, quotes, whatever\'s worth keeping.'"></textarea></div>
+
+        <p v-if="online && wish" class="form-sub">Only you can see your wishlist.</p>
+        <div v-else-if="online" class="field visibility-field">
+          <label for="entry-visibility">Who can see this</label>
+          <select id="entry-visibility" v-model="form.visibility">
+            <option value="">{{ defaultLabel }}</option>
+            <option v-for="l in LEVELS" :key="l" :value="l">{{ LEVEL_LABEL[l] }}</option>
+          </select>
+          <div class="field-hint">Notes are always private.<button v-if="editingId" type="button" class="link-btn" @click="copyShareLink">Copy share link</button></div>
+        </div>
+      </section>
+
+      <section class="form-section details">
+        <button v-if="found" type="button" class="section-toggle" :aria-expanded="detailsOpen" aria-controls="entry-details" @click="detailsOpen = !detailsOpen">Details</button>
+        <div v-show="!found || detailsOpen" id="entry-details">
+          <div class="medium-toggle">
+            <button v-for="x in MEDIA" :key="x" type="button" :data-m="x" :class="{ active: form.medium === x }" :aria-pressed="form.medium === x" @click="form.medium = x">{{ x[0].toUpperCase() + x.slice(1) }}</button>
+          </div>
+
+          <div class="title-row">
+            <div class="field"><label for="entry-title">Title</label><input id="entry-title" v-model="form.title" type="text" @keydown.enter="onTitleEnter"></div>
+            <button type="button" class="btn small" :disabled="lookupBusy" @click="manualLookup">Look up</button>
+          </div>
+
+          <div v-if="suggest" class="suggest-box">
+            <div class="suggest-head">Multiple matches — which one is it?</div>
+            <button v-for="c in suggest.choices" :key="c.id" type="button" class="suggest-item" @click="pickSuggestion(c)">
+              <div class="s-title">{{ c.label }}</div>
+              <div class="s-desc">{{ c.description || 'No description available' }}</div>
+            </button>
+            <button type="button" class="suggest-skip" @click="skipSuggestions">None of these</button>
+          </div>
+          <p v-if="!found && !suggest" class="form-sub by-hand"><button type="button" class="link-btn" @click="byHand">Or fill it in by hand</button></p>
+
+          <div v-show="found">
+            <div class="row-two">
+              <div class="field"><label>{{ labels.year }}</label><input v-model="form.year" type="text" placeholder="e.g. 2019"></div>
+              <div v-if="m === 'book' || m === 'music'" class="field"><label>{{ labels.author }}</label><input v-model="form.author" type="text"></div>
+            </div>
+            <div v-if="m === 'film' || m === 'series'" class="field"><label>{{ labels.director }}</label><input v-model="form.director" type="text"></div>
+            <div v-if="m !== 'book'" class="field"><label>{{ labels.cast }}</label><input v-model="form.cast" type="text" placeholder="Comma-separated"></div>
+            <div v-if="m === 'film' || m === 'series'" class="field"><label>Watched on</label><input v-model="form.platform" type="text" placeholder="e.g. Netflix, cinema, Mubi"></div>
+            <div v-if="m === 'music'" class="field"><label>Listen link</label><input v-model="form.streamUrl" type="text" placeholder="Spotify, YouTube, SoundCloud, Mixcloud…"><a v-if="isHttp(form.streamUrl)" class="field-link" :href="form.streamUrl.trim()" target="_blank" rel="noopener noreferrer">Open link ↗</a></div>
+            <div class="field"><label for="entry-cover">Cover image URL</label><input id="entry-cover" ref="coverInputEl" v-model="form.coverUrl" type="text" placeholder="Auto-filled by Look up, or paste your own"></div>
+          </div>
+        </div>
+      </section>
 
       <div class="status">{{ formStatus }}</div>
       <div class="form-actions">

@@ -667,6 +667,79 @@ describe('add and edit', () => {
     expect(adapter.calls.at(-1)[1]).toMatchObject({ title: 'Paprika', wikidataId: 'Q9' });
   });
 
+  describe('the add / edit form layout', () => {
+    const openManual = async (w) => {
+      await w.find('.add-new-btn').trigger('click');
+      await w.findAll('.view-tabs button')[1].trigger('click');
+      return w.findAll('.form-panel')[0];
+    };
+    const mockSearch = (pages) => fetch.mockImplementation((url, init) => {
+      const json = (body) => Promise.resolve(new Response(JSON.stringify(body)));
+      if (url.includes('generator=search')) return json({ query: { pages } });
+      if (url.includes('wbgetentities')) return json({ entities: { Q9: { claims: {} } } });
+      return fakeFetch(url, init);
+    });
+
+    it('a new entry shows only type, title and Look up until Look up fills it; Enter runs Look up', async () => {
+      mockSearch({ a: { index: 1, title: 'Q9', entityterms: { label: ['Paprika'], description: ['2006 film'] } } });
+      const w = await mountApp();
+      const f = await openManual(w);
+      expect(f.find('.entry-head').isVisible()).toBe(false);
+      expect(f.find('.form-section[aria-label="Your take"]').isVisible()).toBe(false);
+      expect(f.find('#entry-cover').isVisible()).toBe(false);
+      expect(f.find('.section-toggle').exists()).toBe(false);
+      expect(f.find('#entry-title').isVisible()).toBe(true);
+      await f.findAll('.medium-toggle button').find((b) => b.text() === 'Film').trigger('click');
+      await f.find('#entry-title').setValue('Paprika');
+      await f.find('#entry-title').trigger('keydown', { key: 'Enter' });
+      await flushPromises();
+      expect(f.find('.entry-head').isVisible()).toBe(true);
+      expect(f.find('.entry-head').text()).toContain('Paprika');
+      // Filled: Details fold away, and open from the toggle.
+      expect(f.find('.section-toggle').attributes('aria-expanded')).toBe('false');
+      expect(f.find('#entry-details').isVisible()).toBe(false);
+      await f.find('.section-toggle').trigger('click');
+      expect(f.find('#entry-cover').isVisible()).toBe(true);
+    });
+
+    it('when Look up finds nothing, or by hand, Details open for typing', async () => {
+      mockSearch({});
+      const w = await mountApp();
+      let f = await openManual(w);
+      await f.find('#entry-title').setValue('Nothing like this');
+      await f.findAll('button').find((b) => b.text() === 'Look up').trigger('click');
+      await flushPromises();
+      expect(f.find('.entry-head').isVisible()).toBe(true);
+      expect(f.find('.section-toggle').attributes('aria-expanded')).toBe('true');
+      expect(f.find('#entry-cover').isVisible()).toBe(true);
+      await f.findAll('.form-actions button').find((b) => b.text() === 'Cancel').trigger('click');
+      f = await openManual(w);
+      expect(f.find('.entry-head').isVisible()).toBe(false);
+      await f.find('.by-hand button').trigger('click');
+      expect(f.find('.entry-head').isVisible()).toBe(true);
+      expect(f.find('#entry-cover').isVisible()).toBe(true);
+    });
+
+    it('editing opens on the entry and Your take; the cover opens Details; stars clear; Today / Yesterday', async () => {
+      const w = await mountApp();
+      await w.findAll('.card').find((c) => c.text().includes('Steppenwolf')).trigger('click');
+      const f = w.findAll('.form-panel')[0];
+      expect(f.find('.entry-head').text()).toContain('Steppenwolf');
+      expect(f.find('#entry-details').isVisible()).toBe(false);
+      await f.find('.eh-cover').trigger('click');
+      expect(f.find('#entry-details').isVisible()).toBe(true);
+      const stars = f.findAll('.star-pick button');
+      await stars[2].trigger('click');
+      expect(f.findAll('.star-pick button.on')).toHaveLength(3);
+      await stars[2].trigger('click');
+      expect(f.findAll('.star-pick button.on')).toHaveLength(0);
+      await f.findAll('.date-quick button').find((b) => b.text() === 'Yesterday').trigger('click');
+      expect(f.find('#entry-date').element.value).toBe(todayLocalIso(1));
+      await f.findAll('.date-quick button').find((b) => b.text() === 'Today').trigger('click');
+      expect(f.find('#entry-date').element.value).toBe(todayLocalIso());
+    });
+  });
+
   it('the describe tip can be hidden, stays hidden, and the ? brings it back', async () => {
     localStorage.removeItem('describeHintHidden');
     let w = await mountApp();
@@ -831,7 +904,7 @@ describe('wishlist (#47)', () => {
     await w.find('.add-new-btn').trigger('click');
     expect(w.find('.form-panel h2').text()).toBe('Add to wishlist');
     await w.findAll('.view-tabs button')[1].trigger('click');
-    expect(w.find('.wish-check input').element.checked).toBe(true);
+    expect(w.find('.status-toggle button[aria-pressed=true]').text()).toBe('Wishlist');
     expect(w.find('.star-pick').exists()).toBe(false);
     expect(w.find('.visibility-field').exists()).toBe(false);
     expect(w.find('.form-panel').text()).toContain('Only you can see your wishlist.');
@@ -850,7 +923,7 @@ describe('wishlist (#47)', () => {
     await w.findAll('.card')[0].find('.done').trigger('click');
     expect(w.find('.form-panel h2').text()).toBe('Done? Rate it');
     expect(w.find('input[type=date]').element.value).toBe(todayLocalIso());
-    expect(w.find('.wish-check').exists()).toBe(false);
+    expect(w.find('.status-toggle').exists()).toBe(false);
     await w.findAll('.star-pick button')[4].trigger('click');
     await saveBtn(w).trigger('click');
     await flushPromises();
@@ -869,10 +942,10 @@ describe('wishlist (#47)', () => {
     expect(titles(w)).toEqual(['Perfect Blue', 'Akira']);
   });
 
-  it('ticking On my wishlist turns an entry into a wish and drops its rating, date and level', async () => {
+  it('switching to Wishlist turns an entry into a wish and drops its rating, date and level', async () => {
     const w = await mountApp(EXAMPLE, 'ok', 'supabase');
     await w.findAll('.card').find((c) => c.text().includes('Steppenwolf')).trigger('click');
-    await w.find('.wish-check input').setValue(true);
+    await w.findAll('.status-toggle button').find((b) => b.text() === 'Wishlist').trigger('click');
     await saveBtn(w).trigger('click');
     await flushPromises();
     expect(adapter.calls.at(-1)[1]).toMatchObject({ title: 'Steppenwolf', status: 'wishlist', rating: 0, dateConsumed: '', visibility: '' });

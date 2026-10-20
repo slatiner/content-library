@@ -140,23 +140,23 @@ select{padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius)
 .overlay{position:fixed;inset:0;background:rgba(25,25,25,0.4);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;z-index:10;}
 .overlay.open{display:flex;}
 .form-panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);width:100%;max-width:480px;padding:20px;}
-.form-panel h2{margin:0 0 4px;font-size:15px;text-transform:uppercase;letter-spacing:0.04em;}
+.form-panel h2{margin:0 0 12px;font-size:17px;font-weight:600;}
 .form-sub{font-size:11.5px;color:var(--ink-soft);margin:0 0 16px;line-height:1.4;}
 .field{margin-bottom:12px;}
-.field label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-soft);margin-bottom:4px;}
+.field label{display:block;font-size:12.5px;font-weight:500;color:var(--ink-soft);margin-bottom:4px;}
 .field input,.field textarea,.field select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius);font-family:inherit;font-size:13px;color:var(--ink);background:#fff;}
 .field textarea{resize:vertical;min-height:60px;}
 .title-row{display:flex;gap:6px;align-items:flex-end;}
 .title-row .field{flex:1;margin-bottom:0;}
 .medium-toggle{display:flex;gap:6px;margin-bottom:14px;}
-.medium-toggle button{flex:1;padding:8px;border:1px solid var(--line);background:#fff;font-family:inherit;font-size:12px;cursor:pointer;border-radius:var(--radius);text-transform:uppercase;letter-spacing:0.04em;}
+.medium-toggle button{flex:1;padding:8px;border:1px solid var(--line);background:#fff;font-family:inherit;font-size:13px;cursor:pointer;border-radius:var(--radius);}
 .medium-toggle button.active{background:var(--ink);color:#fff;border-color:var(--ink);}
 .medium-toggle button[data-m=book].active{background:var(--book);border-color:var(--book);}
 .medium-toggle button[data-m=film].active{background:var(--film);border-color:var(--film);}
 .medium-toggle button[data-m=series].active{background:var(--series);border-color:var(--series);}
 .medium-toggle button[data-m=music].active{background:var(--music);border-color:var(--music);}
 .view-tabs{display:flex;gap:6px;margin-bottom:14px;}
-.view-tabs button{flex:1;padding:8px;border:1px solid var(--line);background:#fff;font-family:inherit;font-size:12px;cursor:pointer;border-radius:var(--radius);text-transform:uppercase;letter-spacing:0.04em;}
+.view-tabs button{flex:1;padding:8px;border:1px solid var(--line);background:#fff;font-family:inherit;font-size:13px;cursor:pointer;border-radius:var(--radius);}
 .view-tabs button.active{background:var(--ink);color:#fff;border-color:var(--ink);}
 #aiInput{width:100%;min-height:96px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius);font-family:inherit;font-size:14px;line-height:1.45;color:var(--ink);background:#fff;resize:vertical;}
 .hint{position:relative;padding-right:22px;}
@@ -195,6 +195,26 @@ select{padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius)
 .star-pick button:focus-visible{outline:2px solid var(--ink);outline-offset:1px;}
 .form-panel:focus{outline:none;}
 .form-actions .push-left{margin-right:auto;}
+
+/* Add / edit form: the entry on top, then Your take, then folded Details. */
+.entry-head{display:flex;gap:14px;align-items:center;margin-bottom:16px;}
+.eh-cover{width:72px;aspect-ratio:2/3;flex:none;padding:0;border:0;border-radius:var(--radius);overflow:hidden;background:var(--line);cursor:pointer;}
+.eh-cover img,.eh-cover .pv-ph{width:100%;height:100%;object-fit:cover;display:block;}
+.eh-cover:focus-visible{outline:2px solid var(--ink);outline-offset:2px;}
+.eh-body{min-width:0;}
+.eh-body .pv-title{font-size:16px;}
+.form-section{margin-bottom:6px;}
+.form-section.details{border-top:1px solid var(--line);padding-top:4px;}
+.section-toggle{display:flex;align-items:center;gap:6px;width:100%;padding:10px 0;border:0;background:none;font:inherit;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;text-align:left;}
+.section-toggle::before{content:'';width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(-45deg);transition:transform .15s ease;}
+.section-toggle[aria-expanded=true]::before{transform:rotate(45deg);}
+.section-toggle:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:4px;}
+.status-toggle{display:inline-flex;gap:4px;padding:3px;margin-bottom:14px;border:1px solid var(--line);border-radius:var(--radius);background:#fff;}
+.status-toggle button{padding:6px 14px;border:0;background:none;font-family:inherit;font-size:13px;color:var(--ink-soft);cursor:pointer;border-radius:6px;}
+.status-toggle button.active{background:var(--ink);color:#fff;}
+.date-quick{display:flex;gap:12px;margin-top:5px;font-size:12px;}
+.field-hint{display:flex;gap:12px;flex-wrap:wrap;margin-top:5px;font-size:12px;color:var(--ink-soft);}
+.by-hand{margin:-4px 0 4px;}
 .field-link{display:inline-block;margin-top:4px;font-size:12px;color:var(--ink-soft);}
 .form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
 .status{font-size:11px;color:var(--ink-soft);margin-top:10px;min-height:14px;line-height:1.5;}
@@ -262,6 +282,10 @@ header.top .account-menu{align-self:center;}
   .tag-check .tag-label{display:none;}
   .filter-row select{flex:1 1 0;min-width:0;order:2;}
   .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+  /* Dialogs are full-screen sheets with Cancel / Save pinned to the bottom. */
+  .overlay{padding:0;}
+  .form-panel{max-width:none;min-height:100%;border:0;border-radius:0;padding:18px 16px 0;}
+  .form-actions{position:sticky;bottom:0;margin:16px -16px 0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:var(--panel);border-top:1px solid var(--line);}
   /* 16px or more, or iOS Safari zooms the page when a field is tapped. */
   input,select,textarea,.filter-row input[type=text],.field input,.field textarea,.field select,#aiInput,.redeem-row input,.popover .field input{font-size:16px;}
 }
@@ -272,4 +296,3 @@ header.top .account-menu{align-self:center;}
 .list-toggle button.active{background:var(--ink);color:#fff;}
 .card .done{position:absolute;bottom:8px;right:8px;width:26px;height:26px;border-radius:50%;background:rgba(25,25,25,0.7);color:#fff;border:none;font-size:14px;line-height:26px;text-align:center;cursor:pointer;padding:0;z-index:2;}
 .card .done:hover{background:var(--ink);}
-.wish-check{display:flex;align-items:center;gap:8px;font-size:13px;margin:4px 0 14px;cursor:pointer;}
