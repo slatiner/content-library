@@ -29,9 +29,13 @@ export function useScrollChrome(headerEl) {
     else if (travel < -TRAVEL) tucked.value = false;
   }
 
+  // Keyboard focus reaching the tucked filter bar brings it back.
+  function onFocusIn(e) { if (tucked.value && e.target.closest?.('.filter-bar')) tucked.value = false; }
+
   let observer = null;
   onMounted(() => {
     window.addEventListener('scroll', onScroll, { passive: true });
+    document.addEventListener('focusin', onFocusIn);
     if (headerEl.value && typeof ResizeObserver !== 'undefined') {
       // border-box: the compact header's padding keeps shrinking after its content
       // (held up by the button) has stopped, which content-box would miss.
@@ -43,6 +47,7 @@ export function useScrollChrome(headerEl) {
   });
   onBeforeUnmount(() => {
     window.removeEventListener('scroll', onScroll);
+    document.removeEventListener('focusin', onFocusIn);
     observer?.disconnect();
   });
 

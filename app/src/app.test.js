@@ -266,6 +266,16 @@ describe('sticky header on scroll', () => {
     expect(header()).not.toContain('compact');
     w.unmount();
   });
+
+  it('Tab into the tucked filter bar brings it back', async () => {
+    const w = await mountApp(EXAMPLE, 'ok', 'file');
+    await scrollTo(300);
+    expect(w.find('.filter-bar').classes()).toContain('tucked');
+    w.find('.filter-bar input[type=text]').element.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+    await flushPromises();
+    expect(w.find('.filter-bar').classes()).not.toContain('tucked');
+    w.unmount();
+  });
 });
 
 describe('signing in (Supabase storage)', () => {

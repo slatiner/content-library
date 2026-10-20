@@ -30,8 +30,9 @@ header.top h1.logo svg{transition:height .15s ease;}
 header.top.compact{padding:6px 0 5px;}
 header.top.compact h1.logo svg{height:26px;}
 /* 1px under the header's border, so rounding never leaves a gap. */
-.filter-bar{position:sticky;top:calc(var(--header-h,1px) - 1px);z-index:7;transition:transform .3s ease,opacity .3s ease,visibility 0s linear 0s;}
-.filter-bar.tucked{transform:translateY(-100%);opacity:0;visibility:hidden;pointer-events:none;transition:transform .3s ease,opacity .3s ease,visibility 0s linear .3s;}
+/* Tucked stays focusable (no visibility:hidden): Tab into it and it slides back. */
+.filter-bar{position:sticky;top:calc(var(--header-h,1px) - 1px);z-index:7;transition:transform .3s ease,opacity .3s ease;}
+.filter-bar.tucked{transform:translateY(-100%);opacity:0;pointer-events:none;}
 header.top h1{font-size:19px;font-weight:600;letter-spacing:0.02em;margin:0;}
 header.top h1.logo{line-height:0;align-self:center;}
 header.top h1.logo svg{height:36px;width:auto;display:block;}
