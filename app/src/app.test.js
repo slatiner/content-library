@@ -657,6 +657,25 @@ describe('add and edit', () => {
     expect(adapter.calls.at(-1)[1]).toMatchObject({ title: 'Paprika', wikidataId: 'Q9' });
   });
 
+  it('the describe tip can be hidden, stays hidden, and the ? brings it back', async () => {
+    localStorage.removeItem('describeHintHidden');
+    let w = await mountApp();
+    await w.find('.add-new-btn').trigger('click');
+    expect(w.find('#describe-hint').exists()).toBe(true);
+    expect(w.find('.hint-open').exists()).toBe(false);
+    await w.find('.hint-close').trigger('click');
+    expect(w.find('#describe-hint').exists()).toBe(false);
+    expect(localStorage.getItem('describeHintHidden')).toBe('1');
+    w.unmount();
+    w = await mountApp();
+    await w.find('.add-new-btn').trigger('click');
+    expect(w.find('#describe-hint').exists()).toBe(false);
+    await w.find('.ai-input-wrap .hint-open').trigger('click');
+    expect(w.find('#describe-hint').exists()).toBe(true);
+    expect(localStorage.getItem('describeHintHidden')).toBe(null);
+    w.unmount();
+  });
+
   it('Describe it: send, preview, Enter again adds', async () => {
     groqAnswer = { intent: 'add', medium: 'film', title: 'Perfect Blue', year: null, creator: 'Satoshi Kon', rating: 4, dateConsumed: '2026-10-01', note: 'anime night', platform: null, url: null };
     const w = await mountApp();

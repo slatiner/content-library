@@ -70,6 +70,15 @@ function open(entry, opts = {}) {
   if (!entry) nextTick(() => aiInputEl.value && aiInputEl.value.focus());
 }
 function close() { isOpen.value = false; }
+
+// The example under the describe box can be dismissed once it's familiar; the ?
+// in the box brings it back. Remembered per browser.
+const HINT_KEY = 'describeHintHidden';
+const hintHidden = ref((() => { try { return localStorage.getItem(HINT_KEY) === '1'; } catch (e) { return false; } })());
+function setHintHidden(v) {
+  hintHidden.value = v;
+  try { v ? localStorage.setItem(HINT_KEY, '1') : localStorage.removeItem(HINT_KEY); } catch (e) { /* storage unavailable */ }
+}
 // Also on the card, but that × needs hover, which phones don't have.
 function remove() {
   const id = editingId.value;
@@ -297,8 +306,11 @@ function saveKey() {
     </div>
 
     <div v-show="view === 'ai'">
-      <p v-if="wish" class="form-sub">Say what you want to watch, read or listen to. For example: "Perfect Blue, Sam recommended it".</p>
-      <p v-else class="form-sub">Just say what you watched, read or listened to. For example: "Perfect Blue, solid 4, watched two weeks ago, note: anime night at home".</p>
+      <div v-if="!hintHidden" id="describe-hint" class="form-sub hint">
+        <p v-if="wish">Say what you want to watch, read or listen to. For example: "Perfect Blue, Sam recommended it".</p>
+        <p v-else>Just say what you watched, read or listened to. For example: "Perfect Blue, solid 4, watched two weeks ago, note: anime night at home".</p>
+        <button type="button" class="hint-close" aria-label="Hide this tip" title="Hide this tip" @click="setHintHidden(true)">×</button>
+      </div>
 
       <div v-if="keyBox" class="suggest-box">
         <div class="suggest-head">Groq API key needed</div>
@@ -309,7 +321,10 @@ function saveKey() {
         </div>
       </div>
 
-      <textarea id="aiInput" ref="aiInputEl" v-model="aiText" :placeholder="wish ? 'What do you want to get to?' : 'What did you just finish?'" @keydown="onAiKeydown" @input="onAiInput"></textarea>
+      <div class="ai-input-wrap">
+        <textarea id="aiInput" ref="aiInputEl" v-model="aiText" :placeholder="wish ? 'What do you want to get to?' : 'What did you just finish?'" @keydown="onAiKeydown" @input="onAiInput"></textarea>
+        <button v-if="hintHidden" type="button" class="hint-open" aria-label="How to describe it" title="How to describe it" @click="setHintHidden(false)">?</button>
+      </div>
       <div class="status">{{ aiStatus }}</div>
 
       <div v-if="aiStage === 'choices' && aiChoices" class="suggest-box">
