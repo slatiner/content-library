@@ -38,7 +38,7 @@ function onSearchEnter(e) {
 <template>
   <div class="filter-bar">
     <div class="filter-row">
-      <input v-model="filters.search" type="text" placeholder="Search, ask, or log something…" @keydown.enter="onSearchEnter">
+      <input v-model="filters.search" type="text" placeholder="Type anything…" @keydown.enter="onSearchEnter">
       <!-- On phones the select is invisible over an icon of the current sort; tapping still opens the native picker. -->
       <span class="sort-pick" :data-sort="filters.sortBy">
         <svg class="sort-icon" viewBox="0 0 24 24" aria-hidden="true">
