@@ -321,6 +321,7 @@ export async function lookupTitle(form) {
       const exact = typed.filter((c) => normText(c.label) === normText(title));
       const only = typed.length === 1 ? typed[0] : exact.length === 1 ? exact[0] : null;
       if (only) {
+        if (only.label) form.title = only.label;
         await applyWikidataDetails(only.id, form);
         return { status: `Filled from Wikidata (${only.label}).` };
       }

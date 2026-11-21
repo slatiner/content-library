@@ -811,6 +811,36 @@ describe('add and edit', () => {
     expect(adapter.calls.at(-1)[1]).toMatchObject({ title: 'Paprika', wikidataId: 'Q9' });
   });
 
+  it('picking a suggestion names the entry after it, not after what was typed', async () => {
+    fetch.mockImplementation((url, init) => {
+      const json = (body) => Promise.resolve(new Response(JSON.stringify(body)));
+      if (url.includes('generator=search')) return json({ query: { pages: {
+        a: { index: 1, title: 'Q1', entityterms: { label: ['Heat'], description: ['1995 film'] } },
+        c: { index: 3, title: 'Q2', entityterms: { label: ['Heat'], description: ['1972 film'] } },
+        b: { index: 2, title: 'Q3', entityterms: { label: ['White Heat'], description: ['1949 film'] } },
+      } } });
+      if (url.includes('wbgetentities')) return json({ entities: { Q3: { claims: {} } } });
+      return fakeFetch(url, init);
+    });
+    const w = await mountApp();
+    await w.find('.add-new-btn').trigger('click');
+    await w.findAll('.view-tabs button')[1].trigger('click');
+    await w.findAll('.medium-toggle button').find((b) => b.text() === 'Film').trigger('click');
+    const manual = w.findAll('.form-panel')[0];
+    const lookUp = async (typed) => {
+      await manual.find('.title-row input').setValue(typed);
+      await manual.findAll('button').find((b) => b.text() === 'Look up').trigger('click');
+      await flushPromises();
+    };
+    await lookUp('heat');
+    await manual.findAll('.suggest-item').find((b) => b.text().includes('1949')).trigger('click');
+    await flushPromises();
+    expect(manual.find('.title-row input').element.value).toBe('White Heat');
+    // One exact match fills straight away, with its own capitalization.
+    await lookUp('white heat');
+    expect(manual.find('.title-row input').element.value).toBe('White Heat');
+  });
+
   describe('the add / edit form layout', () => {
     const openManual = async (w) => {
       await w.find('.add-new-btn').trigger('click');

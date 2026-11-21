@@ -191,6 +191,8 @@ function onTitleEnter(e) {
 }
 async function pickSuggestion(c) {
   formStatus.value = 'Filling details…';
+  // The picked match names the entry, not what was typed ("heat" -> "White Heat").
+  if (c.label) form.title = c.label;
   try {
     await applyWikidataDetails(c.id, form);
     suggest.value = null;
@@ -277,6 +279,7 @@ async function pickAiChoice(c) {
   aiStage.value = 'input';
   sendBusy.value = true;
   aiStatus.value = 'Filling in details…';
+  if (c.label) form.title = c.label;
   try {
     await applyWikidataDetails(c.id, form);
     aiStatus.value = `Filled from Wikidata (${c.label}).`;
