@@ -356,6 +356,8 @@ header.top .account-menu{align-self:center;}
   .field input[type=date]{-webkit-appearance:none;appearance:none;width:8.5em;min-height:38px;padding:8px 6px;text-align:left;}
   .field input[type=date]::-webkit-date-and-time-value{text-align:left;}
   .row-two .field-rating{flex-shrink:0;}
+  .star-pick{gap:0;}
+  .star-pick button{font-size:19px;padding:4px 2px;}
 }
 
 /* Consumed / Wishlist (#47) */
