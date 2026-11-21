@@ -15,6 +15,7 @@ import SharedItem from './components/SharedItem.vue';
 import GoogleButton from './components/GoogleButton.vue';
 import { useScrollChrome } from './lib/scrollChrome.js';
 import { swipeHandlers } from './lib/swipe.js';
+import { useProgressive } from './lib/progressive.js';
 
 // Phones: swipe left for the Wishlist, right for Consumed (the toggle's order).
 // The grid stays put; the toggle's highlight follows the finger, and on release
@@ -41,8 +42,12 @@ watch(list, async () => {
 const listed = computed(() => entries.value.filter(inList(list.value)));
 const counts = computed(() => countByMedium(listed.value));
 const visible = computed(() => filterAndSort(listed.value, filters, ask.criteria));
+// Large libraries render a page of cards at a time as you scroll.
+const { shown, more, sentinel } = useProgressive(visible, () => [list.value, filters, ask.criteria]);
 
 // 'unsupported' still shows the library, so Export / Import can be used by hand.
+// While the library loads, a grid of grey placeholder cards holds its place.
+const showLoading = computed(() => connection.state === 'checking');
 const showMain = computed(() => connection.state === 'ok' || connection.state === 'unsupported');
 const showSetup = computed(() => connection.state === 'none');
 const showSignIn = computed(() => connection.state === 'signedOut');
@@ -160,6 +165,13 @@ onMounted(async () => {
       </template>
     </div>
 
+    <div v-if="showLoading" class="grid skeleton" role="status" aria-label="Loading your library">
+      <div v-for="i in 12" :key="i" class="card skel" aria-hidden="true">
+        <div class="cover"></div>
+        <div class="info"><div class="skel-line"></div><div class="skel-line short"></div></div>
+      </div>
+    </div>
+
     <div v-if="showSetup" class="setup">
       <p>No folder connected yet. Pick the folder where you keep your data (for example this project's folder) — the app will create/use a file called <code>media-archive-data.json</code> inside it automatically from now on, no browsing to find it each time. Brave/Chrome will still ask you to reconnect on each new launch — that's the browser's own security check, not something I can skip.</p>
       <button class="btn" @click="connectStorage">Connect folder</button>
@@ -187,8 +199,9 @@ onMounted(async () => {
     <div v-else-if="showShared && entries.length" class="shared-view">
       <FilterBar :counts="counts" :class="{ tucked }" />
       <TransitionGroup name="card" tag="div" class="grid">
-        <EntryCard v-for="e in visible" :key="e.id" :entry="e" readonly />
+        <EntryCard v-for="e in shown" :key="e.id" :entry="e" readonly />
       </TransitionGroup>
+      <div v-if="more" ref="sentinel" class="grid-more" aria-hidden="true"></div>
       <div v-if="!visible.length" class="empty">No matches.</div>
     </div>
 
@@ -196,8 +209,9 @@ onMounted(async () => {
       <FilterBar with-lists :counts="counts" :drag="listDrag" :class="{ tucked }" />
       <!-- Keyed by list, so a switch swaps the whole grid instead of fading cards one by one. -->
       <TransitionGroup ref="libGrid" :key="list" name="card" tag="div" class="grid">
-        <EntryCard v-for="e in visible" :key="e.id" :entry="e" :level="levelFor(e)" :shareable="isOnline" @open="dialog.open(e)" @done="dialog.open(e, { done: true })" @delete="deleteEntry(e.id)" />
+        <EntryCard v-for="e in shown" :key="e.id" :entry="e" :level="levelFor(e)" :shareable="isOnline" @open="dialog.open(e)" @done="dialog.open(e, { done: true })" @delete="deleteEntry(e.id)" />
       </TransitionGroup>
+      <div v-if="more" ref="sentinel" class="grid-more" aria-hidden="true"></div>
       <div v-if="!visible.length" class="empty">
         {{ listed.length
           ? (list === 'wishlist'

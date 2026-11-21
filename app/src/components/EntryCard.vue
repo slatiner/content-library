@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { DONE_VERB, personLine, isWish } from '../lib/entries.js';
 import { shareLink, shareUrl } from '../state.js';
 import Stars from './Stars.vue';
@@ -25,6 +25,11 @@ function onClick() {
 
 const wish = computed(() => isWish(props.entry));
 
+// The cover fades in once loaded, over a shimmer; a broken link falls back to
+// the coloured title placeholder.
+const imgState = ref('loading'); // 'loading' | 'loaded' | 'error'
+watch(() => props.entry.coverUrl, () => { imgState.value = 'loading'; });
+
 const people = computed(() => personLine(props.entry));
 const hasHover = computed(() => props.entry.dateConsumed || props.entry.insights || people.value || props.entry.streamUrl);
 
@@ -47,8 +52,8 @@ async function copyShareLink() {
 <template>
   <div class="card" :class="{ peek }" @click="onClick">
     <button v-if="!readonly" class="del" title="Delete" @click.stop="$emit('delete')">×</button>
-    <div class="cover">
-      <img v-if="entry.coverUrl" :src="entry.coverUrl" alt="" loading="lazy">
+    <div class="cover" :class="{ loading: entry.coverUrl && imgState === 'loading' }">
+      <img v-if="entry.coverUrl && imgState !== 'error'" :src="entry.coverUrl" alt="" loading="lazy" decoding="async" :class="{ loaded: imgState === 'loaded' }" @load="imgState = 'loaded'" @error="imgState = 'error'">
       <div v-else class="ph" :class="entry.medium">{{ entry.title }}</div>
       <div v-if="hasHover" class="hover-info">
         <div v-if="people" class="hi-people">{{ people }}</div>

@@ -1324,3 +1324,48 @@ describe('export / import', () => {
     expect(adapter.calls.at(-1)).toEqual(['replaceAll', 5]);
   });
 });
+
+describe('large libraries load progressively', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+  const many = (n) => Array.from({ length: n }, (_, i) => ({ ...EXAMPLE[0], id: `e_${i}_x`, title: `Film ${String(i).padStart(2, '0')}`, dateAdded: 1700000000000 + i }));
+
+  it('renders a page of cards, then the next page as the end comes into view; a list switch starts over', async () => {
+    const observers = [];
+    vi.stubGlobal('IntersectionObserver', class {
+      constructor(cb) { this.cb = cb; this.els = new Set(); observers.push(this); }
+      observe(el) { this.els.add(el); }
+      unobserve(el) { this.els.delete(el); }
+      disconnect() { this.els.clear(); }
+    });
+    const w = await mountApp(many(30));
+    expect(w.findAll('.card')).toHaveLength(24);
+    const live = observers.find((o) => o.els.size);
+    live.cb([{ isIntersecting: true }]);
+    await flushPromises();
+    expect(w.findAll('.card')).toHaveLength(30);
+    expect(w.find('.grid-more').exists()).toBe(false);
+    state.setList('wishlist');
+    await flushPromises();
+    state.setList('consumed');
+    await flushPromises();
+    expect(w.findAll('.card')).toHaveLength(24);
+  });
+
+  it('shows placeholder cards while the library is loading', async () => {
+    const w = await mountApp(EXAMPLE, 'checking');
+    expect(w.find('.grid.skeleton').attributes('role')).toBe('status');
+    expect(w.findAll('.card.skel').length).toBeGreaterThan(0);
+  });
+
+  it('a cover fades in once loaded, and a broken cover falls back to the title placeholder', async () => {
+    const w = await mountApp(many(2));
+    const [a, b] = w.findAll('.card');
+    expect(a.find('.cover').classes()).toContain('loading');
+    await a.find('img').trigger('load');
+    expect(a.find('img').classes()).toContain('loaded');
+    expect(a.find('.cover').classes()).not.toContain('loading');
+    await b.find('img').trigger('error');
+    expect(b.find('img').exists()).toBe(false);
+    expect(b.find('.ph').text()).toContain('Film');
+  });
+});
