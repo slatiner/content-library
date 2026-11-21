@@ -349,10 +349,14 @@ header.top .account-menu{align-self:center;}
 
 /* Consumed / Wishlist (#47) */
 /* Swiping between the lists: the browser handles vertical scroll and pinch only. */
-.library{touch-action:pan-y pinch-zoom;overflow-x:clip;}
-.list-toggle{display:inline-flex;flex:none;gap:4px;margin-left:auto;padding:3px;border:1px solid var(--line);border-radius:var(--radius);background:#fff;}
-.list-toggle button{padding:6px 14px;border:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;border-radius:var(--radius);text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-soft);}
-.list-toggle button.active{background:var(--ink);color:#fff;}
+.library{touch-action:pan-y pinch-zoom;}
+/* Two equal halves with one highlight (the pill) that slides between them; --pill is 0 or 1, in between while swiping. */
+.list-toggle{position:relative;display:inline-grid;grid-template-columns:1fr 1fr;flex:none;gap:4px;margin-left:auto;padding:3px;border:1px solid var(--line);border-radius:var(--radius);background:#fff;}
+.list-pill{position:absolute;top:3px;bottom:3px;left:3px;width:calc((100% - 10px) / 2);border-radius:var(--radius);background:var(--ink);transform:translateX(calc(var(--pill, 0) * (100% + 4px)));transition:transform .2s cubic-bezier(.2,.8,.2,1);}
+.list-toggle.dragging .list-pill{transition:none;}
+.list-toggle button{position:relative;padding:6px 14px;border:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;border-radius:var(--radius);text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-soft);transition:color .15s;}
+.list-toggle button.lit{color:#fff;}
+@media (prefers-reduced-motion: reduce){ .list-pill{transition:none;} }
 .card .done{position:absolute;bottom:8px;right:8px;width:26px;height:26px;border-radius:50%;background:rgba(25,25,25,0.7);color:#fff;border:none;font-size:14px;line-height:26px;text-align:center;cursor:pointer;padding:0;z-index:2;}
 .card .done:hover{background:var(--ink);}
 /* Copy share link (consumed, online): shown on hover or focus where there's a

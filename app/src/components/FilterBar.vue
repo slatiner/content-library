@@ -6,7 +6,10 @@ import MediumIcon from './MediumIcon.vue';
 
 // withLists: the Consumed / Wishlist toggle (#47); a shared view has no wishlist.
 // counts: entries per medium in the current list, shown on each type's tag.
-defineProps({ withLists: { type: Boolean, default: false }, counts: { type: Object, default: () => ({}) } });
+// drag: while swiping between the lists, how far (-1..1) the toggle's highlight has moved off its list.
+const props = defineProps({ withLists: { type: Boolean, default: false }, counts: { type: Object, default: () => ({}) }, drag: { type: Number, default: 0 } });
+// 0 = Consumed, 1 = Wishlist; the highlight sits there and the label over it turns white.
+const pillPos = computed(() => Math.min(1, Math.max(0, (list.value === 'wishlist' ? 1 : 0) + props.drag)));
 
 const SORTS = [
   ['dateConsumed_desc', 'Recently finished'],
@@ -57,9 +60,10 @@ function onSearchEnter(e) {
           <span class="tag-count mono">{{ counts[m] ?? 0 }}</span>
         </label>
       </div>
-      <div v-if="withLists" class="list-toggle" role="tablist">
-        <button type="button" role="tab" :aria-selected="list === 'consumed'" :class="{ active: list === 'consumed' }" @click="setList('consumed')">Consumed</button>
-        <button type="button" role="tab" :aria-selected="list === 'wishlist'" :class="{ active: list === 'wishlist' }" @click="setList('wishlist')">Wishlist</button>
+      <div v-if="withLists" class="list-toggle" role="tablist" :class="{ dragging: drag !== 0 }" :style="{ '--pill': pillPos }">
+        <span class="list-pill" aria-hidden="true" />
+        <button type="button" role="tab" :aria-selected="list === 'consumed'" :class="{ active: list === 'consumed', lit: pillPos < 0.5 }" @click="setList('consumed')">Consumed</button>
+        <button type="button" role="tab" :aria-selected="list === 'wishlist'" :class="{ active: list === 'wishlist', lit: pillPos >= 0.5 }" @click="setList('wishlist')">Wishlist</button>
       </div>
     </div>
     <div v-if="ask.status || ask.chips.length" class="ask-row">
