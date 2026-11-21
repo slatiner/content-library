@@ -1130,6 +1130,32 @@ describe('wishlist (#47)', () => {
     expect(titles(w)).toEqual(['Akira', 'Perfect Blue']);
   });
 
+  it('a sideways swipe switches lists; a scroll, a slow drag or a swipe from a field does not', async () => {
+    const w = await mountApp(WITH_WISHES);
+    const lib = w.find('.library');
+    const swipe = async (x0, x1, { y1 = 300, target = lib } = {}) => {
+      await target.trigger('touchstart', { touches: [{ clientX: x0, clientY: 300 }] });
+      await lib.trigger('touchend', { changedTouches: [{ clientX: x1, clientY: y1 }] });
+    };
+    await swipe(400, 300, { y1: 500 }); // mostly vertical: a scroll
+    expect(titles(w)).toEqual(['In Rainbows', 'Paprika', 'Silo', 'Steppenwolf']);
+    await swipe(400, 300, { target: w.find('.filter-bar input[type=text]') });
+    expect(titles(w)).toEqual(['In Rainbows', 'Paprika', 'Silo', 'Steppenwolf']);
+    await swipe(400, 300);
+    expect(titles(w)).toEqual(['Perfect Blue', 'Akira']);
+    expect(w.find('.list-toggle .active').text()).toBe('Wishlist');
+    await swipe(300, 400);
+    expect(w.find('.list-toggle .active').text()).toBe('Consumed');
+  });
+
+  it('the sort icon follows the selected sort', async () => {
+    const w = await mountApp(EXAMPLE);
+    expect(w.find('.sort-pick').attributes('data-sort')).toBe('dateConsumed_desc');
+    await w.find('.filter-bar select').setValue('rating_desc');
+    expect(w.find('.sort-pick').attributes('data-sort')).toBe('rating_desc');
+    expect(w.find('.sort-pick .sort-icon path').exists()).toBe(true);
+  });
+
   it('only consumed cards get a share button', async () => {
     const w = await mountApp(WITH_WISHES, 'ok', 'supabase');
     expect(w.findAll('.card .share')).toHaveLength(4);

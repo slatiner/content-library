@@ -36,9 +36,20 @@ function onSearchEnter(e) {
   <div class="filter-bar">
     <div class="filter-row">
       <input v-model="filters.search" type="text" placeholder="Search, ask, or log something…" @keydown.enter="onSearchEnter">
-      <select v-model="filters.sortBy">
-        <option v-for="[v, label] in sorts" :key="v" :value="v">{{ label }}</option>
-      </select>
+      <!-- On phones the select is invisible over an icon of the current sort; tapping still opens the native picker. -->
+      <span class="sort-pick" :data-sort="filters.sortBy">
+        <svg class="sort-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <template v-if="filters.sortBy === 'dateConsumed_desc'"><circle cx="12" cy="12" r="9" /><path d="m8 12 3 3 5-6" /></template>
+          <template v-else-if="filters.sortBy === 'dateAdded_desc'"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></template>
+          <template v-else-if="filters.sortBy === 'rating_desc'"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9Z" /></template>
+          <template v-else-if="filters.sortBy === 'year_desc'"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></template>
+          <template v-else><path d="M4 17 7.5 7 11 17M5.2 13.5h4.6M14 7h6l-6 10h6" /></template>
+        </svg>
+        <svg class="sort-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5" /></svg>
+        <select v-model="filters.sortBy" aria-label="Sort">
+          <option v-for="[v, label] in sorts" :key="v" :value="v">{{ label }}</option>
+        </select>
+      </span>
       <div class="medium-tags">
         <label v-for="m in MEDIA" :key="m" class="tag-check" :class="[m, { active: filters.mediums.includes(m) }]" @click.prevent="toggleMedium(m)">
           <input type="checkbox" class="visually-hidden" :checked="filters.mediums.includes(m)" :aria-label="`${MEDIUM_TAG_LABEL[m]}, ${counts[m] ?? 0}`">

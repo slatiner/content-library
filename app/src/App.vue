@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
-import { entries, connection, initStorage, connectStorage, reconnectStorage, signOut, redeemInvite, openShared, filters, ask, deleteEntry, onAddRequest, list } from './state.js';
+import { entries, connection, initStorage, connectStorage, reconnectStorage, signOut, redeemInvite, openShared, filters, ask, deleteEntry, onAddRequest, list, setList } from './state.js';
 import { countByMedium, filterAndSort, levelOf, inList, isWish } from './lib/entries.js';
 import FilterBar from './components/FilterBar.vue';
 import SettingsMenu from './components/SettingsMenu.vue';
@@ -14,6 +14,10 @@ import AccountDialog from './components/AccountDialog.vue';
 import SharedItem from './components/SharedItem.vue';
 import GoogleButton from './components/GoogleButton.vue';
 import { useScrollChrome } from './lib/scrollChrome.js';
+import { swipeHandlers } from './lib/swipe.js';
+
+// Phones: swipe left for the Wishlist, right for Consumed (the toggle's order).
+const swipe = swipeHandlers((dir) => setList(dir === 'left' ? 'wishlist' : 'consumed'));
 
 // Consumed or Wishlist (#47): the filter counts and grid show the current list only.
 const listed = computed(() => entries.value.filter(inList(list.value)));
@@ -170,7 +174,7 @@ onMounted(async () => {
       <div v-if="!visible.length" class="empty">No matches.</div>
     </div>
 
-    <div v-if="showMain">
+    <div v-if="showMain" class="library" @touchstart.passive="swipe.touchstart" @touchend.passive="swipe.touchend" @touchcancel.passive="swipe.touchcancel">
       <FilterBar with-lists :counts="counts" :class="{ tucked }" />
       <TransitionGroup name="card" tag="div" class="grid">
         <EntryCard v-for="e in visible" :key="e.id" :entry="e" :level="levelFor(e)" :shareable="isOnline" @open="dialog.open(e)" @done="dialog.open(e, { done: true })" @delete="deleteEntry(e.id)" />

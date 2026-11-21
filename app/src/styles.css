@@ -306,6 +306,10 @@ header.top .account-menu{align-self:center;}
 .avatar{display:inline-flex;width:26px;height:26px;border-radius:50%;overflow:hidden;flex:none;background:var(--line);color:var(--ink);align-items:center;justify-content:center;font-size:11px;font-weight:600;letter-spacing:0.02em;}
 .avatar img{width:100%;height:100%;object-fit:cover;display:block;}
 
+/* Sort control: the plain select on wide screens; icons only on phones. */
+.sort-pick{display:contents;}
+.sort-pick .sort-icon,.sort-pick .sort-caret{display:none;width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+
 /* Medium tags in the filter row. */
 .medium-tags{display:flex;gap:8px;flex-wrap:wrap;}
 
@@ -328,7 +332,12 @@ header.top .account-menu{align-self:center;}
   .filter-row .medium-tags .tag-check{padding:6px 8px;font-size:11px;gap:4px;}
   .tag-check .tag-icon{display:block;}
   .tag-check .tag-label{display:none;}
-  .filter-row select{flex:1 1 0;min-width:0;order:2;}
+  /* Sort: an icon button at the end of the type line, the select invisible on top. */
+  .sort-pick{order:2;margin-left:auto;position:relative;display:inline-flex;align-items:center;gap:1px;padding:5px 5px 5px 8px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);color:var(--ink);}
+  .sort-pick .sort-icon{display:block;}
+  .sort-pick .sort-caret{display:block;width:12px;height:12px;color:var(--ink-soft);}
+  .sort-pick:has(select:focus-visible){outline:2px solid var(--ink);outline-offset:2px;}
+  .sort-pick select{position:absolute;inset:0;width:100%;height:100%;opacity:0;padding:0;border:0;-webkit-appearance:none;appearance:none;cursor:pointer;}
   .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
   /* Dialogs are full-screen sheets with Cancel / Save pinned to the bottom. */
   .overlay{padding:0;}
