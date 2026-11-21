@@ -351,7 +351,11 @@ header.top .account-menu{align-self:center;}
   .form-actions{position:sticky;bottom:0;margin:16px -16px 0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:var(--panel);border-top:1px solid var(--line);}
   /* 16px or more, or iOS Safari zooms the page when a field is tapped. */
   input,select,textarea,.filter-row input[type=text],.field input,.field textarea,.field select,#aiInput,.redeem-row input,.popover .field input{font-size:16px;}
-  .field input[type=date]{padding:8px 6px;}
+  /* iOS gives date inputs a wide built-in minimum that ignores min-width; dropping
+     the native look lets an explicit width stick. */
+  .field input[type=date]{-webkit-appearance:none;appearance:none;width:8.5em;min-height:38px;padding:8px 6px;text-align:left;}
+  .field input[type=date]::-webkit-date-and-time-value{text-align:left;}
+  .row-two .field-rating{flex-shrink:0;}
 }
 
 /* Consumed / Wishlist (#47) */
