@@ -237,7 +237,10 @@ select{padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius)
 .form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
 .status{font-size:11px;color:var(--ink-soft);margin-top:10px;min-height:14px;line-height:1.5;}
 .row-two{display:flex;gap:10px;}
-.row-two .field{flex:1;}
+.row-two .field{flex:1;min-width:0;}
+/* The stars keep their width; the date field takes what's left (phones overflowed). */
+.row-two .field-rating{flex:0 0 auto;}
+.field input[type=date]{display:block;min-width:0;max-width:100%;}
 
 .suggest-box{border:1px solid var(--line);border-radius:var(--radius);padding:10px;margin:12px 0;background:#fbfbfa;}
 .suggest-box .suggest-head{font-size:11px;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-soft);margin-bottom:8px;}
@@ -345,6 +348,7 @@ header.top .account-menu{align-self:center;}
   .form-actions{position:sticky;bottom:0;margin:16px -16px 0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:var(--panel);border-top:1px solid var(--line);}
   /* 16px or more, or iOS Safari zooms the page when a field is tapped. */
   input,select,textarea,.filter-row input[type=text],.field input,.field textarea,.field select,#aiInput,.redeem-row input,.popover .field input{font-size:16px;}
+  .field input[type=date]{padding:8px 6px;}
 }
 
 /* Consumed / Wishlist (#47) */

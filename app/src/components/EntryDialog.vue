@@ -471,7 +471,7 @@ function saveKey() {
                 <button type="button" class="link-btn" @click="form.dateConsumed = todayLocalIso(1)">Yesterday</button>
               </div>
             </div>
-            <div class="field">
+            <div class="field field-rating">
               <label id="entry-rating">Rating</label>
               <div class="star-pick" role="group" aria-labelledby="entry-rating">
                 <button v-for="i in 5" :key="i" type="button" :class="{ on: i <= form.rating }" :aria-label="`${i} of 5`" :aria-pressed="form.rating === i" @click="rate(i)">{{ i <= form.rating ? '★' : '☆' }}</button>
