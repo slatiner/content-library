@@ -1141,6 +1141,13 @@ describe('wishlist (#47)', () => {
     expect(titles(w)).toEqual(['In Rainbows', 'Paprika', 'Silo', 'Steppenwolf']);
     await swipe(400, 300, { target: w.find('.filter-bar input[type=text]') });
     expect(titles(w)).toEqual(['In Rainbows', 'Paprika', 'Silo', 'Steppenwolf']);
+    // A drag that follows the finger but is let go early springs back.
+    await lib.trigger('touchstart', { touches: [{ clientX: 400, clientY: 300 }] });
+    await lib.trigger('touchmove', { touches: [{ clientX: 385, clientY: 302 }] });
+    expect(w.find('.grid').element.style.transform).toBe('translateX(-15px)');
+    await lib.trigger('touchend', { changedTouches: [{ clientX: 385, clientY: 302 }] });
+    expect(w.find('.grid').element.style.transform).toBe('');
+    expect(w.find('.list-toggle .active').text()).toBe('Consumed');
     await swipe(400, 300);
     expect(titles(w)).toEqual(['Perfect Blue', 'Akira']);
     expect(w.find('.list-toggle .active').text()).toBe('Wishlist');

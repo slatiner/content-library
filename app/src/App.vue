@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { entries, connection, initStorage, connectStorage, reconnectStorage, signOut, redeemInvite, openShared, filters, ask, deleteEntry, onAddRequest, list, setList } from './state.js';
 import { countByMedium, filterAndSort, levelOf, inList, isWish } from './lib/entries.js';
 import FilterBar from './components/FilterBar.vue';
@@ -17,7 +17,47 @@ import { useScrollChrome } from './lib/scrollChrome.js';
 import { swipeHandlers } from './lib/swipe.js';
 
 // Phones: swipe left for the Wishlist, right for Consumed (the toggle's order).
-const swipe = swipeHandlers((dir) => setList(dir === 'left' ? 'wishlist' : 'consumed'));
+// The grid follows the finger, slides out, and the other list slides in. A drag
+// towards a list that isn't there (right on Consumed) only gives a little.
+const libGrid = ref(null);
+const gridEl = () => libGrid.value?.$el;
+const animates = (el) => el?.animate && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+const targetOf = (dx) => (dx < 0 ? 'wishlist' : 'consumed');
+let sliding = false;
+const swipe = swipeHandlers({
+  move(dx) {
+    const el = gridEl();
+    if (!el || sliding) return;
+    el.style.transform = `translateX(${targetOf(dx) === list.value ? dx * 0.25 : dx}px)`;
+  },
+  async end(dir, dx) {
+    const el = gridEl();
+    if (sliding) return;
+    const target = dir && targetOf(dx);
+    if (!target || target === list.value) {
+      if (el && animates(el) && dx) el.animate([{ transform: el.style.transform }, { transform: 'none' }], { duration: 180, easing: 'ease-out' });
+      if (el) el.style.transform = '';
+      return;
+    }
+    if (animates(el)) {
+      sliding = true;
+      const out = el.animate([{ transform: el.style.transform || 'none' }, { transform: `translateX(${Math.sign(dx) * window.innerWidth}px)`, opacity: 0 }], { duration: 150, easing: 'ease-in', fill: 'forwards' });
+      el.style.transform = '';
+      try { await out.finished; } catch { /* cancelled */ }
+      sliding = false;
+    }
+    if (el) el.style.transform = '';
+    setList(target);
+  },
+});
+// Any list change (swipe or toggle) slides the new grid in from its side.
+watch(list, async (next) => {
+  await nextTick();
+  const el = gridEl();
+  if (!animates(el)) return;
+  const from = next === 'wishlist' ? 1 : -1;
+  el.animate([{ transform: `translateX(${from * 40}%)`, opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 220, easing: 'cubic-bezier(.2,.8,.2,1)' });
+});
 
 // Consumed or Wishlist (#47): the filter counts and grid show the current list only.
 const listed = computed(() => entries.value.filter(inList(list.value)));
@@ -174,9 +214,10 @@ onMounted(async () => {
       <div v-if="!visible.length" class="empty">No matches.</div>
     </div>
 
-    <div v-if="showMain" class="library" @touchstart.passive="swipe.touchstart" @touchend.passive="swipe.touchend" @touchcancel.passive="swipe.touchcancel">
+    <div v-if="showMain" class="library" @touchstart.passive="swipe.touchstart" @touchmove.passive="swipe.touchmove" @touchend.passive="swipe.touchend" @touchcancel.passive="swipe.touchcancel">
       <FilterBar with-lists :counts="counts" :class="{ tucked }" />
-      <TransitionGroup name="card" tag="div" class="grid">
+      <!-- Keyed by list, so a switch swaps the whole grid instead of fading cards one by one. -->
+      <TransitionGroup ref="libGrid" :key="list" name="card" tag="div" class="grid">
         <EntryCard v-for="e in visible" :key="e.id" :entry="e" :level="levelFor(e)" :shareable="isOnline" @open="dialog.open(e)" @done="dialog.open(e, { done: true })" @delete="deleteEntry(e.id)" />
       </TransitionGroup>
       <div v-if="!visible.length" class="empty">

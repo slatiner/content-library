@@ -348,6 +348,8 @@ header.top .account-menu{align-self:center;}
 }
 
 /* Consumed / Wishlist (#47) */
+/* Swiping between the lists: the browser handles vertical scroll and pinch only. */
+.library{touch-action:pan-y pinch-zoom;overflow-x:clip;}
 .list-toggle{display:inline-flex;flex:none;gap:4px;margin-left:auto;padding:3px;border:1px solid var(--line);border-radius:var(--radius);background:#fff;}
 .list-toggle button{padding:6px 14px;border:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;border-radius:var(--radius);text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-soft);}
 .list-toggle button.active{background:var(--ink);color:#fff;}
