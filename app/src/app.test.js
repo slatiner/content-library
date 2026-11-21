@@ -190,6 +190,15 @@ describe('library view', () => {
     expect(adapter.calls[0][0]).toBe('delete');
   });
 
+  it('a delete that fails puts the card back and says why', async () => {
+    const w = await mountApp();
+    adapter.deleteEntry = async () => { throw new Error('offline'); };
+    await w.find('.card .del').trigger('click');
+    await flushPromises();
+    expect(w.findAll('.card')).toHaveLength(4);
+    expect(alert).toHaveBeenCalledWith(expect.stringContaining('offline'));
+  });
+
   it('shows Reconnect when the folder needs permission again', async () => {
     const w = await mountApp(EXAMPLE, 'warn');
     expect(w.find('.card').exists()).toBe(false);
@@ -687,6 +696,20 @@ describe('add and edit', () => {
     expect(total).toBe(5);
   });
 
+  it('a save that fails keeps the form open with the error and adds nothing', async () => {
+    const w = await mountApp();
+    adapter.saveEntry = async () => { throw new Error('Could not save: offline'); };
+    await w.find('.add-new-btn').trigger('click');
+    await w.findAll('.view-tabs button')[1].trigger('click');
+    const manual = w.findAll('.form-panel')[0];
+    await manual.find('.title-row input').setValue('Perfect Blue');
+    await manual.findAll('.form-actions button').find((b) => b.text() === 'Save').trigger('click');
+    await flushPromises();
+    expect(w.findAll('.card')).toHaveLength(4);
+    expect(manual.text()).toContain('Could not save: offline. Try again.');
+    expect(manual.isVisible()).toBe(true);
+  });
+
   it('refuses to save without a title', async () => {
     const w = await mountApp();
     await w.find('.add-new-btn').trigger('click');
@@ -809,6 +832,35 @@ describe('add and edit', () => {
     await manual.findAll('.form-actions button').find((b) => b.text() === 'Save').trigger('click');
     await flushPromises();
     expect(adapter.calls.at(-1)[1]).toMatchObject({ title: 'Paprika', wikidataId: 'Q9' });
+  });
+
+  it('a lookup answer for a title changed since is dropped', async () => {
+    let release;
+    fetch.mockImplementation((url, init) => {
+      const json = (body) => Promise.resolve(new Response(JSON.stringify(body)));
+      if (url.includes('generator=search')) {
+        return new Promise((r) => { release = () => r(new Response(JSON.stringify({ query: { pages: {
+          a: { index: 1, title: 'Q1', entityterms: { label: ['Heat'], description: ['1995 film'] } },
+          b: { index: 2, title: 'Q2', entityterms: { label: ['Heat'], description: ['1972 film'] } },
+        } } }))); });
+      }
+      if (url.includes('wbgetentities')) return json({ entities: {} });
+      return fakeFetch(url, init);
+    });
+    const w = await mountApp();
+    await w.find('.add-new-btn').trigger('click');
+    await w.findAll('.view-tabs button')[1].trigger('click');
+    await w.findAll('.medium-toggle button').find((b) => b.text() === 'Film').trigger('click');
+    const manual = w.findAll('.form-panel')[0];
+    await manual.find('.title-row input').setValue('Heat');
+    await manual.findAll('button').find((b) => b.text() === 'Look up').trigger('click');
+    await flushPromises();
+    await manual.find('.title-row input').setValue('Paprika');
+    release();
+    await flushPromises();
+    expect(manual.findAll('.suggest-item')).toHaveLength(0);
+    expect(manual.find('.title-row input').element.value).toBe('Paprika');
+    expect(manual.findAll('button').find((b) => b.text() === 'Look up').element.disabled).toBe(false);
   });
 
   it('picking a suggestion names the entry after it, not after what was typed', async () => {

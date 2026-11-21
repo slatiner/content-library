@@ -98,6 +98,25 @@ describe('Supabase adapter', () => {
     expect(status.at(-1)[1]).toContain('boom');
   });
 
+  it('entry queries ask for the user\'s own rows, not only what the database allows', async () => {
+    const { storage, client } = adapterWith({ session, rows: EXAMPLE.map((e) => entryToRow(e, 'u1')) });
+    await storage.init();
+    await storage.deleteEntry('x');
+    await storage.ownStatusOf('film', 'x');
+    const entryQueries = client.log.filter((q) => q.table === 'entries');
+    expect(entryQueries).toHaveLength(3);
+    for (const q of entryQueries) expect(q.calls).toContainEqual(['eq', 'user_id', 'u1']);
+  });
+
+  it('finds an owned title ignoring case and punctuation, or by Wikidata id', async () => {
+    const rows = [entryToRow({ ...EXAMPLE[0], medium: 'film', title: 'White Heat', status: 'wishlist', wikidataId: 'Q3' }, 'u1')];
+    const { storage } = adapterWith({ session, rows });
+    await storage.init();
+    expect(await storage.ownStatusOf('film', 'white heat!')).toBe('wishlist');
+    expect(await storage.ownStatusOf('film', 'L\'Enfer blanc', 'Q3')).toBe('wishlist');
+    expect(await storage.ownStatusOf('film', 'Heat')).toBe('');
+  });
+
   it('sign-in uses Google and returns to this page', async () => {
     const { storage, client } = adapterWith();
     await storage.connect();

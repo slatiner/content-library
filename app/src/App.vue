@@ -123,7 +123,7 @@ onMounted(async () => {
         @change-folder="connectStorage" @sharing="sharingOpen = true" @invite="inviteOpen = true" @diagnose="diagOpen = true" @backup="backupOpen = true" @account="accountOpen = true" @sign-out="signOut" />
     </header>
 
-    <div v-if="connection.state !== 'ok'" class="filebar">
+    <div v-if="connection.state !== 'ok'" class="filebar" :class="{ plain: connection.state === 'checking' }">
       <span class="dot" :class="dot"></span>
       <span>{{ connection.text }}</span>
       <span style="flex:1;"></span>

@@ -1,9 +1,11 @@
 // Supabase version of the storage adapter (see ./index.js). Signs in with
 // Google; each entry is one row, so saves touch only the changed entry. Row-level
-// security limits every query to the signed-in user's rows. A new account has to
+// security limits every query to the signed-in user's rows; queries on entries
+// also filter by user_id, so they stay the user's own if friends can read (#35). A new account has to
 // redeem an invite code before it can read or write anything (#28).
 import { createClient } from '@supabase/supabase-js';
 import { entryToRow, rowToEntry } from './rows.js';
+import { normText } from '../entries.js';
 
 const PAGE = 1000; // PostgREST's default maximum rows per request
 
@@ -20,7 +22,7 @@ export function createSupabaseStorage(setStatus, { url, key, client } = {}) {
   async function loadAll() {
     const all = [];
     for (let from = 0; ; from += PAGE) {
-      const { data, error } = await sb.from('entries').select('*').order('date_added').range(from, from + PAGE - 1);
+      const { data, error } = await sb.from('entries').select('*').eq('user_id', user.id).order('date_added').range(from, from + PAGE - 1);
       if (error) fail('Could not load your library', error);
       all.push(...data);
       if (data.length < PAGE) break;
@@ -90,7 +92,7 @@ export function createSupabaseStorage(setStatus, { url, key, client } = {}) {
     },
 
     async deleteEntry(id) {
-      const { error } = await sb.from('entries').delete().eq('id', id);
+      const { error } = await sb.from('entries').delete().eq('user_id', user.id).eq('id', id);
       if (error) fail('Could not delete', error);
     },
 
@@ -155,11 +157,14 @@ export function createSupabaseStorage(setStatus, { url, key, client } = {}) {
       return { state: 'needsInvite', email: user.email, requestedAt: (req.data[0] && req.data[0].created_at) || '' };
     },
 
-    // 'consumed', 'wishlist' or '' : whether the viewer already has this title.
-    async ownStatusOf(medium, title) {
-      const { data, error } = await sb.from('entries').select('status').eq('medium', medium).eq('title', title).limit(1);
+    // 'consumed', 'wishlist' or '' : whether the viewer already has this work,
+    // by Wikidata id or by title ignoring case and punctuation.
+    async ownStatusOf(medium, title, wikidataId = '') {
+      const { data, error } = await sb.from('entries').select('status, title, wikidata_id').eq('user_id', user.id).eq('medium', medium);
       if (error) fail('Could not check your library', error);
-      return (data[0] && data[0].status) || '';
+      const key = normText(title);
+      const hit = data.find((r) => wikidataId && r.wikidata_id === wikidataId) || data.find((r) => normText(r.title) === key);
+      return (hit && hit.status) || '';
     },
 
     // Admins only: a new single-use code, as { code, expiresAt }.

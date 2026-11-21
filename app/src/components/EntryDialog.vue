@@ -55,6 +55,7 @@ function open(entry, opts = {}) {
   editingId.value = entry ? entry.id : null;
   doneMode.value = !!(entry && opts.done);
   suggest.value = null;
+  lookupSeq++; // a lookup still running for the last entry is dropped
   found.value = !!entry;
   detailsOpen.value = false;
   takeOpen.value = true;
@@ -160,6 +161,9 @@ async function save() {
   try {
     await saveEntry(collectEntry());
     close();
+  } catch (e) {
+    formStatus.value = `${(e && e.message) || e}. Try again.`;
+    return false;
   } finally {
     saving.value = false;
   }
@@ -167,13 +171,28 @@ async function save() {
 }
 
 // ---- Manual view: Look up ----
+// A lookup fills a copy of the form, and only the newest one is kept: an older
+// answer arriving late, or one for a title or type changed since, is dropped.
+// Fields the lookup changed are copied over; anything else typed meanwhile stays.
+let lookupSeq = 0;
+async function filling(fn) {
+  const seq = ++lookupSeq;
+  const before = { ...form };
+  const draft = { ...form };
+  const res = await fn(draft);
+  if (seq !== lookupSeq || form.title !== before.title || form.medium !== before.medium) return { stale: true };
+  for (const k of Object.keys(draft)) if (draft[k] !== before[k]) form[k] = draft[k];
+  return res;
+}
+
 async function manualLookup() {
   if (!form.title.trim()) { formStatus.value = 'Type a title first.'; return; }
   suggest.value = null;
   lookupBusy.value = true;
   formStatus.value = form.medium === 'music' ? 'Looking up on MusicBrainz…' : 'Looking up on Wikidata…';
-  const res = await lookupTitle(form);
+  const res = await filling(lookupTitle);
   lookupBusy.value = false;
+  if (res.stale) { formStatus.value = ''; return; }
   if (res.choices) {
     suggest.value = res;
     formStatus.value = res.uncertain
@@ -191,10 +210,13 @@ function onTitleEnter(e) {
 }
 async function pickSuggestion(c) {
   formStatus.value = 'Filling details…';
-  // The picked match names the entry, not what was typed ("heat" -> "White Heat").
-  if (c.label) form.title = c.label;
   try {
-    await applyWikidataDetails(c.id, form);
+    const res = await filling((draft) => {
+      // The picked match names the entry, not what was typed ("heat" -> "White Heat").
+      if (c.label) draft.title = c.label;
+      return applyWikidataDetails(c.id, draft);
+    });
+    if (res && res.stale) return;
     suggest.value = null;
     formStatus.value = `Filled from "${c.label}". Review, then Save.`;
     revealForm(false);
@@ -250,7 +272,8 @@ async function aiSubmit() {
     fillFormFromExtraction(form, r);
     formStatus.value = '';
     aiStatus.value = 'Looking up details…';
-    const res = await lookupTitle(form);
+    const res = await filling(lookupTitle);
+    if (res.stale) return;
     if (res.choices) {
       aiChoices.value = { choices: res.choices.slice(0, 6), uncertain: res.uncertain };
       aiStatus.value = '';
@@ -279,9 +302,12 @@ async function pickAiChoice(c) {
   aiStage.value = 'input';
   sendBusy.value = true;
   aiStatus.value = 'Filling in details…';
-  if (c.label) form.title = c.label;
   try {
-    await applyWikidataDetails(c.id, form);
+    const res = await filling((draft) => {
+      if (c.label) draft.title = c.label;
+      return applyWikidataDetails(c.id, draft);
+    });
+    if (res && res.stale) { sendBusy.value = false; return; }
     aiStatus.value = `Filled from Wikidata (${c.label}).`;
   } catch (e) {
     aiStatus.value = `Couldn't load details (${(e && e.message) || e}). Showing what you told me.`;

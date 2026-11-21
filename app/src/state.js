@@ -71,7 +71,7 @@ async function refreshViewer() {
   try {
     shared.viewer = await storage.viewer();
     const item = entries.value.length === 1 ? entries.value[0] : null;
-    shared.mine = item && shared.viewer.state === 'member' ? await storage.ownStatusOf(item.medium, item.title) : '';
+    shared.mine = item && shared.viewer.state === 'member' ? await storage.ownStatusOf(item.medium, item.title, item.wikidataId) : '';
   } catch (e) {
     // The item still shows; only the save options are missing.
     shared.viewer = { state: 'error', text: e.message };
@@ -99,23 +99,33 @@ export const listAccessRequests = () => storage.listAccessRequests();
 export const dismissAccessRequest = (userId) => storage.dismissAccessRequest(userId);
 
 // Create or update. Keeps fields the form doesn't know about (e.g. external ids).
+// If storing fails, the page goes back to what's stored and the error is thrown.
 export async function saveEntry(entry) {
   const i = entries.value.findIndex((e) => e.id === entry.id);
-  if (i >= 0) entries.value[i] = { ...entries.value[i], ...entry };
+  const before = i >= 0 ? entries.value[i] : null;
+  if (i >= 0) entries.value[i] = { ...before, ...entry };
   else entries.value.push(entry);
+  const saved = i >= 0 ? entries.value[i] : entry;
   try {
-    await storage.saveEntry(i >= 0 ? entries.value[i] : entry, entries.value);
+    await storage.saveEntry(saved, entries.value);
   } catch (e) {
-    alert('Saved in this page but not stored: ' + (e.message || e) + '\nUse Export/Import to back this up manually.');
+    const j = entries.value.indexOf(saved);
+    if (j >= 0) { if (before) entries.value[j] = before; else entries.value.splice(j, 1); }
+    throw e;
   }
 }
 
 export function deleteEntry(id) {
-  const entry = entries.value.find((e) => e.id === id);
+  const i = entries.value.findIndex((e) => e.id === id);
+  const entry = entries.value[i];
   const label = entry ? `"${entry.title}"` : 'this entry';
   if (!confirm(`Delete ${label}? This can't be undone.`)) return;
   entries.value = entries.value.filter((e) => e.id !== id);
-  storage.deleteEntry(id, entries.value).catch((e) => alert((e && e.message) || e));
+  storage.deleteEntry(id, entries.value).catch((e) => {
+    // Still stored, so it comes back on the page.
+    if (entry && !entries.value.some((x) => x.id === id)) entries.value.splice(Math.min(i, entries.value.length), 0, entry);
+    alert(`Couldn't delete ${label}: ${(e && e.message) || e}`);
+  });
 }
 
 // Export/Import: returns how many were added.
