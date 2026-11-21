@@ -235,6 +235,44 @@ describe('keyboard, touch and screen readers', () => {
     expect(w.findAll('.overlay.drawer')).toHaveLength(1);
   });
 
+  it('on a phone, pulling the edit sheet down closes it; a short pull or a pull from a field does not', async () => {
+    vi.stubGlobal('matchMedia', (q) => ({ matches: q === '(max-width: 640px)' }));
+    const w = await mountApp();
+    await card(w, 'Steppenwolf').find('button.card-open').trigger('click');
+    const ov = w.find('.overlay.open');
+    const pull = async (y1, { target = ov, moves = true } = {}) => {
+      await target.trigger('touchstart', { touches: [{ clientX: 200, clientY: 100 }] });
+      if (moves) await ov.trigger('touchmove', { touches: [{ clientX: 202, clientY: y1 }] });
+      await ov.trigger('touchend', { changedTouches: [{ clientX: 202, clientY: y1 }] });
+    };
+    // Follows the finger, then springs back when let go early.
+    await ov.trigger('touchstart', { touches: [{ clientX: 200, clientY: 100 }] });
+    await ov.trigger('touchmove', { touches: [{ clientX: 202, clientY: 130 }] });
+    expect(ov.find('.form-panel').classes()).toContain('pulling');
+    expect(ov.find('.form-panel').element.style.transform).toBe('translateY(30px)');
+    await ov.trigger('touchend', { changedTouches: [{ clientX: 202, clientY: 130 }] });
+    expect(ov.find('.form-panel').element.style.transform).toBe('');
+    expect(w.find('.overlay.open').exists()).toBe(true);
+    await pull(300, { target: ov.find('input[type=text]') });
+    expect(w.find('.overlay.open').exists()).toBe(true);
+    await pull(40); // upwards: a scroll
+    expect(w.find('.overlay.open').exists()).toBe(true);
+    await pull(300);
+    expect(w.find('.overlay.open').exists()).toBe(false);
+    vi.unstubAllGlobals();
+  });
+
+  it('pulling down does nothing on a wide screen', async () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: false }));
+    const w = await mountApp();
+    await card(w, 'Steppenwolf').find('button.card-open').trigger('click');
+    const ov = w.find('.overlay.open');
+    await ov.trigger('touchstart', { touches: [{ clientX: 200, clientY: 100 }] });
+    await ov.trigger('touchend', { changedTouches: [{ clientX: 200, clientY: 400 }] });
+    expect(w.find('.overlay.open').exists()).toBe(true);
+    vi.unstubAllGlobals();
+  });
+
   it('type tags are focusable checkboxes named with their count', async () => {
     const w = await mountApp();
     const input = w.find('.tag-check.film input');
