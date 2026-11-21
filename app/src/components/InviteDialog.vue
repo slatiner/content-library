@@ -63,7 +63,7 @@ async function dismiss(req) {
 
 async function copy() {
   try { await navigator.clipboard.writeText(linkFor(latest.value.code)); status.value = 'Link copied.'; }
-  catch (e) { status.value = 'Clipboard blocked. Copy the link by hand.'; }
+  catch { status.value = 'Clipboard blocked. Copy the link by hand.'; }
 }
 </script>
 

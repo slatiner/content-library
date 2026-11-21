@@ -90,10 +90,10 @@ function close() { isOpen.value = false; }
 // The example under the describe box can be dismissed once it's familiar; the ?
 // in the box brings it back. Remembered per browser.
 const HINT_KEY = 'describeHintHidden';
-const hintHidden = ref((() => { try { return localStorage.getItem(HINT_KEY) === '1'; } catch (e) { return false; } })());
+const hintHidden = ref((() => { try { return localStorage.getItem(HINT_KEY) === '1'; } catch { return false; } })());
 function setHintHidden(v) {
   hintHidden.value = v;
-  try { v ? localStorage.setItem(HINT_KEY, '1') : localStorage.removeItem(HINT_KEY); } catch (e) { /* storage unavailable */ }
+  try { v ? localStorage.setItem(HINT_KEY, '1') : localStorage.removeItem(HINT_KEY); } catch { /* storage unavailable */ }
 }
 // Also on the card, but that × needs hover, which phones don't have.
 function remove() {
@@ -149,7 +149,7 @@ async function copyShareLink() {
   try {
     const url = shareUrl(await shareLink(editingId.value));
     try { await navigator.clipboard.writeText(url); formStatus.value = 'Link copied. Anyone with it can see this entry (not your notes).'; }
-    catch (e) { formStatus.value = `Copy this link: ${url}`; }
+    catch { formStatus.value = `Copy this link: ${url}`; }
   } catch (e) { formStatus.value = e.message; }
 }
 

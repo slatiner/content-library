@@ -53,7 +53,7 @@ function pendingInvite() {
       history.replaceState(null, '', window.location.pathname + window.location.hash);
     }
     return fromUrl || localStorage.getItem(PENDING) || '';
-  } catch (e) { return fromUrl || ''; }
+  } catch { return fromUrl || ''; }
 }
 const inviteCode = ref(pendingInvite());
 const redeemError = ref('');
@@ -64,7 +64,7 @@ async function redeem() {
   redeemError.value = '';
   try {
     await redeemInvite(inviteCode.value.trim());
-    try { localStorage.removeItem(PENDING); } catch (e) { /* storage unavailable */ }
+    try { localStorage.removeItem(PENDING); } catch { /* storage unavailable */ }
   } catch (e) { redeemError.value = e.message; }
   finally { redeeming.value = false; }
 }
@@ -81,11 +81,11 @@ function takeShareToken() {
     const token = sessionStorage.getItem(PENDING_SHARE) || '';
     sessionStorage.removeItem(PENDING_SHARE);
     return { token, restore: !!token };
-  } catch (e) { return { token: '', restore: false }; }
+  } catch { return { token: '', restore: false }; }
 }
 const share = takeShareToken();
 function signInFromShared() {
-  try { sessionStorage.setItem(PENDING_SHARE, share.token); } catch (e) { /* comes back to the library instead */ }
+  try { sessionStorage.setItem(PENDING_SHARE, share.token); } catch { /* comes back to the library instead */ }
   connectStorage();
 }
 onMounted(async () => {

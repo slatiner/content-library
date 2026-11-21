@@ -26,14 +26,14 @@ function parseImport() {
 
 async function copy() {
   try { await navigator.clipboard.writeText(exportText.value); status.value = 'Copied to clipboard.'; }
-  catch (e) { exportEl.value.select(); status.value = 'Clipboard blocked — text selected, copy manually.'; }
+  catch { exportEl.value.select(); status.value = 'Clipboard blocked — text selected, copy manually.'; }
 }
 
 async function merge() {
   try {
     const added = await mergeEntries(parseImport());
     status.value = `Merged — added ${added} new entr${added === 1 ? 'y' : 'ies'}.`;
-  } catch (e) { status.value = "Couldn't read that as a backup."; }
+  } catch { status.value = "Couldn't read that as a backup."; }
 }
 
 async function replace() {
@@ -42,7 +42,7 @@ async function replace() {
     if (!confirm(`Replace all ${entries.value.length} current entries with ${incoming.length} from this backup?`)) return;
     await replaceEntries(incoming);
     status.value = `Replaced — now ${entries.value.length} entries.`;
-  } catch (e) { status.value = "Couldn't read that as a backup."; }
+  } catch { status.value = "Couldn't read that as a backup."; }
 }
 </script>
 

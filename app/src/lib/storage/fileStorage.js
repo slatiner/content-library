@@ -55,7 +55,7 @@ export function createFileStorage(setStatus) {
     async init() {
       if (!supported) { setStatus('unsupported', MSG.unsupported); return null; }
       let handle;
-      try { handle = await idbGet(HANDLE_KEY); } catch (e) { handle = null; }
+      try { handle = await idbGet(HANDLE_KEY); } catch { handle = null; }
       if (!handle) { setStatus('none', 'No folder connected yet.'); return null; }
       dirHandle = handle;
       try {
@@ -109,7 +109,7 @@ export function createFileStorage(setStatus) {
       try {
         const fh = await dirHandle.getFileHandle('secrets.json');
         return JSON.parse(await (await fh.getFile()).text());
-      } catch (e) { return null; }
+      } catch { return null; }
     },
   };
 }

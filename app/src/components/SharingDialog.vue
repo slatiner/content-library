@@ -33,7 +33,7 @@ async function copyLibraryLink() {
     const url = shareUrl(await shareLink(null));
     await refresh();
     try { await navigator.clipboard.writeText(url); status.value = 'Library link copied.'; }
-    catch (e) { status.value = `Copy this link: ${url}`; }
+    catch { status.value = `Copy this link: ${url}`; }
   } catch (e) { status.value = e.message; }
 }
 

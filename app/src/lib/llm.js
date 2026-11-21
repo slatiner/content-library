@@ -149,7 +149,7 @@ export async function llmJson(key, text, task) {
   try {
     const d = await r.json();
     return JSON.parse(d.choices[0].message.content);
-  } catch (e) {
+  } catch {
     const err = new Error("Groq's answer wasn't in the expected format. Try rephrasing.");
     err.code = 'PARSE';
     throw err;

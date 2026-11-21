@@ -28,7 +28,7 @@ export async function openLibrarySearchWork(title, author) {
     const doc = ((await r.json()).docs || [])[0];
     if (!doc || linkKey({ title: doc.title }) !== linkKey({ title })) return '';
     return (String(doc.key || '').match(/OL\d+W$/) || [''])[0];
-  } catch (e) { return ''; }
+  } catch { return ''; }
 }
 
 const MEDIUM_KEYWORDS = {
@@ -146,7 +146,7 @@ async function commonsNeedsNoCredit(filename) {
     const page = Object.values(((await r.json()).query || {}).pages || {})[0];
     const lic = page && page.imageinfo && page.imageinfo[0].extmetadata.LicenseShortName;
     return !!lic && /^(public domain|pd\b|cc0|no restrictions)/i.test(lic.value);
-  } catch (e) { return false; }
+  } catch { return false; }
 }
 
 async function fetchWikipediaLeadImage(pageTitle) {
@@ -161,7 +161,7 @@ async function fetchWikipediaLeadImage(pageTitle) {
     const commons = src.match(/\/wikipedia\/commons\/(?:thumb\/)?[0-9a-f]\/[0-9a-f]{2}\/([^/?]+)/);
     if (commons && !(await commonsNeedsNoCredit(decodeURIComponent(commons[1])))) return '';
     return src;
-  } catch (e) { return ''; }
+  } catch { return ''; }
 }
 
 // TVmaze has real portrait posters for TV shows, and allows browser requests (CORS *).
@@ -171,7 +171,7 @@ async function fetchTvmazePoster(title) {
     if (!r.ok) return '';
     const d = await r.json();
     return (d.image && (d.image.original || d.image.medium)) || '';
-  } catch (e) { return ''; }
+  } catch { return ''; }
 }
 
 // Load an image to read its size. Resolves { w, h }, or null if it doesn't load.
@@ -212,7 +212,7 @@ async function fetchCoverFallback(medium, title, author) {
     const d = await r.json();
     if (d.docs && d.docs[0] && d.docs[0].cover_i) return `https://covers.openlibrary.org/b/id/${d.docs[0].cover_i}-L.jpg`;
     return '';
-  } catch (e) { return ''; }
+  } catch { return ''; }
 }
 
 export async function applyWikidataDetails(qid, form) {

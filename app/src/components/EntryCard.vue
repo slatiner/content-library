@@ -36,7 +36,7 @@ async function copyShareLink() {
   try {
     const url = shareUrl(await shareLink(props.entry.id));
     try { await navigator.clipboard.writeText(url); note = 'Link copied'; }
-    catch (e) { note = "Couldn't copy; use Copy share link in the entry"; }
+    catch { note = "Couldn't copy; use Copy share link in the entry"; }
   } catch (e) { note = e.message; }
   shareNote.value = note;
   clearTimeout(noteTimer);

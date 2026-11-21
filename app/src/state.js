@@ -143,14 +143,14 @@ export async function ensureGroqKey() {
   try {
     const stored = (localStorage.getItem('groqApiKey') || '').trim();
     if (stored) { groqKey = stored; return stored; }
-  } catch (e) { /* storage unavailable */ }
+  } catch { /* storage unavailable */ }
   return null;
 }
 export function forgetGroqKey() { groqKey = null; }
 // Returns true if the key was also stored in this browser.
 export function setGroqKey(k) {
   groqKey = k;
-  try { localStorage.setItem('groqApiKey', k); return true; } catch (e) { return false; }
+  try { localStorage.setItem('groqApiKey', k); return true; } catch { return false; }
 }
 
 // ---- Library filters (the controls above the grid) ----
