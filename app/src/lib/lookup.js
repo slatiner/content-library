@@ -244,7 +244,9 @@ export async function applyWikidataDetails(qid, form) {
     const title = form.title.trim();
     const sources = [
       form.medium === 'series' && (() => fetchTvmazePoster(title)),
-      form.medium !== 'book' && enTitle && (() => fetchWikipediaLeadImage(enTitle)),
+      // For books this is usually the first-edition cover, which looks closer
+      // to the real book than Open Library's user-uploaded scans.
+      enTitle && (() => fetchWikipediaLeadImage(enTitle)),
       img && (async () => (await commonsNeedsNoCredit(img)) ? `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(img)}?width=600` : ''),
       () => fetchCoverFallback(form.medium, title, form.author.trim()),
     ].filter(Boolean);

@@ -808,6 +808,30 @@ describe('add and edit', () => {
     wd.forEach(([, init]) => expect(init.headers['Api-User-Agent']).toContain('github.com/slatiner/content-library'));
   });
 
+  it('Look up for a book prefers the Wikipedia cover over Open Library', async () => {
+    const wpCover = 'https://upload.wikimedia.org/wikipedia/en/a/a4/Dune_cover.jpg';
+    fetch.mockImplementation((url, init) => {
+      const json = (body) => Promise.resolve(new Response(JSON.stringify(body)));
+      if (url.includes('wbsearchentities')) return json({ search: [{ id: 'Q42', label: 'Dune', description: '1965 novel by Frank Herbert' }] });
+      if (url.includes('wbgetentities')) return json({ entities: { Q42: { claims: {}, sitelinks: { enwiki: { title: 'Dune (novel)' } } } } });
+      if (url.includes('/page/summary/Dune_(novel)')) return json({ originalimage: { source: wpCover } });
+      if (url.includes('openlibrary.org/search.json')) return json({ docs: [{ key: '/works/OL1W', cover_i: 99 }] });
+      return fakeFetch(url, init);
+    });
+    // jsdom loads no images: report every one as a 2:3 portrait.
+    vi.stubGlobal('Image', class {
+      set src(v) { this.naturalWidth = 400; this.naturalHeight = 600; setTimeout(() => this.onload && this.onload()); }
+    });
+    const w = await mountApp();
+    await w.find('.add-new-btn').trigger('click');
+    await w.findAll('.view-tabs button')[1].trigger('click');
+    await w.findAll('.medium-toggle button').find((b) => b.text() === 'Book').trigger('click');
+    const manual = w.findAll('.form-panel')[0];
+    await manual.find('.title-row input').setValue('Dune');
+    await manual.findAll('button').find((b) => b.text() === 'Look up').trigger('click');
+    await vi.waitFor(() => expect(manual.find('input[placeholder^="Auto-filled by Look up"]').element.value).toBe(wpCover));
+  });
+
   it('Look up for music fills from MusicBrainz and stores its id', async () => {
     fetch.mockImplementation((url, init) => {
       if (url.startsWith('https://musicbrainz.org/ws/2/release-group')) {
