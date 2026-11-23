@@ -57,6 +57,17 @@ export function linkKey({ title, medium }) {
   return `${medium}|${normText(title)}`;
 }
 
+// Other entries for the same work as `entry`: same medium, and the same Wikidata
+// id when both have one, otherwise the same title ignoring case and punctuation.
+export function findTwins(all, entry) {
+  const key = normText(entry.title);
+  return all.filter((e) => e.id !== entry.id && e.medium === entry.medium
+    && (e.wikidataId && entry.wikidataId ? e.wikidataId === entry.wikidataId : normText(e.title) === key));
+}
+
+// "You watched X" / "Listened to it again?"
+export const DONE_PAST = { book: 'read', film: 'watched', series: 'watched', music: 'listened to' };
+
 // What a wish keeps when saved: no rating, date or visibility of its own.
 export function asWish(e) {
   return { ...e, status: 'wishlist', rating: 0, dateConsumed: '', visibility: '' };

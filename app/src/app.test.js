@@ -873,7 +873,7 @@ describe('add and edit', () => {
       if (url.includes('wbgetentities')) return json({ entities: { Q9: { claims: {} } } });
       return fakeFetch(url, init);
     });
-    const w = await mountApp();
+    const w = await mountApp(EXAMPLE.slice(1)); // without Paprika, which it adds
     await w.find('.add-new-btn').trigger('click');
     await w.findAll('.view-tabs button')[1].trigger('click');
     await w.findAll('.medium-toggle button').find((b) => b.text() === 'Film').trigger('click');
@@ -1169,6 +1169,88 @@ describe('wishlist (#47)', () => {
   const WITH_WISHES = [...EXAMPLE, WISH, WISH2];
   const toList = async (w, label) => { await w.findAll('.list-toggle button').find((b) => b.text() === label).trigger('click'); };
   const saveBtn = (w) => w.findAll('.form-actions button').find((b) => b.text() === 'Save');
+
+  describe('adding something already there', () => {
+    const addFilm = async (w, title, { date, rating } = {}) => {
+      await w.find('.add-new-btn').trigger('click');
+      await w.findAll('.view-tabs button')[1].trigger('click');
+      await w.find('.medium-toggle button[data-m=film]').trigger('click');
+      await w.find('.title-row input').setValue(title);
+      if (date) await w.find('#entry-date').setValue(date);
+      if (rating) await w.findAll('.star-pick button')[rating - 1].trigger('click');
+      await saveBtn(w).trigger('click');
+      await flushPromises();
+    };
+    const dupButton = (w, text) => w.findAll('.dup-box button').find((b) => b.text() === text);
+
+    it('asks if it was watched again, and changes the date of the entry already there', async () => {
+      const w = await mountApp(WITH_WISHES);
+      await addFilm(w, 'paprika!', { date: '2026-11-20', rating: 3 });
+      expect(adapter.calls).toHaveLength(0);
+      expect(w.find('.dup-box').text()).toContain('You watched "Paprika" on 2026-08-10. Watched it again?');
+      await dupButton(w, 'Yes, change the date to 2026-11-20').trigger('click');
+      await flushPromises();
+      expect(adapter.calls).toHaveLength(1);
+      expect(adapter.calls[0][1]).toMatchObject({ id: EXAMPLE[0].id, title: 'Paprika', dateConsumed: '2026-11-20', rating: 3, insights: EXAMPLE[0].insights, coverUrl: EXAMPLE[0].coverUrl });
+      expect(w.findAll('.card')).toHaveLength(4);
+    });
+
+    it('Back returns to the form without saving', async () => {
+      const w = await mountApp(WITH_WISHES);
+      await addFilm(w, 'Paprika');
+      await dupButton(w, 'Back').trigger('click');
+      expect(w.find('.dup-box').exists()).toBe(false);
+      expect(w.find('.title-row input').element.value).toBe('Paprika');
+      expect(adapter.calls).toHaveLength(0);
+    });
+
+    it('moves a wish to the library when it is added as watched', async () => {
+      const w = await mountApp(WITH_WISHES);
+      await addFilm(w, 'Akira', { date: '2026-11-20', rating: 4 });
+      expect(w.find('.dup-box').text()).toContain('"Akira" is on your wishlist. Move it to your library?');
+      await dupButton(w, 'Move to library').trigger('click');
+      await flushPromises();
+      expect(adapter.calls).toHaveLength(1);
+      expect(adapter.calls[0][1]).toMatchObject({ id: 'e_2_wish', status: 'consumed', dateConsumed: '2026-11-20', rating: 4, insights: 'Sam recommended it', dateAdded: WISH2.dateAdded });
+      expect(w.findAll('.card')).toHaveLength(5);
+    });
+
+    it('says a wish is already on the wishlist', async () => {
+      const w = await mountApp(WITH_WISHES);
+      await toList(w, 'Wishlist');
+      await addFilm(w, 'Perfect Blue');
+      expect(w.find('.dup-box').text()).toContain('"Perfect Blue" is already on your wishlist.');
+      await dupButton(w, 'Close').trigger('click');
+      expect(adapter.calls).toHaveLength(0);
+      expect(titles(w)).toEqual(['Perfect Blue', 'Akira']);
+    });
+
+    it('offers to wish for something watched before', async () => {
+      const w = await mountApp(WITH_WISHES);
+      await toList(w, 'Wishlist');
+      await addFilm(w, 'Paprika');
+      expect(w.find('.dup-box').text()).toContain('You watched "Paprika" on 2026-08-10. Add it to your wishlist again?');
+      await dupButton(w, 'Add to wishlist again').trigger('click');
+      await flushPromises();
+      expect(adapter.calls.at(-1)[1]).toMatchObject({ title: 'Paprika', status: 'wishlist' });
+      expect(adapter.calls.at(-1)[1].id).not.toBe(EXAMPLE[0].id);
+      expect(titles(w)).toContain('Paprika');
+    });
+
+    it('Done on that wish updates the date of the watched entry and drops the wish', async () => {
+      const rewatch = { ...WISH, id: 'e_3_wish', title: 'Paprika', insights: 'On a big screen', dateAdded: 1900000000000 };
+      const w = await mountApp([...WITH_WISHES, rewatch]);
+      await toList(w, 'Wishlist');
+      await w.findAll('.card').find((c) => c.text().includes('Paprika')).find('.done').trigger('click');
+      await saveBtn(w).trigger('click');
+      await flushPromises();
+      await dupButton(w, `Yes, change the date to ${todayLocalIso()}`).trigger('click');
+      await flushPromises();
+      expect(adapter.calls[0][1]).toMatchObject({ id: EXAMPLE[0].id, dateConsumed: todayLocalIso(), rating: EXAMPLE[0].rating, insights: `${EXAMPLE[0].insights}\n\nOn a big screen` });
+      expect(adapter.calls[1]).toEqual(['delete', 'e_3_wish', 6]);
+      expect(titles(w)).toEqual(['Perfect Blue', 'Akira']);
+    });
+  });
 
   it('the toggle switches lists, with counts, sorts and filters per list', async () => {
     const w = await mountApp(WITH_WISHES);

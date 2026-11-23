@@ -116,16 +116,23 @@ export async function saveEntry(entry) {
 }
 
 export function deleteEntry(id) {
-  const i = entries.value.findIndex((e) => e.id === id);
-  const entry = entries.value[i];
+  const entry = entries.value.find((e) => e.id === id);
   const label = entry ? `"${entry.title}"` : 'this entry';
   if (!confirm(`Delete ${label}? This can't be undone.`)) return;
+  removeEntry(id).catch((e) => alert(`Couldn't delete ${label}: ${(e && e.message) || e}`));
+}
+
+// Delete without asking. If storing fails, the entry comes back and the error is thrown.
+export async function removeEntry(id) {
+  const i = entries.value.findIndex((e) => e.id === id);
+  const entry = entries.value[i];
   entries.value = entries.value.filter((e) => e.id !== id);
-  storage.deleteEntry(id, entries.value).catch((e) => {
-    // Still stored, so it comes back on the page.
+  try {
+    await storage.deleteEntry(id, entries.value);
+  } catch (e) {
     if (entry && !entries.value.some((x) => x.id === id)) entries.value.splice(Math.min(i, entries.value.length), 0, entry);
-    alert(`Couldn't delete ${label}: ${(e && e.message) || e}`);
-  });
+    throw e;
+  }
 }
 
 // Export/Import: returns how many were added.

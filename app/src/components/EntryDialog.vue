@@ -1,7 +1,7 @@
 <script setup>
 import { computed, nextTick, reactive, ref } from 'vue';
-import { entries, connection, saveEntry, deleteEntry, ensureGroqKey, forgetGroqKey, setGroqKey, shareLink, shareUrl, list } from '../state.js';
-import { MEDIA, DONE_VERB, ID_FIELDS, LEVELS, LEVEL_LABEL, emptyForm, linkKey, personLine, uid, asWish, isWish, todayLocalIso } from '../lib/entries.js';
+import { entries, connection, saveEntry, deleteEntry, removeEntry, ensureGroqKey, forgetGroqKey, setGroqKey, shareLink, shareUrl, list } from '../state.js';
+import { MEDIA, DONE_VERB, DONE_PAST, ID_FIELDS, LEVELS, LEVEL_LABEL, emptyForm, findTwins, linkKey, personLine, uid, asWish, isWish, todayLocalIso } from '../lib/entries.js';
 import { lookupTitle, applyWikidataDetails } from '../lib/lookup.js';
 import { llmJson, ADD_TASK, fillFormFromExtraction } from '../lib/llm.js';
 import Stars from './Stars.vue';
@@ -55,6 +55,7 @@ function open(entry, opts = {}) {
   editingId.value = entry ? entry.id : null;
   doneMode.value = !!(entry && opts.done);
   suggest.value = null;
+  dup.value = null;
   lookupSeq++; // a lookup still running for the last entry is dropped
   found.value = !!entry;
   detailsOpen.value = false;
@@ -154,20 +155,83 @@ async function copyShareLink() {
   } catch (e) { formStatus.value = e.message; }
 }
 
-// Returns false (and says why in formStatus) when the entry can't be saved.
+// Returns false (and says why in formStatus) when the entry can't be saved, and
+// 'asked' when it's already in the library and the dialog asks what to do.
 async function save() {
   if (!form.title.trim()) { formStatus.value = 'Title is required.'; return false; }
+  const entry = collectEntry();
+  if (!editingId.value || doneMode.value) {
+    const d = duplicateOf(entry);
+    if (d) { dup.value = d; return 'asked'; }
+  }
+  return store(() => saveEntry(entry));
+}
+
+async function store(fn) {
   saving.value = true;
   try {
-    await saveEntry(collectEntry());
+    await fn();
     close();
   } catch (e) {
     formStatus.value = `${(e && e.message) || e}. Try again.`;
+    dup.value = null;
     return false;
   } finally {
     saving.value = false;
   }
   return true;
+}
+
+// ---- Already in the library ----
+// A new entry (or a wish being marked done) for a work that's already there.
+// kind: 'again'      consumed again: update the consumed entry's date
+//       'fromWish'   consumed, and on the wishlist: move the wish to the library
+//       'onWishlist' wished, and already on the wishlist: nothing to add
+//       'wishAgain'  wished, and consumed before: add a wish next to it
+const dup = ref(null); // { kind, twin, entry }
+function duplicateOf(entry) {
+  const twins = findTwins(entries.value, entry);
+  const done = twins.find((e) => !isWish(e));
+  const wished = twins.find(isWish);
+  if (!isWish(entry)) {
+    if (done) return { kind: 'again', twin: done, entry };
+    if (wished && !doneMode.value) return { kind: 'fromWish', twin: wished, entry };
+  } else {
+    if (wished) return { kind: 'onWishlist', twin: wished, entry };
+    if (done) return { kind: 'wishAgain', twin: done, entry };
+  }
+  return null;
+}
+const mergeNotes = (a, b) => (!b || a === b ? a : !a ? b : `${a}\n\n${b}`);
+const newDate = computed(() => (dup.value && dup.value.entry.dateConsumed) || todayLocalIso());
+const dupText = computed(() => {
+  if (!dup.value) return null;
+  const { kind, twin, entry } = dup.value;
+  const past = DONE_PAST[entry.medium] || 'finished';
+  const name = `"${twin.title}"`;
+  const when = twin.dateConsumed ? `You ${past} ${name} on ${twin.dateConsumed}.` : `${name} is already in your library.`;
+  const again = `${past[0].toUpperCase()}${past.slice(1)} it again?`;
+  return {
+    again: { text: `${when} ${again}`, yes: `Yes, change the date to ${newDate.value}` },
+    fromWish: { text: `${name} is on your wishlist. Move it to your library?`, yes: 'Move to library' },
+    onWishlist: { text: `${name} is already on your wishlist.`, yes: '' },
+    wishAgain: { text: `${when} Add it to your wishlist again?`, yes: 'Add to wishlist again' },
+  }[kind];
+});
+function confirmDup() {
+  const { kind, twin, entry } = dup.value;
+  if (kind === 'wishAgain') return store(() => saveEntry(entry));
+  if (kind === 'fromWish') {
+    // The wish becomes the library entry; what the wish had fills any gaps.
+    const filled = Object.fromEntries(Object.entries(entry).map(([k, v]) => [k, v === '' || v === 0 ? twin[k] ?? v : v]));
+    return store(() => saveEntry({ ...filled, id: twin.id, dateAdded: twin.dateAdded, status: 'consumed', insights: mergeNotes(twin.insights, entry.insights) }));
+  }
+  // 'again': a new date; a new rating if one was given; new notes added to the old.
+  const wishId = doneMode.value ? editingId.value : null;
+  return store(async () => {
+    await saveEntry({ ...twin, dateConsumed: newDate.value, rating: entry.rating || twin.rating, insights: mergeNotes(twin.insights, entry.insights) });
+    if (wishId) await removeEntry(wishId); // the wish was for this rewatch
+  });
 }
 
 // ---- Manual view: Look up ----
@@ -333,7 +397,7 @@ async function aiAdd() {
   addBusy.value = true;
   try {
     // If save refuses (e.g. missing title), say why here, not in the hidden form.
-    if (!(await save())) aiStatus.value = formStatus.value || "Couldn't save this entry.";
+    if ((await save()) === false) aiStatus.value = formStatus.value || "Couldn't save this entry.";
   } catch (e) {
     aiStatus.value = `Couldn't save: ${(e && e.message) || e}`;
   } finally {
@@ -355,12 +419,32 @@ function saveKey() {
   <Modal v-model:open="isOpen" drawer>
     <h2>{{ heading }}</h2>
 
-    <div v-show="withTabs" class="view-tabs" style="display:flex;">
+    <div v-show="withTabs && !dup" class="view-tabs" style="display:flex;">
       <button type="button" :class="{ active: view === 'ai' }" @click="onTab('ai')">Describe it</button>
       <button type="button" :class="{ active: view === 'manual' }" @click="onTab('manual')">Manual</button>
     </div>
 
-    <div v-show="view === 'ai'">
+    <div v-if="dupText" class="dup-box" role="alert">
+      <div class="entry-head">
+        <div class="eh-cover"><img v-if="dup.twin.coverUrl" :src="dup.twin.coverUrl" alt=""><span v-else class="pv-ph" :class="dup.twin.medium"></span></div>
+        <div class="eh-body">
+          <span class="pv-chip" :class="dup.twin.medium">{{ dup.twin.medium }}</span>
+          <div class="pv-title">{{ dup.twin.title }}<span v-if="dup.twin.year" class="yr"> ({{ dup.twin.year }})</span></div>
+          <div v-if="personLine(dup.twin)" class="pv-meta">{{ personLine(dup.twin) }}</div>
+        </div>
+      </div>
+      <p class="dup-text">{{ dupText.text }}</p>
+      <div class="status">{{ formStatus }}</div>
+      <div class="form-actions">
+        <template v-if="dupText.yes">
+          <button type="button" class="btn ghost" @click="dup = null">Back</button>
+          <button type="button" class="btn" :disabled="saving" @click="confirmDup">{{ dupText.yes }}</button>
+        </template>
+        <button v-else type="button" class="btn" @click="close">Close</button>
+      </div>
+    </div>
+
+    <div v-show="view === 'ai' && !dup">
       <div v-if="!hintHidden" id="describe-hint" class="form-sub hint">
         <p v-if="wish">Say what you want to watch, read or listen to. For example: "Perfect Blue, Sam recommended it".</p>
         <p v-else>Just say what you watched, read or listened to. For example: "Perfect Blue, solid 4, watched two weeks ago, note: anime night at home".</p>
@@ -422,7 +506,7 @@ function saveKey() {
       </div>
     </div>
 
-    <div v-show="view === 'manual'">
+    <div v-show="view === 'manual' && !dup">
       <div class="medium-toggle">
         <button v-for="x in MEDIA" :key="x" type="button" :data-m="x" :class="{ active: form.medium === x }" :aria-pressed="form.medium === x" @click="form.medium = x">{{ x[0].toUpperCase() + x.slice(1) }}</button>
       </div>

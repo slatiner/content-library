@@ -228,6 +228,8 @@ select{padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius)
 .eh-cover{width:72px;aspect-ratio:2/3;flex:none;padding:0;border:0;border-radius:var(--radius);overflow:hidden;background:var(--line);cursor:pointer;}
 .eh-cover img,.eh-cover .pv-ph{width:100%;height:100%;object-fit:cover;display:block;}
 .eh-cover:focus-visible{outline:2px solid var(--ink);outline-offset:2px;}
+.dup-box .eh-cover{cursor:default;}
+.dup-text{margin:0 0 8px;line-height:1.45;}
 .eh-body{min-width:0;}
 .eh-body .pv-title{font-size:16px;}
 .form-section{margin-bottom:6px;}
